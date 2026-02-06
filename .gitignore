@@ -12,3 +12,6 @@ coverage/
 .turbo/
 packages/server/prisma/migrations/
 !packages/server/prisma/migrations/.gitkeep
+
+.vercel
+.env*.local

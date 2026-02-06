@@ -1,0 +1,34 @@
+databases:
+  - name: pm-postgres
+    plan: free
+    databaseName: pm_prod
+    user: pm_user
+    postgresMajorVersion: 16
+
+services:
+  - type: web
+    plan: free
+    name: pm-server
+    runtime: node
+    buildCommand: pnpm install && pnpm --filter @pm/shared build && cd packages/server && npx prisma generate && cd ../.. && pnpm --filter @pm/server build
+    startCommand: cd packages/server && node dist/index.js
+    envVars:
+      - key: NODE_VERSION
+        value: 20.11.0
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3001
+      - key: DATABASE_URL
+        fromDatabase:
+          name: pm-postgres
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRES_IN
+        value: 15m
+      - key: JWT_REFRESH_EXPIRES_IN
+        value: 7d
+      - key: CLIENT_URL
+        sync: false
+    healthCheckPath: /api/health

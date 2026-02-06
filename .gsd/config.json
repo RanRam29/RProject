@@ -1,0 +1,51 @@
+{
+  "project": "project-management",
+  "version": "1.0.0",
+  "framework": "GSD",
+  "architecture": "monorepo",
+  "packageManager": "pnpm",
+  "deployment": {
+    "client": {
+      "platform": "vercel",
+      "package": "@pm/client",
+      "buildCommand": "pnpm --filter @pm/shared build && pnpm --filter @pm/client build",
+      "outputDirectory": "packages/client/dist",
+      "framework": "vite",
+      "env": {
+        "VITE_API_URL": "https://<RENDER_SERVICE_URL>/api/v1",
+        "VITE_WS_URL": "wss://<RENDER_SERVICE_URL>"
+      }
+    },
+    "server": {
+      "platform": "render",
+      "package": "@pm/server",
+      "buildCommand": "pnpm install && pnpm --filter @pm/shared build && pnpm --filter @pm/server build",
+      "startCommand": "pnpm --filter @pm/server start",
+      "runtime": "node",
+      "env": {
+        "DATABASE_URL": "<RENDER_POSTGRES_INTERNAL_URL>",
+        "JWT_SECRET": "<GENERATE_SECURE_SECRET>",
+        "CLIENT_URL": "https://<VERCEL_APP_URL>",
+        "PORT": "3001",
+        "NODE_ENV": "production"
+      }
+    },
+    "database": {
+      "platform": "render",
+      "type": "postgresql",
+      "version": "16"
+    }
+  },
+  "environments": {
+    "development": {
+      "client": "http://localhost:5173",
+      "server": "http://localhost:3001",
+      "database": "postgresql://pm_user:pm_password@localhost:5433/pm_dev"
+    },
+    "production": {
+      "client": "https://<YOUR_VERCEL_DOMAIN>",
+      "server": "https://<YOUR_RENDER_DOMAIN>",
+      "database": "<RENDER_POSTGRES_URL>"
+    }
+  }
+}

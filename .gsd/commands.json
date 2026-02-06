@@ -1,0 +1,43 @@
+{
+  "dev": {
+    "description": "Start local development environment",
+    "steps": [
+      "docker compose up -d",
+      "pnpm install",
+      "pnpm db:migrate",
+      "pnpm dev"
+    ]
+  },
+  "build": {
+    "description": "Build all packages for production",
+    "steps": [
+      "pnpm --filter @pm/shared build",
+      "pnpm --filter @pm/server build",
+      "pnpm --filter @pm/client build"
+    ]
+  },
+  "deploy:client": {
+    "description": "Deploy client to Vercel",
+    "steps": [
+      "vercel --prod"
+    ]
+  },
+  "deploy:server": {
+    "description": "Deploy server to Render (via git push)",
+    "steps": [
+      "git push origin main"
+    ]
+  },
+  "db:migrate:prod": {
+    "description": "Run Prisma migrations against production DB",
+    "steps": [
+      "DATABASE_URL=$PRODUCTION_DATABASE_URL pnpm --filter @pm/server prisma migrate deploy"
+    ]
+  },
+  "seed:prod": {
+    "description": "Seed production database",
+    "steps": [
+      "DATABASE_URL=$PRODUCTION_DATABASE_URL pnpm --filter @pm/server prisma db seed"
+    ]
+  }
+}

@@ -3,5 +3,8 @@
   "version": 2,
   "buildCommand": "pnpm --filter @pm/shared build && pnpm --filter @pm/client build",
   "outputDirectory": "packages/client/dist",
-  "installCommand": "pnpm install"
+  "installCommand": "pnpm install",
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
 }

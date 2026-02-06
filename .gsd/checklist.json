@@ -1,0 +1,19 @@
+{
+  "pre-deploy": [
+    { "task": "All TypeScript compiles without errors", "command": "pnpm typecheck" },
+    { "task": "Shared package builds successfully", "command": "pnpm --filter @pm/shared build" },
+    { "task": "Server builds successfully", "command": "pnpm --filter @pm/server build" },
+    { "task": "Client builds successfully", "command": "pnpm --filter @pm/client build" },
+    { "task": "Environment variables are set on Vercel", "manual": true },
+    { "task": "Environment variables are set on Render", "manual": true },
+    { "task": "Render PostgreSQL database is provisioned", "manual": true },
+    { "task": "Prisma migrations have been run on production DB", "command": "prisma migrate deploy" }
+  ],
+  "post-deploy": [
+    { "task": "Vercel client loads without errors", "url": "https://<VERCEL_URL>" },
+    { "task": "Render server health check passes", "url": "https://<RENDER_URL>/api/health" },
+    { "task": "Client can reach server API (CORS works)", "manual": true },
+    { "task": "Authentication flow works end-to-end", "manual": true },
+    { "task": "WebSocket connections establish", "manual": true }
+  ]
+}
