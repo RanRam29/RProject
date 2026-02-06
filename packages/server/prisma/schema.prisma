@@ -1,0 +1,352 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ──────────────────────────────────────────────
+// USERS & AUTHENTICATION
+// ──────────────────────────────────────────────
+
+enum SystemRole {
+  SYS_ADMIN
+  PROJECT_CREATOR
+  TEMPLATE_MANAGER
+  VIEWER_ONLY
+}
+
+model User {
+  id           String     @id @default(uuid()) @db.Uuid
+  email        String     @unique
+  passwordHash String     @map("password_hash")
+  displayName  String     @map("display_name")
+  avatarUrl    String?    @map("avatar_url")
+  systemRole   SystemRole @default(VIEWER_ONLY) @map("system_role")
+  isActive     Boolean    @default(true) @map("is_active")
+  createdAt    DateTime   @default(now()) @map("created_at")
+  updatedAt    DateTime   @updatedAt @map("updated_at")
+
+  ownedProjects      Project[]
+  projectPermissions ProjectPermission[]
+  assignedTasks      Task[]              @relation("TaskAssignee")
+  createdTasks       Task[]              @relation("TaskCreator")
+  uploadedFiles      File[]
+  activityLogs       ActivityLog[]
+  refreshTokens      RefreshToken[]
+  createdTemplates   Template[]
+  comments           Comment[]
+
+  @@map("users")
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid()) @db.Uuid
+  token     String   @unique
+  userId    String   @map("user_id") @db.Uuid
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@map("refresh_tokens")
+}
+
+// ──────────────────────────────────────────────
+// PROJECTS
+// ──────────────────────────────────────────────
+
+enum ProjectStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+model Project {
+  id          String        @id @default(uuid()) @db.Uuid
+  name        String
+  description String?
+  configJson  Json          @default("{}") @map("config_json")
+  status      ProjectStatus @default(ACTIVE)
+  ownerId     String        @map("owner_id") @db.Uuid
+  owner       User          @relation(fields: [ownerId], references: [id])
+  templateId  String?       @map("template_id") @db.Uuid
+  template    Template?     @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  createdAt   DateTime      @default(now()) @map("created_at")
+  updatedAt   DateTime      @updatedAt @map("updated_at")
+
+  permissions  ProjectPermission[]
+  tasks        Task[]
+  taskStatuses TaskStatus[]
+  files        File[]
+  widgets      ProjectWidget[]
+  activityLogs ActivityLog[]
+  labels       Label[]
+
+  @@index([ownerId])
+  @@index([status])
+  @@map("projects")
+}
+
+// ──────────────────────────────────────────────
+// PROJECT WIDGETS
+// ──────────────────────────────────────────────
+
+enum WidgetType {
+  TASK_LIST
+  KANBAN
+  TIMELINE
+  FILES
+  AI_ASSISTANT
+  DEPENDENCY_GRAPH
+  ACTIVITY_FEED
+}
+
+model ProjectWidget {
+  id         String     @id @default(uuid()) @db.Uuid
+  projectId  String     @map("project_id") @db.Uuid
+  project    Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  type       WidgetType
+  title      String
+  configJson Json       @default("{}") @map("config_json")
+  positionX  Int        @default(0) @map("position_x")
+  positionY  Int        @default(0) @map("position_y")
+  width      Int        @default(400)
+  height     Int        @default(300)
+  sortOrder  Int        @default(0) @map("sort_order")
+  createdAt  DateTime   @default(now()) @map("created_at")
+  updatedAt  DateTime   @updatedAt @map("updated_at")
+
+  @@index([projectId])
+  @@map("project_widgets")
+}
+
+// ──────────────────────────────────────────────
+// RBAC: PROJECT-LEVEL PERMISSIONS
+// ──────────────────────────────────────────────
+
+enum ProjectRole {
+  OWNER
+  EDITOR
+  VIEWER
+  CUSTOM
+}
+
+model ProjectPermission {
+  id           String      @id @default(uuid()) @db.Uuid
+  projectId    String      @map("project_id") @db.Uuid
+  project      Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  userId       String      @map("user_id") @db.Uuid
+  user         User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role         ProjectRole @default(VIEWER)
+  customRoleId String?     @map("custom_role_id") @db.Uuid
+  customRole   CustomRole? @relation(fields: [customRoleId], references: [id], onDelete: SetNull)
+  capabilities Json        @default("{}")
+  createdAt    DateTime    @default(now()) @map("created_at")
+  updatedAt    DateTime    @updatedAt @map("updated_at")
+
+  @@unique([projectId, userId])
+  @@index([userId])
+  @@map("project_permissions")
+}
+
+model CustomRole {
+  id           String   @id @default(uuid()) @db.Uuid
+  name         String
+  description  String?
+  capabilities Json
+  projectId    String   @map("project_id") @db.Uuid
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  permissions ProjectPermission[]
+
+  @@index([projectId])
+  @@map("custom_roles")
+}
+
+// ──────────────────────────────────────────────
+// TASKS & STATUSES
+// ──────────────────────────────────────────────
+
+enum TaskPriority {
+  URGENT
+  HIGH
+  MEDIUM
+  LOW
+  NONE
+}
+
+model TaskStatus {
+  id        String   @id @default(uuid()) @db.Uuid
+  projectId String   @map("project_id") @db.Uuid
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  name      String
+  color     String   @default("#6B7280")
+  sortOrder Int      @default(0) @map("sort_order")
+  isFinal   Boolean  @default(false) @map("is_final")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  tasks Task[]
+
+  @@unique([projectId, name])
+  @@index([projectId])
+  @@map("task_statuses")
+}
+
+model Task {
+  id           String     @id @default(uuid()) @db.Uuid
+  projectId    String     @map("project_id") @db.Uuid
+  project      Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  title        String
+  description  Json?
+  statusId     String     @map("status_id") @db.Uuid
+  status       TaskStatus @relation(fields: [statusId], references: [id])
+  assigneeId   String?    @map("assignee_id") @db.Uuid
+  assignee     User?      @relation("TaskAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+  creatorId    String     @map("creator_id") @db.Uuid
+  creator      User       @relation("TaskCreator", fields: [creatorId], references: [id])
+  parentTaskId String?    @map("parent_task_id") @db.Uuid
+  parentTask   Task?      @relation("Subtasks", fields: [parentTaskId], references: [id], onDelete: Cascade)
+  subtasks     Task[]     @relation("Subtasks")
+  priority     TaskPriority @default(NONE)
+  startDate    DateTime?  @map("start_date")
+  dueDate      DateTime?  @map("due_date")
+  sortOrder    Int        @default(0) @map("sort_order")
+  createdAt    DateTime   @default(now()) @map("created_at")
+  updatedAt    DateTime   @updatedAt @map("updated_at")
+
+  blockedBy  TaskDependency[] @relation("BlockedTask")
+  blocking   TaskDependency[] @relation("BlockingTask")
+  labels     TaskLabel[]
+  comments   Comment[]
+
+  @@index([projectId])
+  @@index([statusId])
+  @@index([assigneeId])
+  @@index([parentTaskId])
+  @@index([priority])
+  @@map("tasks")
+}
+
+model TaskDependency {
+  id             String   @id @default(uuid()) @db.Uuid
+  blockedTaskId  String   @map("blocked_task_id") @db.Uuid
+  blockedTask    Task     @relation("BlockedTask", fields: [blockedTaskId], references: [id], onDelete: Cascade)
+  blockingTaskId String   @map("blocking_task_id") @db.Uuid
+  blockingTask   Task     @relation("BlockingTask", fields: [blockingTaskId], references: [id], onDelete: Cascade)
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  @@unique([blockedTaskId, blockingTaskId])
+  @@index([blockingTaskId])
+  @@map("task_dependencies")
+}
+
+// ──────────────────────────────────────────────
+// LABELS
+// ──────────────────────────────────────────────
+
+model Label {
+  id        String   @id @default(uuid()) @db.Uuid
+  projectId String   @map("project_id") @db.Uuid
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  name      String
+  color     String   @default("#6B7280")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  tasks TaskLabel[]
+
+  @@unique([projectId, name])
+  @@index([projectId])
+  @@map("labels")
+}
+
+model TaskLabel {
+  id      String @id @default(uuid()) @db.Uuid
+  taskId  String @map("task_id") @db.Uuid
+  task    Task   @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  labelId String @map("label_id") @db.Uuid
+  label   Label  @relation(fields: [labelId], references: [id], onDelete: Cascade)
+
+  @@unique([taskId, labelId])
+  @@index([labelId])
+  @@map("task_labels")
+}
+
+// ──────────────────────────────────────────────
+// COMMENTS
+// ──────────────────────────────────────────────
+
+model Comment {
+  id        String   @id @default(uuid()) @db.Uuid
+  taskId    String   @map("task_id") @db.Uuid
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  authorId  String   @map("author_id") @db.Uuid
+  author    User     @relation(fields: [authorId], references: [id])
+  content   String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([taskId, createdAt])
+  @@map("comments")
+}
+
+// ──────────────────────────────────────────────
+// FILES
+// ──────────────────────────────────────────────
+
+model File {
+  id           String   @id @default(uuid()) @db.Uuid
+  projectId    String   @map("project_id") @db.Uuid
+  project      Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  originalName String   @map("original_name")
+  storagePath  String   @map("storage_path")
+  mimeType     String   @map("mime_type")
+  sizeBytes    BigInt   @map("size_bytes")
+  uploadedById String   @map("uploaded_by_id") @db.Uuid
+  uploadedBy   User     @relation(fields: [uploadedById], references: [id])
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@index([projectId])
+  @@map("files")
+}
+
+// ──────────────────────────────────────────────
+// TEMPLATES
+// ──────────────────────────────────────────────
+
+model Template {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String
+  description String?
+  configJson  Json     @map("config_json")
+  isPublic    Boolean  @default(false) @map("is_public")
+  createdById String   @map("created_by_id") @db.Uuid
+  createdBy   User     @relation(fields: [createdById], references: [id])
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  projects Project[]
+
+  @@index([isPublic])
+  @@map("templates")
+}
+
+// ──────────────────────────────────────────────
+// ACTIVITY LOG
+// ──────────────────────────────────────────────
+
+model ActivityLog {
+  id        String   @id @default(uuid()) @db.Uuid
+  projectId String   @map("project_id") @db.Uuid
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  userId    String   @map("user_id") @db.Uuid
+  user      User     @relation(fields: [userId], references: [id])
+  action    String
+  metadata  Json     @default("{}")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([projectId, createdAt])
+  @@index([userId])
+  @@map("activity_logs")
+}

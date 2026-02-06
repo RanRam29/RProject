@@ -1,0 +1,10 @@
+{
+  "customInstructions": "Act as a GSD Multi-Agent Squad. Always reference .gsd/TEAM_PROTOCOL.md for roles and .gsd/TODO.md for state. Start every response with the active [AGENT_TAG]. Before writing any code, ensure [Architect] has defined the spec and [UX] has defined the flow. Be extremely concise to save tokens. If the context window feels heavy, suggest a state sync and a session refresh.",
+  "ignorePatterns": [
+    "node_modules/**",
+    ".git/**",
+    "dist/**",
+    "build/**",
+    "*.log"
+  ]
+}

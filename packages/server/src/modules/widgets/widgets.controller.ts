@@ -1,0 +1,86 @@
+import { Request, Response, NextFunction } from 'express';
+import { widgetsService } from './widgets.service';
+import { sendSuccess } from '../../utils/api-response';
+
+export class WidgetsController {
+  async list(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { projectId } = req.params;
+
+      const widgets = await widgetsService.list(projectId);
+
+      sendSuccess(res, widgets);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async create(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { projectId } = req.params;
+      const { type, title, configJson, sortOrder, positionX, positionY, width, height } = req.body;
+
+      const widget = await widgetsService.create(projectId, {
+        type,
+        title,
+        configJson,
+        sortOrder,
+        positionX,
+        positionY,
+        width,
+        height,
+      });
+
+      sendSuccess(res, widget, 201);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async update(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { widgetId } = req.params;
+      const { title, configJson, sortOrder, positionX, positionY, width, height } = req.body;
+
+      const widget = await widgetsService.update(widgetId, {
+        title,
+        configJson,
+        sortOrder,
+        positionX,
+        positionY,
+        width,
+        height,
+      });
+
+      sendSuccess(res, widget);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async reorder(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { widgets } = req.body;
+
+      const result = await widgetsService.reorder(widgets);
+
+      sendSuccess(res, result);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async delete(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { widgetId } = req.params;
+
+      const result = await widgetsService.delete(widgetId);
+
+      sendSuccess(res, result);
+    } catch (error) {
+      next(error);
+    }
+  }
+}
+
+export const widgetsController = new WidgetsController();

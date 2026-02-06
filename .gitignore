@@ -1,0 +1,14 @@
+node_modules/
+sandbox/
+dist/
+nul
+build/
+.env
+.env.local
+*.log
+.DS_Store
+Thumbs.db
+coverage/
+.turbo/
+packages/server/prisma/migrations/
+!packages/server/prisma/migrations/.gitkeep

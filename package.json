@@ -1,0 +1,24 @@
+{
+  "name": "project-management",
+  "private": true,
+  "scripts": {
+    "dev": "pnpm --parallel --filter @pm/* dev",
+    "dev:server": "pnpm --filter @pm/server dev",
+    "dev:client": "pnpm --filter @pm/client dev",
+    "build": "pnpm --filter @pm/shared build && pnpm --parallel --filter @pm/server --filter @pm/client build",
+    "db:migrate": "pnpm --filter @pm/server prisma migrate dev",
+    "db:seed": "pnpm --filter @pm/server prisma db seed",
+    "db:studio": "pnpm --filter @pm/server prisma studio",
+    "lint": "eslint packages/*/src --ext .ts,.tsx",
+    "typecheck": "pnpm --parallel --filter @pm/* typecheck"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": ["@prisma/client", "@prisma/engines", "esbuild", "prisma"]
+  }
+}
