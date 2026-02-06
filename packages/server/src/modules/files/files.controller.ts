@@ -66,7 +66,7 @@ export class FilesController {
 
   async delete(req: Request, res: Response, next: NextFunction) {
     try {
-      const { fileId } = req.params;
+      const fileId = req.params.fileId as string;
 
       const result = await filesService.delete(fileId);
 

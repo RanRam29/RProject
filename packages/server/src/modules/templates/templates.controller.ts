@@ -17,7 +17,7 @@ export class TemplatesController {
 
   async getById(req: Request, res: Response, next: NextFunction) {
     try {
-      const { templateId } = req.params;
+      const templateId = req.params.templateId as string;
 
       const template = await templatesService.getById(templateId);
 
@@ -47,7 +47,7 @@ export class TemplatesController {
 
   async update(req: Request, res: Response, next: NextFunction) {
     try {
-      const { templateId } = req.params;
+      const templateId = req.params.templateId as string;
       const { name, description, configJson, isPublic } = req.body;
 
       const template = await templatesService.update(templateId, {
@@ -65,7 +65,7 @@ export class TemplatesController {
 
   async delete(req: Request, res: Response, next: NextFunction) {
     try {
-      const { templateId } = req.params;
+      const templateId = req.params.templateId as string;
 
       const result = await templatesService.delete(templateId);
 

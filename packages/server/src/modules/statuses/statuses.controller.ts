@@ -5,7 +5,7 @@ import { sendSuccess } from '../../utils/api-response';
 export class StatusesController {
   async list(req: Request, res: Response, next: NextFunction) {
     try {
-      const { projectId } = req.params;
+      const projectId = req.params.projectId as string;
 
       const statuses = await statusesService.list(projectId);
 
@@ -17,7 +17,7 @@ export class StatusesController {
 
   async create(req: Request, res: Response, next: NextFunction) {
     try {
-      const { projectId } = req.params;
+      const projectId = req.params.projectId as string;
       const { name, color, sortOrder } = req.body;
 
       const status = await statusesService.create(projectId, {
@@ -34,7 +34,7 @@ export class StatusesController {
 
   async update(req: Request, res: Response, next: NextFunction) {
     try {
-      const { statusId } = req.params;
+      const statusId = req.params.statusId as string;
       const { name, color, sortOrder } = req.body;
 
       const status = await statusesService.update(statusId, {
@@ -51,7 +51,7 @@ export class StatusesController {
 
   async delete(req: Request, res: Response, next: NextFunction) {
     try {
-      const { statusId } = req.params;
+      const statusId = req.params.statusId as string;
 
       const result = await statusesService.delete(statusId);
 

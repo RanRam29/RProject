@@ -25,21 +25,21 @@ export const usersController = {
 
   async getById(req: Request, res: Response, next: NextFunction) {
     try {
-      const user = await usersService.getById(req.params.id);
+      const user = await usersService.getById(req.params.id as string);
       sendSuccess(res, user);
     } catch (err) { next(err); }
   },
 
   async update(req: Request, res: Response, next: NextFunction) {
     try {
-      const user = await usersService.update(req.params.id, req.body);
+      const user = await usersService.update(req.params.id as string, req.body);
       sendSuccess(res, user);
     } catch (err) { next(err); }
   },
 
   async updateRole(req: Request, res: Response, next: NextFunction) {
     try {
-      const user = await usersService.updateRole(req.params.id, req.body.role);
+      const user = await usersService.updateRole(req.params.id as string, req.body.role);
       sendSuccess(res, user);
     } catch (err) { next(err); }
   },
@@ -47,7 +47,7 @@ export const usersController = {
   async changePassword(req: Request, res: Response, next: NextFunction) {
     try {
       const result = await usersService.changePassword(
-        req.params.id,
+        req.params.id as string,
         req.body.currentPassword,
         req.body.newPassword
       );
@@ -57,7 +57,7 @@ export const usersController = {
 
   async deactivate(req: Request, res: Response, next: NextFunction) {
     try {
-      await usersService.deactivate(req.params.id);
+      await usersService.deactivate(req.params.id as string);
       sendSuccess(res, { message: 'User deactivated' });
     } catch (err) { next(err); }
   },

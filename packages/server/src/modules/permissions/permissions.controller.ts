@@ -5,7 +5,7 @@ import { sendSuccess } from '../../utils/api-response';
 export class PermissionsController {
   async list(req: Request, res: Response, next: NextFunction) {
     try {
-      const { projectId } = req.params;
+      const projectId = req.params.projectId as string;
 
       const permissions = await permissionsService.list(projectId);
 
@@ -17,7 +17,7 @@ export class PermissionsController {
 
   async invite(req: Request, res: Response, next: NextFunction) {
     try {
-      const { projectId } = req.params;
+      const projectId = req.params.projectId as string;
       const { userId, role, customRoleId } = req.body;
 
       const permission = await permissionsService.invite(
@@ -35,7 +35,7 @@ export class PermissionsController {
 
   async update(req: Request, res: Response, next: NextFunction) {
     try {
-      const { permId } = req.params;
+      const permId = req.params.permId as string;
       const { role, customRoleId, capabilities } = req.body;
 
       const permission = await permissionsService.update(
@@ -53,7 +53,7 @@ export class PermissionsController {
 
   async remove(req: Request, res: Response, next: NextFunction) {
     try {
-      const { permId } = req.params;
+      const permId = req.params.permId as string;
 
       const result = await permissionsService.remove(permId);
 
@@ -65,7 +65,7 @@ export class PermissionsController {
 
   async listCustomRoles(req: Request, res: Response, next: NextFunction) {
     try {
-      const { projectId } = req.params;
+      const projectId = req.params.projectId as string;
 
       const roles = await permissionsService.listCustomRoles(projectId);
 
@@ -77,7 +77,7 @@ export class PermissionsController {
 
   async createCustomRole(req: Request, res: Response, next: NextFunction) {
     try {
-      const { projectId } = req.params;
+      const projectId = req.params.projectId as string;
       const { name, description, capabilities } = req.body;
 
       const role = await permissionsService.createCustomRole(projectId, {
@@ -94,7 +94,7 @@ export class PermissionsController {
 
   async updateCustomRole(req: Request, res: Response, next: NextFunction) {
     try {
-      const { roleId } = req.params;
+      const roleId = req.params.roleId as string;
       const { name, description, capabilities } = req.body;
 
       const role = await permissionsService.updateCustomRole(roleId, {
@@ -111,7 +111,7 @@ export class PermissionsController {
 
   async deleteCustomRole(req: Request, res: Response, next: NextFunction) {
     try {
-      const { roleId } = req.params;
+      const roleId = req.params.roleId as string;
 
       const result = await permissionsService.deleteCustomRole(roleId);
 

@@ -5,7 +5,7 @@ import { sendSuccess } from '../../utils/api-response';
 export class LabelsController {
   async list(req: Request, res: Response, next: NextFunction) {
     try {
-      const { projectId } = req.params;
+      const projectId = req.params.projectId as string;
 
       const labels = await labelsService.list(projectId);
 
@@ -17,7 +17,7 @@ export class LabelsController {
 
   async create(req: Request, res: Response, next: NextFunction) {
     try {
-      const { projectId } = req.params;
+      const projectId = req.params.projectId as string;
       const { name, color } = req.body;
 
       const label = await labelsService.create(projectId, { name, color });
@@ -30,7 +30,7 @@ export class LabelsController {
 
   async update(req: Request, res: Response, next: NextFunction) {
     try {
-      const { labelId } = req.params;
+      const labelId = req.params.labelId as string;
       const { name, color } = req.body;
 
       const label = await labelsService.update(labelId, { name, color });
@@ -43,7 +43,7 @@ export class LabelsController {
 
   async delete(req: Request, res: Response, next: NextFunction) {
     try {
-      const { labelId } = req.params;
+      const labelId = req.params.labelId as string;
 
       const result = await labelsService.delete(labelId);
 
@@ -55,7 +55,8 @@ export class LabelsController {
 
   async assignToTask(req: Request, res: Response, next: NextFunction) {
     try {
-      const { taskId, labelId } = req.params;
+      const taskId = req.params.taskId as string;
+      const labelId = req.params.labelId as string;
 
       const taskLabel = await labelsService.assignToTask(taskId, labelId);
 
@@ -67,7 +68,8 @@ export class LabelsController {
 
   async removeFromTask(req: Request, res: Response, next: NextFunction) {
     try {
-      const { taskId, labelId } = req.params;
+      const taskId = req.params.taskId as string;
+      const labelId = req.params.labelId as string;
 
       const result = await labelsService.removeFromTask(taskId, labelId);
 

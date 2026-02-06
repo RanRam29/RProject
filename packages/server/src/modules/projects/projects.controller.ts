@@ -19,7 +19,7 @@ export class ProjectsController {
 
   async getById(req: Request, res: Response, next: NextFunction) {
     try {
-      const { projectId } = req.params;
+      const projectId = req.params.projectId as string;
 
       const project = await projectsService.getById(projectId);
 
@@ -62,7 +62,7 @@ export class ProjectsController {
 
   async update(req: Request, res: Response, next: NextFunction) {
     try {
-      const { projectId } = req.params;
+      const projectId = req.params.projectId as string;
       const { name, description } = req.body;
 
       const project = await projectsService.update(projectId, { name, description });
@@ -75,7 +75,7 @@ export class ProjectsController {
 
   async updateStatus(req: Request, res: Response, next: NextFunction) {
     try {
-      const { projectId } = req.params;
+      const projectId = req.params.projectId as string;
       const { status } = req.body;
 
       const project = await projectsService.updateStatus(projectId, status);
@@ -88,7 +88,7 @@ export class ProjectsController {
 
   async delete(req: Request, res: Response, next: NextFunction) {
     try {
-      const { projectId } = req.params;
+      const projectId = req.params.projectId as string;
 
       const result = await projectsService.delete(projectId);
 
@@ -100,7 +100,7 @@ export class ProjectsController {
 
   async saveAsTemplate(req: Request, res: Response, next: NextFunction) {
     try {
-      const { projectId } = req.params;
+      const projectId = req.params.projectId as string;
       const userId = req.user!.id;
 
       const template = await projectsService.saveAsTemplate(projectId, userId);

@@ -5,7 +5,7 @@ import { sendSuccess } from '../../utils/api-response';
 export class WidgetsController {
   async list(req: Request, res: Response, next: NextFunction) {
     try {
-      const { projectId } = req.params;
+      const projectId = req.params.projectId as string;
 
       const widgets = await widgetsService.list(projectId);
 
@@ -17,7 +17,7 @@ export class WidgetsController {
 
   async create(req: Request, res: Response, next: NextFunction) {
     try {
-      const { projectId } = req.params;
+      const projectId = req.params.projectId as string;
       const { type, title, configJson, sortOrder, positionX, positionY, width, height } = req.body;
 
       const widget = await widgetsService.create(projectId, {
@@ -39,7 +39,7 @@ export class WidgetsController {
 
   async update(req: Request, res: Response, next: NextFunction) {
     try {
-      const { widgetId } = req.params;
+      const widgetId = req.params.widgetId as string;
       const { title, configJson, sortOrder, positionX, positionY, width, height } = req.body;
 
       const widget = await widgetsService.update(widgetId, {
@@ -72,7 +72,7 @@ export class WidgetsController {
 
   async delete(req: Request, res: Response, next: NextFunction) {
     try {
-      const { widgetId } = req.params;
+      const widgetId = req.params.widgetId as string;
 
       const result = await widgetsService.delete(widgetId);
 
