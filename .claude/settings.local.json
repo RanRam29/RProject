@@ -53,7 +53,12 @@
       "Bash(npx kill-port:*)",
       "Bash(python:*)",
       "Bash(npx tsc:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(git config:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nfix: TypeScript strict type fixes for Express req.params\n\n- Add ''as string'' type assertions for req.params in all controllers\n- Fixes ''string | string[]'' not assignable to ''string'' errors\n- Enables successful TypeScript compilation\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git push:*)",
+      "Bash(git commit:*)"
     ]
   }
 }

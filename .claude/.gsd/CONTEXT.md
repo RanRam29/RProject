@@ -19,7 +19,7 @@
 - Activity Feed: ActivityLog model populated via activityService.log(). ActivityFeedWidget shows recent project activity. 4 events tracked: task CRUD + comments.
 
 ## Active Goal
-- Phase 1-4 COMPLETE. Phase 5 (Security, Stability & Core UX) in progress. Starting 5.1 Security & Stability.
+- Phase 1-4 COMPLETE. Phase 5.1 (Security & Stability) COMPLETE. Ready for 5.2 Dashboard Analytics.
 
 ## Critical Rules
 - Always use Shared package for Types.
