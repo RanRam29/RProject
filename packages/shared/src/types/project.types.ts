@@ -1,5 +1,5 @@
-import { ProjectStatus } from '../enums';
-import { WidgetConfig } from './template.types';
+import { ProjectStatus } from '../enums/index.js';
+import { WidgetConfig } from './template.types.js';
 
 export interface ProjectDTO {
   id: string;

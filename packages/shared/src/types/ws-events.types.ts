@@ -1,9 +1,9 @@
-import { ProjectDTO, ProjectWidgetDTO } from './project.types';
-import { TaskDTO, TaskStatusDTO } from './task.types';
-import { FileDTO } from './file.types';
-import { UserPresenceDTO } from './user.types';
-import { LabelDTO } from './label.types';
-import { CommentDTO } from './comment.types';
+import { ProjectDTO, ProjectWidgetDTO } from './project.types.js';
+import { TaskDTO, TaskStatusDTO } from './task.types.js';
+import { FileDTO } from './file.types.js';
+import { UserPresenceDTO } from './user.types.js';
+import { LabelDTO } from './label.types.js';
+import { CommentDTO } from './comment.types.js';
 
 export interface CursorPosition {
   userId: string;

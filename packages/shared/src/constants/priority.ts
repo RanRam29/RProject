@@ -1,4 +1,4 @@
-import { TaskPriority } from '../enums/task-priority.enum';
+import { TaskPriority } from '../enums/task-priority.enum.js';
 
 export interface PriorityConfig {
   label: string;

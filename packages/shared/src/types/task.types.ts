@@ -1,6 +1,6 @@
-import type { TaskLabelDTO } from './label.types';
-import type { CommentDTO } from './comment.types';
-import type { TaskPriority } from '../enums/task-priority.enum';
+import type { TaskLabelDTO } from './label.types.js';
+import type { CommentDTO } from './comment.types.js';
+import type { TaskPriority } from '../enums/task-priority.enum.js';
 
 export interface TaskDTO {
   id: string;

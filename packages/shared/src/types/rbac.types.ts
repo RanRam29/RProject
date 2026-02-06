@@ -1,4 +1,4 @@
-import { ProjectRole } from '../enums';
+import { ProjectRole } from '../enums/index.js';
 
 export interface ProjectPermissionDTO {
   id: string;

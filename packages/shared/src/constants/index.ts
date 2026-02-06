@@ -1,3 +1,3 @@
-export * from './permissions';
-export * from './defaults';
-export * from './priority';
+export * from './permissions.js';
+export * from './defaults.js';
+export * from './priority.js';

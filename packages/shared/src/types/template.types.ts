@@ -1,4 +1,4 @@
-import { WidgetType } from '../enums';
+import { WidgetType } from '../enums/index.js';
 
 export interface TemplateDTO {
   id: string;

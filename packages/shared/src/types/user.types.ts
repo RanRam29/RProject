@@ -1,4 +1,4 @@
-import { SystemRole } from '../enums';
+import { SystemRole } from '../enums/index.js';
 
 export interface UserDTO {
   id: string;
