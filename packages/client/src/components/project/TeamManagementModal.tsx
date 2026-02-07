@@ -66,8 +66,10 @@ export function TeamManagementModal({ isOpen, onClose, projectId }: TeamManageme
       addToast({ type: 'success', message: 'Member added' });
       resetInviteForm();
     },
-    onError: () => {
-      addToast({ type: 'error', message: 'Failed to add member' });
+    onError: (err: unknown) => {
+      const axiosErr = err as { response?: { data?: { error?: string } } };
+      const message = axiosErr.response?.data?.error || 'Failed to add member';
+      addToast({ type: 'error', message });
     },
   });
 
@@ -79,8 +81,10 @@ export function TeamManagementModal({ isOpen, onClose, projectId }: TeamManageme
       // Auto-invite the new user to the project
       inviteMutation.mutate({ userId: newUser.id, role: selectedRole });
     },
-    onError: (err: Error) => {
-      setCreateError(err.message || 'Failed to create user');
+    onError: (err: unknown) => {
+      const axiosErr = err as { response?: { data?: { error?: string } } };
+      const message = axiosErr.response?.data?.error || (err as Error).message || 'Failed to create user';
+      setCreateError(message);
     },
   });
 
