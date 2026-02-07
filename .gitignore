@@ -10,8 +10,7 @@ build/
 Thumbs.db
 coverage/
 .turbo/
-packages/server/prisma/migrations/
-!packages/server/prisma/migrations/.gitkeep
+packages/server/prisma/migrations/.gitkeep
 
 .vercel
 .env*.local
