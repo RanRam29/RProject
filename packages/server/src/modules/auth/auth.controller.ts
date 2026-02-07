@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
-import { authService } from './auth.service';
-import { sendSuccess } from '../../utils/api-response';
+import { authService } from './auth.service.js';
+import { sendSuccess } from '../../utils/api-response.js';
 
 export const authController = {
   async register(req: Request, res: Response, next: NextFunction): Promise<void> {

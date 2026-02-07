@@ -1,6 +1,6 @@
 import { Router } from 'express';
-import { authenticate } from '../../middleware/auth.middleware';
-import { activityController } from './activity.controller';
+import { authenticate } from '../../middleware/auth.middleware.js';
+import { activityController } from './activity.controller.js';
 
 const router = Router({ mergeParams: true });
 

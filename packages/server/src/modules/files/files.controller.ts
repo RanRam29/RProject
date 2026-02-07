@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
-import { filesService } from './files.service';
-import { sendSuccess } from '../../utils/api-response';
+import { filesService } from './files.service.js';
+import { sendSuccess } from '../../utils/api-response.js';
 
 export class FilesController {
   async list(req: Request, res: Response, next: NextFunction) {

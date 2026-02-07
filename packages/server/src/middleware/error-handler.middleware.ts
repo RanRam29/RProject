@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { ZodError } from 'zod';
-import { ApiError } from '../utils/api-error';
-import { logger } from '../utils/logger';
+import { ApiError } from '../utils/api-error.js';
+import { logger } from '../utils/logger.js';
 
 export function errorHandler(
   err: Error,

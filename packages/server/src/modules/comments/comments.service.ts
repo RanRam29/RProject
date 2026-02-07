@@ -1,8 +1,8 @@
-import prisma from '../../config/db';
-import { ApiError } from '../../utils/api-error';
-import { getIO } from '../../ws/ws.server';
-import { WS_EVENTS } from '../../ws/ws.events';
-import { activityService } from '../activity/activity.service';
+import prisma from '../../config/db.js';
+import { ApiError } from '../../utils/api-error.js';
+import { getIO } from '../../ws/ws.server.js';
+import { WS_EVENTS } from '../../ws/ws.events.js';
+import { activityService } from '../activity/activity.service.js';
 
 const authorSelect = {
   id: true,

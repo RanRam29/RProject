@@ -1,8 +1,8 @@
 import { Router } from 'express';
-import { commentsController } from './comments.controller';
-import { authenticate } from '../../middleware/auth.middleware';
-import { requireProjectRole } from '../../middleware/rbac.middleware';
-import { validate } from '../../middleware/validate.middleware';
+import { commentsController } from './comments.controller.js';
+import { authenticate } from '../../middleware/auth.middleware.js';
+import { requireProjectRole } from '../../middleware/rbac.middleware.js';
+import { validate } from '../../middleware/validate.middleware.js';
 import { createCommentSchema, updateCommentSchema } from '@pm/shared';
 
 const router = Router({ mergeParams: true });

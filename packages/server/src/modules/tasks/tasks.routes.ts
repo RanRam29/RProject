@@ -1,8 +1,8 @@
 import { Router } from 'express';
-import { tasksController } from './tasks.controller';
-import { authenticate } from '../../middleware/auth.middleware';
-import { requireProjectRole } from '../../middleware/rbac.middleware';
-import { validate } from '../../middleware/validate.middleware';
+import { tasksController } from './tasks.controller.js';
+import { authenticate } from '../../middleware/auth.middleware.js';
+import { requireProjectRole } from '../../middleware/rbac.middleware.js';
+import { validate } from '../../middleware/validate.middleware.js';
 import {
   createTaskSchema,
   updateTaskSchema,

@@ -1,6 +1,6 @@
-import prisma from '../../config/db';
+import prisma from '../../config/db.js';
 import { Prisma } from '@prisma/client';
-import { ApiError } from '../../utils/api-error';
+import { ApiError } from '../../utils/api-error.js';
 
 export class TemplatesService {
   async list(userId: string) {

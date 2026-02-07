@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
-import { widgetsService } from './widgets.service';
-import { sendSuccess } from '../../utils/api-response';
+import { widgetsService } from './widgets.service.js';
+import { sendSuccess } from '../../utils/api-response.js';
 
 export class WidgetsController {
   async list(req: Request, res: Response, next: NextFunction) {

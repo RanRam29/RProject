@@ -1,7 +1,7 @@
-import prisma from '../../config/db';
-import { ApiError } from '../../utils/api-error';
-import { getIO } from '../../ws/ws.server';
-import { WS_EVENTS } from '../../ws/ws.events';
+import prisma from '../../config/db.js';
+import { ApiError } from '../../utils/api-error.js';
+import { getIO } from '../../ws/ws.server.js';
+import { WS_EVENTS } from '../../ws/ws.events.js';
 
 export class LabelsService {
   async list(projectId: string) {

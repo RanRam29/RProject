@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
-import { adminService } from './admin.service';
-import { sendSuccess } from '../../utils/api-response';
+import { adminService } from './admin.service.js';
+import { sendSuccess } from '../../utils/api-response.js';
 
 export const adminController = {
   async getLogs(req: Request, res: Response, next: NextFunction) {

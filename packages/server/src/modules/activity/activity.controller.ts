@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
-import { activityService } from './activity.service';
-import { sendPaginated } from '../../utils/api-response';
+import { activityService } from './activity.service.js';
+import { sendPaginated } from '../../utils/api-response.js';
 
 export const activityController = {
   async list(req: Request, res: Response, next: NextFunction) {

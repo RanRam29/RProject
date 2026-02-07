@@ -1,9 +1,9 @@
-import prisma from '../../config/db';
+import prisma from '../../config/db.js';
 import { WidgetType, Prisma } from '@prisma/client';
-import { ApiError } from '../../utils/api-error';
+import { ApiError } from '../../utils/api-error.js';
 import { DEFAULT_TASK_STATUSES } from '@pm/shared';
-import { getIO } from '../../ws/ws.server';
-import { WS_EVENTS } from '../../ws/ws.events';
+import { getIO } from '../../ws/ws.server.js';
+import { WS_EVENTS } from '../../ws/ws.events.js';
 
 export class ProjectsService {
   async list(userId: string, page = 1, limit = 20) {

@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
-import { usersService } from './users.service';
-import { sendSuccess } from '../../utils/api-response';
+import { usersService } from './users.service.js';
+import { sendSuccess } from '../../utils/api-response.js';
 
 export const usersController = {
   async create(req: Request, res: Response, next: NextFunction) {

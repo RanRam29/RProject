@@ -1,8 +1,8 @@
-import prisma from '../../config/db';
+import prisma from '../../config/db.js';
 import { WidgetType, Prisma } from '@prisma/client';
-import { ApiError } from '../../utils/api-error';
-import { getIO } from '../../ws/ws.server';
-import { WS_EVENTS } from '../../ws/ws.events';
+import { ApiError } from '../../utils/api-error.js';
+import { getIO } from '../../ws/ws.server.js';
+import { WS_EVENTS } from '../../ws/ws.events.js';
 
 export class WidgetsService {
   async list(projectId: string) {

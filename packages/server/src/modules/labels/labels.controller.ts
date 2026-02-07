@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
-import { labelsService } from './labels.service';
-import { sendSuccess } from '../../utils/api-response';
+import { labelsService } from './labels.service.js';
+import { sendSuccess } from '../../utils/api-response.js';
 
 export class LabelsController {
   async list(req: Request, res: Response, next: NextFunction) {

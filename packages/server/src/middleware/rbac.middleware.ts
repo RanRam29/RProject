@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
-import prisma from '../config/db';
-import { ApiError } from '../utils/api-error';
+import prisma from '../config/db.js';
+import { ApiError } from '../utils/api-error.js';
 
 export function requireProjectRole(...roles: string[]) {
   return async (req: Request, _res: Response, next: NextFunction): Promise<void> => {

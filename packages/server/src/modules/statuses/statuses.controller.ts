@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
-import { statusesService } from './statuses.service';
-import { sendSuccess } from '../../utils/api-response';
+import { statusesService } from './statuses.service.js';
+import { sendSuccess } from '../../utils/api-response.js';
 
 export class StatusesController {
   async list(req: Request, res: Response, next: NextFunction) {

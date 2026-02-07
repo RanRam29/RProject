@@ -1,4 +1,4 @@
-import prisma from '../../config/db';
+import prisma from '../../config/db.js';
 
 export class AdminService {
   async getLogs(filters: { projectId?: string; userId?: string; action?: string; page?: number; limit?: number }) {

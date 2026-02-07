@@ -1,9 +1,9 @@
 import { Router } from 'express';
-import { projectsController } from './projects.controller';
-import { authenticate } from '../../middleware/auth.middleware';
-import { requireSystemRole } from '../../middleware/auth.middleware';
-import { requireProjectRole } from '../../middleware/rbac.middleware';
-import { validate } from '../../middleware/validate.middleware';
+import { projectsController } from './projects.controller.js';
+import { authenticate } from '../../middleware/auth.middleware.js';
+import { requireSystemRole } from '../../middleware/auth.middleware.js';
+import { requireProjectRole } from '../../middleware/rbac.middleware.js';
+import { validate } from '../../middleware/validate.middleware.js';
 import {
   createProjectSchema,
   instantiateProjectSchema,

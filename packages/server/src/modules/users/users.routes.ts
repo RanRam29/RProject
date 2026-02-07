@@ -1,8 +1,8 @@
 import { Router } from 'express';
-import { authenticate, requireSystemRole } from '../../middleware/auth.middleware';
-import { validate } from '../../middleware/validate.middleware';
+import { authenticate, requireSystemRole } from '../../middleware/auth.middleware.js';
+import { validate } from '../../middleware/validate.middleware.js';
 import { createUserSchema, updateUserSchema, changePasswordSchema, updateUserRoleSchema } from '@pm/shared';
-import { usersController } from './users.controller';
+import { usersController } from './users.controller.js';
 
 const router = Router();
 

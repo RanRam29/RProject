@@ -1,8 +1,8 @@
 import { Router } from 'express';
-import { templatesController } from './templates.controller';
-import { authenticate } from '../../middleware/auth.middleware';
-import { requireSystemRole } from '../../middleware/auth.middleware';
-import { validate } from '../../middleware/validate.middleware';
+import { templatesController } from './templates.controller.js';
+import { authenticate } from '../../middleware/auth.middleware.js';
+import { requireSystemRole } from '../../middleware/auth.middleware.js';
+import { validate } from '../../middleware/validate.middleware.js';
 import { createTemplateSchema, updateTemplateSchema } from '@pm/shared';
 
 const router = Router({ mergeParams: true });

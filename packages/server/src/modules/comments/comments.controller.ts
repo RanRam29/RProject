@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
-import { commentsService } from './comments.service';
-import { sendSuccess } from '../../utils/api-response';
+import { commentsService } from './comments.service.js';
+import { sendSuccess } from '../../utils/api-response.js';
 
 export class CommentsController {
   async list(req: Request, res: Response, next: NextFunction) {

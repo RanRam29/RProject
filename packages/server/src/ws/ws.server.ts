@@ -1,10 +1,10 @@
 import { Server as HttpServer } from 'http';
 import { Server as SocketServer } from 'socket.io';
-import { wsAuthMiddleware } from './ws.auth';
-import { WS_EVENTS } from './ws.events';
-import { logger } from '../utils/logger';
-import prisma from '../config/db';
-import { env } from '../config/env';
+import { wsAuthMiddleware } from './ws.auth.js';
+import { WS_EVENTS } from './ws.events.js';
+import { logger } from '../utils/logger.js';
+import prisma from '../config/db.js';
+import { env } from '../config/env.js';
 
 let io: SocketServer | null = null;
 

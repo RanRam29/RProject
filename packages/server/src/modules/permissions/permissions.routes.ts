@@ -1,8 +1,8 @@
 import { Router } from 'express';
-import { permissionsController } from './permissions.controller';
-import { authenticate } from '../../middleware/auth.middleware';
-import { requireProjectRole } from '../../middleware/rbac.middleware';
-import { validate } from '../../middleware/validate.middleware';
+import { permissionsController } from './permissions.controller.js';
+import { authenticate } from '../../middleware/auth.middleware.js';
+import { requireProjectRole } from '../../middleware/rbac.middleware.js';
+import { validate } from '../../middleware/validate.middleware.js';
 import {
   inviteUserSchema,
   updatePermissionSchema,

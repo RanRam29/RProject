@@ -1,10 +1,10 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { randomUUID } from 'crypto';
-import prisma from '../../config/db';
-import { env } from '../../config/env';
-import { ApiError } from '../../utils/api-error';
-import logger from '../../utils/logger';
+import prisma from '../../config/db.js';
+import { env } from '../../config/env.js';
+import { ApiError } from '../../utils/api-error.js';
+import logger from '../../utils/logger.js';
 
 const SALT_ROUNDS = 12;
 

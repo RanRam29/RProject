@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
-import { templatesService } from './templates.service';
-import { sendSuccess } from '../../utils/api-response';
+import { templatesService } from './templates.service.js';
+import { sendSuccess } from '../../utils/api-response.js';
 
 export class TemplatesController {
   async list(req: Request, res: Response, next: NextFunction) {

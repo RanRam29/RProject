@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
-import { projectsService } from './projects.service';
-import { sendSuccess, sendPaginated } from '../../utils/api-response';
+import { projectsService } from './projects.service.js';
+import { sendSuccess, sendPaginated } from '../../utils/api-response.js';
 
 export class ProjectsController {
   async list(req: Request, res: Response, next: NextFunction) {

@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
-import { permissionsService } from './permissions.service';
-import { sendSuccess } from '../../utils/api-response';
+import { permissionsService } from './permissions.service.js';
+import { sendSuccess } from '../../utils/api-response.js';
 
 export class PermissionsController {
   async list(req: Request, res: Response, next: NextFunction) {

@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
-import { tasksService } from './tasks.service';
-import { sendSuccess, sendPaginated } from '../../utils/api-response';
-import { activityService } from '../activity/activity.service';
+import { tasksService } from './tasks.service.js';
+import { sendSuccess, sendPaginated } from '../../utils/api-response.js';
+import { activityService } from '../activity/activity.service.js';
 
 export class TasksController {
   async list(req: Request, res: Response, next: NextFunction) {
