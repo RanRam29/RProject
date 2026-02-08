@@ -7,3 +7,5 @@ export * from './file.validator.js';
 export * from './label.validator.js';
 export * from './comment.validator.js';
 export * from './notification.validator.js';
+export * from './email.validator.js';
+export * from './time-tracking.validator.js';

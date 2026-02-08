@@ -202,7 +202,10 @@ describe('TasksService', () => {
         expect.objectContaining({
           where: {
             projectId: PROJECT_ID,
-            title: { contains: 'bug', mode: 'insensitive' },
+            OR: [
+              { title: { contains: 'bug', mode: 'insensitive' } },
+              { description: { string_contains: 'bug' } },
+            ],
           },
         }),
       );
@@ -239,7 +242,10 @@ describe('TasksService', () => {
             statusId: STATUS_ID,
             assigneeId: ASSIGNEE_ID,
             priority: 'URGENT',
-            title: { contains: 'fix', mode: 'insensitive' },
+            OR: [
+              { title: { contains: 'fix', mode: 'insensitive' } },
+              { description: { string_contains: 'fix' } },
+            ],
           },
         }),
       );

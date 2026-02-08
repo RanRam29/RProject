@@ -35,10 +35,15 @@ model User {
   createdTasks       Task[]              @relation("TaskCreator")
   uploadedFiles      File[]
   activityLogs       ActivityLog[]
-  refreshTokens      RefreshToken[]
-  createdTemplates   Template[]
-  comments           Comment[]
-  notifications      Notification[]
+  refreshTokens          RefreshToken[]
+  passwordResetTokens    PasswordResetToken[]
+  emailVerificationTokens EmailVerificationToken[]
+  emailVerified          Boolean    @default(false) @map("email_verified")
+  createdTemplates       Template[]
+  comments               Comment[]
+  notifications          Notification[]
+  taskChanges            TaskChangeHistory[]
+  timeEntries            TimeEntry[]
 
   @@map("users")
 }
@@ -53,6 +58,37 @@ model RefreshToken {
 
   @@index([userId])
   @@map("refresh_tokens")
+}
+
+// ──────────────────────────────────────────────
+// EMAIL TOKENS
+// ──────────────────────────────────────────────
+
+model PasswordResetToken {
+  id        String    @id @default(uuid()) @db.Uuid
+  token     String    @unique
+  userId    String    @map("user_id") @db.Uuid
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime  @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("password_reset_tokens")
+}
+
+model EmailVerificationToken {
+  id        String    @id @default(uuid()) @db.Uuid
+  token     String    @unique
+  userId    String    @map("user_id") @db.Uuid
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime  @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@map("email_verification_tokens")
 }
 
 // ──────────────────────────────────────────────
@@ -218,10 +254,12 @@ model Task {
   createdAt    DateTime   @default(now()) @map("created_at")
   updatedAt    DateTime   @updatedAt @map("updated_at")
 
-  blockedBy  TaskDependency[] @relation("BlockedTask")
-  blocking   TaskDependency[] @relation("BlockingTask")
-  labels     TaskLabel[]
-  comments   Comment[]
+  blockedBy    TaskDependency[] @relation("BlockedTask")
+  blocking     TaskDependency[] @relation("BlockingTask")
+  labels       TaskLabel[]
+  comments     Comment[]
+  changeHistory TaskChangeHistory[]
+  timeEntries  TimeEntry[]
 
   @@index([projectId])
   @@index([statusId])
@@ -245,6 +283,50 @@ model TaskDependency {
   @@unique([blockedTaskId, blockingTaskId])
   @@index([blockingTaskId])
   @@map("task_dependencies")
+}
+
+// ──────────────────────────────────────────────
+// TASK CHANGE HISTORY (Activity tracking)
+// ──────────────────────────────────────────────
+
+model TaskChangeHistory {
+  id        String   @id @default(uuid()) @db.Uuid
+  taskId    String   @map("task_id") @db.Uuid
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  userId    String   @map("user_id") @db.Uuid
+  user      User     @relation(fields: [userId], references: [id])
+  field     String                    // e.g. "title", "status", "assignee", "priority"
+  oldValue  String?  @map("old_value")
+  newValue  String?  @map("new_value")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([taskId, createdAt])
+  @@index([userId])
+  @@map("task_change_history")
+}
+
+// ──────────────────────────────────────────────
+// TIME TRACKING
+// ──────────────────────────────────────────────
+
+model TimeEntry {
+  id          String    @id @default(uuid()) @db.Uuid
+  taskId      String    @map("task_id") @db.Uuid
+  task        Task      @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  userId      String    @map("user_id") @db.Uuid
+  user        User      @relation(fields: [userId], references: [id])
+  description String?
+  startedAt   DateTime  @map("started_at")
+  stoppedAt   DateTime? @map("stopped_at")
+  durationMs  Int?      @map("duration_ms")   // Computed or manual: total milliseconds
+  isManual    Boolean   @default(false) @map("is_manual")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  @@index([taskId])
+  @@index([userId])
+  @@index([taskId, userId])
+  @@map("time_entries")
 }
 
 // ──────────────────────────────────────────────

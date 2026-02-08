@@ -73,22 +73,22 @@ All security hardening items implemented. Security score: 9.5/10.
 
 ## Phase 1 — TESTING & RELIABILITY (Priority: HIGH)
 
-Current test coverage is minimal (3 test files). This blocks safe feature development.
+Test suite: 33 files, 522 tests, all passing.
 
 ### 1.1 Server Unit Tests
-- [ ] Auth service tests (register, login, refresh, logout)
+- [x] Auth service tests (register, login, refresh, logout)
 - [ ] Task service tests (CRUD, status changes, reordering)
 - [ ] Project service tests (CRUD, permissions, templates)
 - [ ] Permission service tests (invite, update, custom roles)
 - [ ] Middleware tests (auth, rate limiting, validation)
 - **Target:** 80%+ service layer coverage
 
-### 1.2 Server Integration Tests
-- [ ] Auth flow end-to-end (register → login → refresh → logout)
-- [ ] RBAC enforcement (role-based endpoint access)
-- [ ] Task lifecycle (create → update status → assign → complete)
+### 1.2 Server Integration Tests ✅
+- [x] Auth flow end-to-end (register → login → refresh → logout) — 17 tests
+- [x] RBAC enforcement (role-based endpoint access) — 30 tests
+- [x] Task lifecycle (create → update status → assign → complete → dependencies → bulk) — 31 tests
 - [ ] WebSocket event propagation
-- [ ] Error handling (400, 401, 403, 404, 409 responses)
+- [x] Error handling (400, 401, 403, 404, 409 responses) — covered across all 3 test files
 
 ### 1.3 Client Unit Tests
 - [ ] All Zustand stores (auth, ui, project, ws — auth/ui done)
@@ -117,21 +117,27 @@ Current test coverage is minimal (3 test files). This blocks safe feature develo
 
 Fill gaps in existing features that affect daily usability.
 
-### 2.1 Email System
-- [ ] Set up transactional email provider (SendGrid/Resend/SES)
-- [ ] Password reset flow (forgot password → email link → reset form)
-- [ ] Email verification on registration
-- [ ] Project invite notifications via email
-- [ ] Task assignment notifications
-- [ ] Digest emails (daily/weekly project summary)
+### 2.1 Email System ✅
+- [x] Set up transactional email provider (Resend) — email.service.ts with templates
+- [x] Password reset flow (forgot password → email link → reset form) — 4 endpoints, token-based
+- [x] Email verification on registration — auto-sends on register, verify/resend endpoints
+- [x] Project invite notifications via email — emailService.sendProjectInvite()
+- [x] Task assignment notifications — emailService.sendTaskAssignment()
+- [ ] Digest emails (daily/weekly project summary) — deferred, requires cron scheduler
+- [x] Prisma models: PasswordResetToken, EmailVerificationToken with indexes
+- [x] Integration tests: 25 tests covering all email endpoints
+- [x] Audit logging for password reset & email verification events
+- [x] Security: anti-enumeration (always returns 200), token expiry, single-use tokens, cooldown on resend
 
-### 2.2 Task Enhancements
-- [ ] Bulk task operations (select multiple → move, assign, delete)
-- [ ] Task search with full-text search (PostgreSQL tsvector or external)
-- [ ] Task activity history (who changed what, when)
-- [ ] Recurring tasks (daily, weekly, custom schedule)
-- [ ] Task time tracking (start/stop timer, manual entry)
-- [ ] Rich text editor for task descriptions (Tiptap/ProseMirror)
+### 2.2 Task Enhancements ✅
+- [x] Bulk task operations (select multiple → move, assign, delete, setPriority) — already existed
+- [x] Task search with full-text search — OR search across title + description (JSON content)
+- [x] Task activity history — TaskChangeHistory model, field-level change tracking on update/status change
+- [x] Task time tracking — TimeEntry model, start/stop timer, manual entry, total aggregation
+  - Routes: start, stop, manual entry, list, total, delete, update
+  - WebSocket events on timer start/stop
+- [ ] Recurring tasks (daily, weekly, custom schedule) — deferred, requires cron scheduler
+- [ ] Rich text editor for task descriptions (Tiptap/ProseMirror) — client-side, Phase 3
 
 ### 2.3 Views & Visualization
 - [ ] List view (table format with sorting/filtering)
@@ -279,8 +285,12 @@ Fill gaps in existing features that affect daily usability.
 4. ~~Fix template access control (Phase 0.4)~~ ✅
 5. ~~Add server auth service tests (Phase 1.1)~~ ✅
 6. ~~Complete remaining Phase 0 items (0.5-0.9)~~ ✅
-7. **Next: Begin Phase 1.2 — Server Integration Tests**
-8. **Next: Begin Phase 2.1 — Email System**
+7. ~~Begin Phase 1.2 — Server Integration Tests~~ ✅ (78 tests: auth, RBAC, task lifecycle)
+8. ~~Begin Phase 2.1 — Email System~~ ✅ (Resend, password reset, email verification, invite/assign templates, 25 tests)
+9. ~~Phase 2.2 — Task Enhancements~~ ✅ (search, activity history, time tracking, 7 new endpoints)
+10. **Next: Phase 2.3 — Views & Visualization**
+11. **Next: Phase 2.4 — Notifications System (in-app center)**
+12. **Next: Continue Phase 1.1 — Remaining service unit tests**
 
 ---
 

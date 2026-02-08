@@ -26,6 +26,9 @@ export interface EnvConfig {
   AWS_ACCESS_KEY_ID: string;
   AWS_SECRET_ACCESS_KEY: string;
   S3_BUCKET_NAME: string;
+  // Email (Resend)
+  RESEND_API_KEY: string;
+  EMAIL_FROM: string;
 }
 
 export const env: EnvConfig = {
@@ -39,6 +42,8 @@ export const env: EnvConfig = {
   AWS_ACCESS_KEY_ID: process.env.AWS_ACCESS_KEY_ID || '',
   AWS_SECRET_ACCESS_KEY: process.env.AWS_SECRET_ACCESS_KEY || '',
   S3_BUCKET_NAME: process.env.S3_BUCKET_NAME || '',
+  RESEND_API_KEY: process.env.RESEND_API_KEY || '',
+  EMAIL_FROM: process.env.EMAIL_FROM || 'GSD <noreply@gsd.app>',
 };
 
 export default env;

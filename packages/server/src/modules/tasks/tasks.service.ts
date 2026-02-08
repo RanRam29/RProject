@@ -42,7 +42,11 @@ export class TasksService {
       }
 
       if (filters.search) {
-        where.title = { contains: filters.search, mode: 'insensitive' };
+        // Search across title and description (JSON text content)
+        where.OR = [
+          { title: { contains: filters.search, mode: 'insensitive' } },
+          { description: { string_contains: filters.search } },
+        ];
       }
 
       const [tasks, total] = await Promise.all([

@@ -1,8 +1,11 @@
 import { Request, Response, NextFunction } from 'express';
 import { tasksService } from './tasks.service.js';
+import { taskHistoryService } from './task-history.service.js';
+import { timeTrackingService } from './time-tracking.service.js';
 import { sendSuccess, sendPaginated } from '../../utils/api-response.js';
 import { activityService } from '../activity/activity.service.js';
 import { notificationsService } from '../notifications/notifications.service.js';
+import prisma from '../../config/db.js';
 
 export class TasksController {
   async list(req: Request, res: Response, next: NextFunction) {
@@ -67,6 +70,9 @@ export class TasksController {
         sortOrder,
       });
 
+      // Record creation in history
+      taskHistoryService.recordChange(task.id, userId, 'created', null, task.title).catch(() => {});
+
       sendSuccess(res, task, 201);
     } catch (error) {
       next(error);
@@ -76,7 +82,11 @@ export class TasksController {
   async update(req: Request, res: Response, next: NextFunction) {
     try {
       const taskId = req.params.taskId as string;
+      const userId = req.user!.id;
       const { title, description, assigneeId, priority, startDate, dueDate } = req.body;
+
+      // Fetch old task for change tracking
+      const oldTask = await prisma.task.findUnique({ where: { id: taskId } });
 
       const task = await tasksService.update(taskId, {
         title,
@@ -91,17 +101,26 @@ export class TasksController {
           : undefined,
       });
 
-      activityService.log(task.projectId, req.user!.id, 'task.updated', { taskId, title: task.title }).catch(() => {});
+      // Record field-level changes
+      if (oldTask) {
+        const changes = taskHistoryService.diffTaskFields(
+          oldTask as unknown as Record<string, unknown>,
+          { title, assigneeId, priority, startDate, dueDate },
+        );
+        taskHistoryService.recordChanges(taskId, userId, changes).catch(() => {});
+      }
+
+      activityService.log(task.projectId, userId, 'task.updated', { taskId, title: task.title }).catch(() => {});
 
       // Notify new assignee if assignment changed
-      if (assigneeId && assigneeId !== req.user!.id) {
+      if (assigneeId && assigneeId !== userId) {
         notificationsService.create({
           userId: assigneeId,
           type: 'TASK_ASSIGNED',
           title: `You were assigned to "${task.title}"`,
           projectId: task.projectId,
           taskId,
-          actorId: req.user!.id,
+          actorId: userId,
         }).catch(() => {});
       }
 
@@ -114,9 +133,27 @@ export class TasksController {
   async updateStatus(req: Request, res: Response, next: NextFunction) {
     try {
       const taskId = req.params.taskId as string;
+      const userId = req.user!.id;
       const { statusId, sortOrder } = req.body;
 
+      // Fetch old task to record status change
+      const oldTask = await prisma.task.findUnique({
+        where: { id: taskId },
+        include: { status: { select: { name: true } } },
+      });
+
       const task = await tasksService.updateStatus(taskId, statusId, sortOrder);
+
+      // Record status change in history
+      if (oldTask) {
+        taskHistoryService.recordChange(
+          taskId,
+          userId,
+          'status',
+          oldTask.status.name,
+          task.status.name,
+        ).catch(() => {});
+      }
 
       sendSuccess(res, task);
     } catch (error) {
@@ -213,6 +250,138 @@ export class TasksController {
       });
 
       sendSuccess(res, result);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  // ════════════════════════════════════════════════
+  // TASK HISTORY
+  // ════════════════════════════════════════════════
+
+  async getHistory(req: Request, res: Response, next: NextFunction) {
+    try {
+      const taskId = req.params.taskId as string;
+      const page = req.query.page ? parseInt(req.query.page as string) : 1;
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 50;
+
+      const result = await taskHistoryService.getTaskHistory(taskId, page, limit);
+
+      sendPaginated(res, result.data, result.total, result.page, result.limit);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  // ════════════════════════════════════════════════
+  // TIME TRACKING
+  // ════════════════════════════════════════════════
+
+  async startTimer(req: Request, res: Response, next: NextFunction) {
+    try {
+      const taskId = req.params.taskId as string;
+      const userId = req.user!.id;
+      const { description } = req.body;
+
+      const entry = await timeTrackingService.startTimer(taskId, userId, description);
+
+      sendSuccess(res, entry, 201);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async stopTimer(req: Request, res: Response, next: NextFunction) {
+    try {
+      const taskId = req.params.taskId as string;
+      const userId = req.user!.id;
+
+      const entry = await timeTrackingService.stopTimer(taskId, userId);
+
+      sendSuccess(res, entry);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async addManualTimeEntry(req: Request, res: Response, next: NextFunction) {
+    try {
+      const taskId = req.params.taskId as string;
+      const userId = req.user!.id;
+      const { startedAt, stoppedAt, description } = req.body;
+
+      const entry = await timeTrackingService.addManualEntry(taskId, userId, {
+        startedAt: new Date(startedAt),
+        stoppedAt: new Date(stoppedAt),
+        description,
+      });
+
+      sendSuccess(res, entry, 201);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async listTimeEntries(req: Request, res: Response, next: NextFunction) {
+    try {
+      const taskId = req.params.taskId as string;
+      const page = req.query.page ? parseInt(req.query.page as string) : 1;
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 50;
+
+      const result = await timeTrackingService.listForTask(taskId, page, limit);
+
+      sendPaginated(res, result.data, result.total, result.page, result.limit);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async getTaskTotalTime(req: Request, res: Response, next: NextFunction) {
+    try {
+      const taskId = req.params.taskId as string;
+
+      const result = await timeTrackingService.getTaskTotalTime(taskId);
+
+      sendSuccess(res, result);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async getActiveTimer(req: Request, res: Response, next: NextFunction) {
+    try {
+      const userId = req.user!.id;
+
+      const entry = await timeTrackingService.getActiveTimer(userId);
+
+      sendSuccess(res, entry);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async deleteTimeEntry(req: Request, res: Response, next: NextFunction) {
+    try {
+      const entryId = req.params.entryId as string;
+      const userId = req.user!.id;
+
+      const result = await timeTrackingService.deleteEntry(entryId, userId);
+
+      sendSuccess(res, result);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async updateTimeEntry(req: Request, res: Response, next: NextFunction) {
+    try {
+      const entryId = req.params.entryId as string;
+      const userId = req.user!.id;
+      const { description } = req.body;
+
+      const entry = await timeTrackingService.updateEntry(entryId, userId, { description });
+
+      sendSuccess(res, entry);
     } catch (error) {
       next(error);
     }

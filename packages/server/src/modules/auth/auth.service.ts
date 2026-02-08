@@ -6,6 +6,7 @@ import { env } from '../../config/env.js';
 import { ApiError } from '../../utils/api-error.js';
 import logger from '../../utils/logger.js';
 import { checkLockout, recordFailedAttempt, resetLockout, checkIpRateLimit, recordIpFailedAttempt } from '../../middleware/account-lockout.middleware.js';
+import { emailAuthService } from '../emails/email-auth.service.js';
 
 const SALT_ROUNDS = 12;
 
@@ -134,6 +135,11 @@ export const authService = {
     });
 
     logger.info(`User registered: ${user.email}`);
+
+    // Send email verification (fire-and-forget)
+    emailAuthService.sendVerificationEmail(user.id).catch((err) => {
+      logger.error(`Failed to send verification email after registration: ${err}`);
+    });
 
     const tokens = await generateTokens({
       id: user.id,

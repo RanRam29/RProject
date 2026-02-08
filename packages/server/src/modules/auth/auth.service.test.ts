@@ -146,12 +146,13 @@ describe('authService.register', () => {
       },
     });
 
-    // Verified JWT was signed with correct payload
+    // Verified JWT was signed with correct payload (includes jti from Phase 0.9)
     expect(mockSign).toHaveBeenCalledWith(
       {
         sub: mockUser.id,
         email: mockUser.email,
         systemRole: mockUser.systemRole,
+        jti: expect.any(String),
       },
       'test-secret',
       { expiresIn: '15m' },
@@ -321,12 +322,13 @@ describe('authService.refreshToken', () => {
       where: { id: 'rt-id-1' },
     });
 
-    // Verified new JWT was signed
+    // Verified new JWT was signed (includes jti from Phase 0.9)
     expect(mockSign).toHaveBeenCalledWith(
       {
         sub: mockUser.id,
         email: mockUser.email,
         systemRole: mockUser.systemRole,
+        jti: expect.any(String),
       },
       'test-secret',
       { expiresIn: '15m' },

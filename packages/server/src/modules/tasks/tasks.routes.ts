@@ -10,6 +10,9 @@ import {
   reorderTaskSchema,
   createDependencySchema,
   bulkTaskOperationSchema,
+  startTimerSchema,
+  manualTimeEntrySchema,
+  updateTimeEntrySchema,
 } from '@pm/shared';
 
 const router = Router({ mergeParams: true });
@@ -107,6 +110,81 @@ router.delete(
   authenticate,
   requireProjectRole('OWNER', 'EDITOR'),
   tasksController.removeDependency.bind(tasksController),
+);
+
+// ════════════════════════════════════════════════
+// TASK HISTORY
+// ════════════════════════════════════════════════
+
+// GET /:taskId/history - Get task change history
+router.get(
+  '/:taskId/history',
+  authenticate,
+  requireProjectRole('OWNER', 'EDITOR', 'VIEWER', 'CUSTOM'),
+  tasksController.getHistory.bind(tasksController),
+);
+
+// ════════════════════════════════════════════════
+// TIME TRACKING
+// ════════════════════════════════════════════════
+
+// POST /:taskId/time/start - Start timer
+router.post(
+  '/:taskId/time/start',
+  authenticate,
+  requireProjectRole('OWNER', 'EDITOR'),
+  validate(startTimerSchema),
+  tasksController.startTimer.bind(tasksController),
+);
+
+// POST /:taskId/time/stop - Stop timer
+router.post(
+  '/:taskId/time/stop',
+  authenticate,
+  requireProjectRole('OWNER', 'EDITOR'),
+  tasksController.stopTimer.bind(tasksController),
+);
+
+// POST /:taskId/time/manual - Add manual time entry
+router.post(
+  '/:taskId/time/manual',
+  authenticate,
+  requireProjectRole('OWNER', 'EDITOR'),
+  validate(manualTimeEntrySchema),
+  tasksController.addManualTimeEntry.bind(tasksController),
+);
+
+// GET /:taskId/time - List time entries for task
+router.get(
+  '/:taskId/time',
+  authenticate,
+  requireProjectRole('OWNER', 'EDITOR', 'VIEWER', 'CUSTOM'),
+  tasksController.listTimeEntries.bind(tasksController),
+);
+
+// GET /:taskId/time/total - Get total time for task
+router.get(
+  '/:taskId/time/total',
+  authenticate,
+  requireProjectRole('OWNER', 'EDITOR', 'VIEWER', 'CUSTOM'),
+  tasksController.getTaskTotalTime.bind(tasksController),
+);
+
+// DELETE /time/:entryId - Delete a time entry
+router.delete(
+  '/time/:entryId',
+  authenticate,
+  requireProjectRole('OWNER', 'EDITOR'),
+  tasksController.deleteTimeEntry.bind(tasksController),
+);
+
+// PATCH /time/:entryId - Update a time entry
+router.patch(
+  '/time/:entryId',
+  authenticate,
+  requireProjectRole('OWNER', 'EDITOR'),
+  validate(updateTimeEntrySchema),
+  tasksController.updateTimeEntry.bind(tasksController),
 );
 
 export default router;

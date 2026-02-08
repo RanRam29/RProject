@@ -24,6 +24,7 @@ import labelRoutes from './modules/labels/labels.routes.js';
 import commentRoutes from './modules/comments/comments.routes.js';
 import activityRoutes from './modules/activity/activity.routes.js';
 import notificationRoutes from './modules/notifications/notifications.routes.js';
+import emailRoutes from './modules/emails/email.routes.js';
 
 const createApp = (): express.Application => {
   const app = express();
@@ -75,6 +76,7 @@ const createApp = (): express.Application => {
   // API routes (v1)
   // ------------------------------------
   app.use('/api/v1/auth', authRoutes);
+  app.use('/api/v1/auth', emailRoutes); // Password reset & email verification
   app.use('/api/v1/users', userRoutes);
   app.use('/api/v1/projects', projectRoutes);
   app.use('/api/v1/projects/:projectId/widgets', widgetRoutes);
