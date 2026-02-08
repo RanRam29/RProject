@@ -9,6 +9,20 @@ export const filesApi = {
     return res.data.data!;
   },
 
+  async upload(projectId: string, file: File): Promise<FileDTO> {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const res = await apiClient.post<ApiResponse<FileDTO>>(
+      `/projects/${projectId}/files/upload`,
+      formData,
+      {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      }
+    );
+    return res.data.data!;
+  },
+
   async getUploadUrl(
     projectId: string,
     fileName: string,
@@ -26,7 +40,7 @@ export const filesApi = {
     data: RegisterFileRequest
   ): Promise<FileDTO> {
     const res = await apiClient.post<ApiResponse<FileDTO>>(
-      `/projects/${projectId}/files`,
+      `/projects/${projectId}/files/register`,
       data
     );
     return res.data.data!;
@@ -34,7 +48,7 @@ export const filesApi = {
 
   async getDownloadUrl(projectId: string, fileId: string): Promise<string> {
     const res = await apiClient.get<ApiResponse<{ downloadUrl: string }>>(
-      `/projects/${projectId}/files/${fileId}/download-url`
+      `/projects/${projectId}/files/${fileId}/download`
     );
     return res.data.data!.downloadUrl;
   },

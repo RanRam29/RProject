@@ -27,6 +27,10 @@ export class ApiError extends Error {
   static conflict(message: string = 'Conflict'): ApiError {
     return new ApiError(message, 409);
   }
+
+  static tooManyRequests(message: string = 'Too many requests'): ApiError {
+    return new ApiError(message, 429);
+  }
 }
 
 export default ApiError;

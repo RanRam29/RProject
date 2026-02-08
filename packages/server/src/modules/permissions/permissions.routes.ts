@@ -14,11 +14,11 @@ const router = Router({ mergeParams: true });
 
 // ── Permission routes ───────────────────────────────────────────────────
 
-// GET / - List all permissions for a project
+// GET / - List all permissions for a project (all members can view)
 router.get(
   '/',
   authenticate,
-  requireProjectRole('OWNER'),
+  requireProjectRole('OWNER', 'EDITOR', 'VIEWER'),
   permissionsController.list.bind(permissionsController),
 );
 

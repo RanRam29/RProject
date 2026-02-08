@@ -8,6 +8,9 @@ const router = Router();
 
 router.use(authenticate);
 
+// Must be before /:id to avoid route conflict
+router.get('/me/tasks', usersController.getMyTasks);
+
 router.post('/', requireSystemRole('SYS_ADMIN'), validate(createUserSchema), usersController.create);
 router.get('/', requireSystemRole('SYS_ADMIN'), usersController.list);
 router.get('/:id', usersController.getById);

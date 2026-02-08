@@ -11,6 +11,9 @@ import { LabelSelector } from '../label/LabelSelector';
 import { CommentThread } from '../comment/CommentThread';
 import { SubtaskList } from '../subtask/SubtaskList';
 import { DependencyManager } from '../dependency/DependencyManager';
+import { AssigneeSelector } from './AssigneeSelector';
+import { ActivityFeed } from './ActivityFeed';
+import { TaskAttachments } from '../file/TaskAttachments';
 
 interface TaskDetailModalProps {
   isOpen: boolean;
@@ -42,6 +45,7 @@ export function TaskDetailModal({
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [statusId, setStatusId] = useState('');
+  const [assigneeId, setAssigneeId] = useState<string | null>(null);
   const [priority, setPriority] = useState<TaskPriority>(TaskPriority.NONE);
   const [startDate, setStartDate] = useState('');
   const [dueDate, setDueDate] = useState('');
@@ -56,6 +60,7 @@ export function TaskDetailModal({
         task.description ? JSON.stringify(task.description) : ''
       );
       setStatusId(task.statusId);
+      setAssigneeId(task.assigneeId || null);
       setPriority(task.priority || TaskPriority.NONE);
       setStartDate(task.startDate ? task.startDate.slice(0, 10) : '');
       setDueDate(task.dueDate ? task.dueDate.slice(0, 10) : '');
@@ -63,6 +68,7 @@ export function TaskDetailModal({
       setTitle('');
       setDescription('');
       setStatusId(defaultStatusId || (statuses[0]?.id ?? ''));
+      setAssigneeId(null);
       setPriority(TaskPriority.NONE);
       setStartDate('');
       setDueDate('');
@@ -78,11 +84,12 @@ export function TaskDetailModal({
   }, [statuses, statusId, mode, defaultStatusId]);
 
   const createMutation = useMutation({
-    mutationFn: (data: { title: string; description?: string; statusId: string; priority?: TaskPriority; startDate?: string; dueDate?: string }) =>
+    mutationFn: (data: { title: string; description?: string; statusId: string; assigneeId?: string; priority?: TaskPriority; startDate?: string; dueDate?: string }) =>
       tasksApi.create(projectId, {
         title: data.title,
         description: data.description || undefined,
         statusId: data.statusId,
+        assigneeId: data.assigneeId,
         priority: data.priority,
         startDate: data.startDate || undefined,
         dueDate: data.dueDate || undefined,
@@ -98,7 +105,7 @@ export function TaskDetailModal({
   });
 
   const updateMutation = useMutation({
-    mutationFn: (data: { title?: string; description?: unknown; priority?: TaskPriority; startDate?: string | null; dueDate?: string | null }) =>
+    mutationFn: (data: { title?: string; description?: unknown; assigneeId?: string | null; priority?: TaskPriority; startDate?: string | null; dueDate?: string | null }) =>
       tasksApi.update(projectId, task!.id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks', projectId] });
@@ -144,6 +151,7 @@ export function TaskDetailModal({
           title: title.trim(),
           description: description.trim() || undefined,
           statusId,
+          assigneeId: assigneeId || undefined,
           priority,
           startDate: startDate || undefined,
           dueDate: dueDate || undefined,
@@ -152,13 +160,14 @@ export function TaskDetailModal({
         updateMutation.mutate({
           title: title.trim(),
           description: description.trim() || null,
+          assigneeId,
           priority,
           startDate: startDate || null,
           dueDate: dueDate || null,
         });
       }
     },
-    [mode, title, description, statusId, priority, startDate, dueDate, task, createMutation, updateMutation]
+    [mode, title, description, statusId, assigneeId, priority, startDate, dueDate, task, createMutation, updateMutation]
   );
 
   const handleStatusChange = useCallback(
@@ -310,6 +319,15 @@ export function TaskDetailModal({
         </div>
 
         <div style={fieldGroupStyle}>
+          <label style={labelStyle}>Assignee</label>
+          <AssigneeSelector
+            projectId={projectId}
+            selectedAssigneeId={assigneeId}
+            onChange={setAssigneeId}
+          />
+        </div>
+
+        <div style={fieldGroupStyle}>
           <label style={labelStyle}>Priority</label>
           <select
             style={selectStyle}
@@ -376,8 +394,22 @@ export function TaskDetailModal({
 
         {mode === 'edit' && task && (
           <div style={fieldGroupStyle}>
+            <label style={labelStyle}>Attachments</label>
+            <TaskAttachments projectId={projectId} taskId={task.id} />
+          </div>
+        )}
+
+        {mode === 'edit' && task && (
+          <div style={fieldGroupStyle}>
             <label style={labelStyle}>Comments</label>
             <CommentThread projectId={projectId} taskId={task.id} />
+          </div>
+        )}
+
+        {mode === 'edit' && task && (
+          <div style={fieldGroupStyle}>
+            <label style={labelStyle}>Activity</label>
+            <ActivityFeed projectId={projectId} taskId={task.id} />
           </div>
         )}
 

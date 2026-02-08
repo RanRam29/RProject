@@ -1,6 +1,8 @@
 import prisma from '../../config/db.js';
 import { ProjectRole } from '@prisma/client';
 import { ApiError } from '../../utils/api-error.js';
+import { notificationsService } from '../notifications/notifications.service.js';
+import { evictUserFromProject } from '../../ws/ws.server.js';
 
 export class PermissionsService {
   async list(projectId: string) {
@@ -30,42 +32,30 @@ export class PermissionsService {
     customRoleId?: string,
   ) {
     try {
-      // Verify user exists
-      const user = await prisma.user.findUnique({
-        where: { id: userId },
-      });
+      // Parallelize all independent validation queries
+      const [user, project, existing, customRole] = await Promise.all([
+        prisma.user.findUnique({ where: { id: userId } }),
+        prisma.project.findUnique({ where: { id: projectId } }),
+        prisma.projectPermission.findFirst({ where: { projectId, userId } }),
+        role === 'CUSTOM' && customRoleId
+          ? prisma.customRole.findFirst({ where: { id: customRoleId, projectId } })
+          : Promise.resolve(null),
+      ]);
 
       if (!user) {
         throw ApiError.notFound('User not found');
       }
 
-      // Verify project exists
-      const project = await prisma.project.findUnique({
-        where: { id: projectId },
-      });
-
       if (!project) {
         throw ApiError.notFound('Project not found');
       }
-
-      // Check for duplicate permission
-      const existing = await prisma.projectPermission.findFirst({
-        where: { projectId, userId },
-      });
 
       if (existing) {
         throw ApiError.conflict('User already has a permission in this project');
       }
 
-      // Validate custom role if provided
-      if (role === 'CUSTOM' && customRoleId) {
-        const customRole = await prisma.customRole.findFirst({
-          where: { id: customRoleId, projectId },
-        });
-
-        if (!customRole) {
-          throw ApiError.badRequest('Custom role not found in this project');
-        }
+      if (role === 'CUSTOM' && customRoleId && !customRole) {
+        throw ApiError.badRequest('Custom role not found in this project');
       }
 
       const permission = await prisma.projectPermission.create({
@@ -82,6 +72,14 @@ export class PermissionsService {
           customRole: true,
         },
       });
+
+      // Notify the invited user
+      notificationsService.create({
+        userId,
+        type: 'PROJECT_INVITED',
+        title: `You were invited to "${project.name}" as ${role}`,
+        projectId,
+      }).catch(() => {});
 
       return permission;
     } catch (error) {
@@ -147,6 +145,16 @@ export class PermissionsService {
         },
       });
 
+      // Notify user of role change
+      if (permission.role !== role) {
+        notificationsService.create({
+          userId: permission.userId,
+          type: 'PERMISSION_CHANGED',
+          title: `Your role was changed to ${role}`,
+          projectId: permission.projectId,
+        }).catch(() => {});
+      }
+
       return updated;
     } catch (error) {
       if (error instanceof ApiError) throw error;
@@ -183,6 +191,9 @@ export class PermissionsService {
       await prisma.projectPermission.delete({
         where: { id: permId },
       });
+
+      // Evict user from WebSocket project room immediately
+      evictUserFromProject(permission.userId, permission.projectId);
 
       return { message: 'Permission removed successfully' };
     } catch (error) {

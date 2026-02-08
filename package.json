@@ -10,15 +10,28 @@
     "db:seed": "pnpm --filter @pm/server prisma db seed",
     "db:studio": "pnpm --filter @pm/server prisma studio",
     "lint": "eslint packages/*/src --ext .ts,.tsx",
-    "typecheck": "pnpm --parallel --filter @pm/* typecheck"
+    "typecheck": "pnpm --parallel --filter @pm/* typecheck",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui"
   },
   "devDependencies": {
-    "typescript": "^5.6.0"
+    "@playwright/test": "^1.58.2",
+    "@vitest/coverage-v8": "^4.0.18",
+    "typescript": "^5.6.0",
+    "vitest": "^4.0.18"
   },
   "engines": {
     "node": ">=20.0.0"
   },
   "pnpm": {
-    "onlyBuiltDependencies": ["@prisma/client", "@prisma/engines", "esbuild", "prisma"]
+    "onlyBuiltDependencies": [
+      "@prisma/client",
+      "@prisma/engines",
+      "esbuild",
+      "prisma"
+    ]
   }
 }

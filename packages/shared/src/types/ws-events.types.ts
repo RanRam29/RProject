@@ -4,6 +4,7 @@ import { FileDTO } from './file.types.js';
 import { UserPresenceDTO } from './user.types.js';
 import { LabelDTO } from './label.types.js';
 import { CommentDTO } from './comment.types.js';
+import { NotificationDTO } from './notification.types.js';
 
 export interface CursorPosition {
   userId: string;
@@ -84,6 +85,8 @@ export interface ServerToClientEvents {
   'comment:updated': (data: { projectId: string; taskId: string; commentId: string; changes: Partial<CommentDTO> }) => void;
   'comment:deleted': (data: { projectId: string; taskId: string; commentId: string }) => void;
 
+  'notification:new': (data: { notification: NotificationDTO }) => void;
+
   'presence:userJoined': (data: {
     projectId: string;
     user: UserPresenceDTO;
@@ -96,6 +99,13 @@ export interface ServerToClientEvents {
     projectId: string;
     cursors: CursorPosition[];
   }) => void;
+  'presence:userTyping': (data: {
+    projectId: string;
+    taskId: string;
+    userId: string;
+    displayName: string;
+    isTyping: boolean;
+  }) => void;
 }
 
 export interface ClientToServerEvents {
@@ -105,5 +115,13 @@ export interface ClientToServerEvents {
     projectId: string;
     x: number;
     y: number;
+  }) => void;
+  'presence:typingStart': (data: {
+    projectId: string;
+    taskId: string;
+  }) => void;
+  'presence:typingStop': (data: {
+    projectId: string;
+    taskId: string;
   }) => void;
 }

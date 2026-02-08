@@ -40,7 +40,15 @@ export const WS_EVENTS = {
   COMMENT_UPDATED: 'comment:updated',
   COMMENT_DELETED: 'comment:deleted',
 
+  NOTIFICATION_NEW: 'notification:new',
+
   USER_JOINED: 'presence:userJoined',
   USER_LEFT: 'presence:userLeft',
   CURSORS: 'presence:cursors',
+
+  // Client -> Server (typing)
+  TYPING_START: 'presence:typingStart',
+  TYPING_STOP: 'presence:typingStop',
+  // Server -> Client (typing)
+  USER_TYPING: 'presence:userTyping',
 } as const;

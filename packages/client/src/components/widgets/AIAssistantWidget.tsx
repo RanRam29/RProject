@@ -197,19 +197,59 @@ export function AIAssistantWidget({ projectId }: WidgetProps) {
         return getSuggestions();
       }
 
-      // Create task
+      // Create task with NLP-like parsing for priority and due dates
       const createMatch = lower.match(/create\s+task[:\s]+(.+)/i) || lower.match(/add\s+task[:\s]+(.+)/i) || lower.match(/new\s+task[:\s]+(.+)/i);
       if (createMatch) {
-        const title = createMatch[1].trim();
+        let taskText = createMatch[1].trim();
         const defaultStatus = statuses.find((s) => !s.isFinal) || statuses[0];
         if (!defaultStatus) return 'No statuses configured. Please add statuses first.';
+
+        // Parse priority from text
+        let priority: string | undefined;
+        const priorityPatterns: [RegExp, string][] = [
+          [/,?\s*(urgent|critical)\s*(?:priority)?/i, 'URGENT'],
+          [/,?\s*high\s*(?:priority)?/i, 'HIGH'],
+          [/,?\s*medium\s*(?:priority)?/i, 'MEDIUM'],
+          [/,?\s*low\s*(?:priority)?/i, 'LOW'],
+        ];
+        for (const [pattern, pValue] of priorityPatterns) {
+          if (pattern.test(taskText)) {
+            priority = pValue;
+            taskText = taskText.replace(pattern, '');
+            break;
+          }
+        }
+
+        // Parse due date from text
+        let dueDate: string | undefined;
+        const dueDatePatterns: [RegExp, () => Date][] = [
+          [/,?\s*due\s*(?:by\s+)?tomorrow/i, () => { const d = new Date(); d.setDate(d.getDate() + 1); return d; }],
+          [/,?\s*due\s*(?:by\s+)?today/i, () => new Date()],
+          [/,?\s*due\s*(?:by\s+)?(?:next\s+)?friday/i, () => { const d = new Date(); d.setDate(d.getDate() + ((5 - d.getDay() + 7) % 7 || 7)); return d; }],
+          [/,?\s*due\s*(?:by\s+)?(?:next\s+)?monday/i, () => { const d = new Date(); d.setDate(d.getDate() + ((1 - d.getDay() + 7) % 7 || 7)); return d; }],
+          [/,?\s*due\s*(?:in\s+)?(\d+)\s*days?/i, () => { const m = taskText.match(/due\s*(?:in\s+)?(\d+)\s*days?/i); const d = new Date(); d.setDate(d.getDate() + (m ? parseInt(m[1]) : 7)); return d; }],
+        ];
+        for (const [pattern, getDate] of dueDatePatterns) {
+          if (pattern.test(taskText)) {
+            const d = getDate();
+            dueDate = d.toISOString().slice(0, 10);
+            taskText = taskText.replace(pattern, '');
+            break;
+          }
+        }
+
+        const title = taskText.replace(/\s+/g, ' ').trim();
 
         try {
           await createTaskMutation.mutateAsync({
             title: title.charAt(0).toUpperCase() + title.slice(1),
             statusId: defaultStatus.id,
+            dueDate,
           });
-          return `Task created: **"${title}"** in "${defaultStatus.name}" status.`;
+          let response = `Task created: **"${title}"** in "${defaultStatus.name}"`;
+          if (priority) response += ` | Priority: **${priority}**`;
+          if (dueDate) response += ` | Due: **${dueDate}**`;
+          return response;
         } catch {
           return 'Failed to create task. Please try again.';
         }
@@ -249,8 +289,12 @@ export function AIAssistantWidget({ projectId }: WidgetProps) {
           '- **"what\'s overdue?"** - Show overdue tasks\n' +
           '- **"suggest"** - Get recommendations\n' +
           '- **"create task: [title]"** - Create a new task\n' +
+          '- **"create task: Fix login bug, high priority, due Friday"** - With priority & date\n' +
           '- **"stats"** - Show project statistics\n' +
-          '- **"workload"** - Analyze workload distribution';
+          '- **"workload"** - Analyze workload distribution\n\n' +
+          '**Task creation supports:**\n' +
+          '- Priority: urgent, high, medium, low\n' +
+          '- Due date: today, tomorrow, Friday, Monday, "in 3 days"';
       }
 
       return 'I didn\'t quite understand that. Try:\n' +

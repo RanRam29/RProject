@@ -38,6 +38,7 @@ model User {
   refreshTokens      RefreshToken[]
   createdTemplates   Template[]
   comments           Comment[]
+  notifications      Notification[]
 
   @@map("users")
 }
@@ -101,6 +102,7 @@ enum WidgetType {
   AI_ASSISTANT
   DEPENDENCY_GRAPH
   ACTIVITY_FEED
+  ANALYTICS
 }
 
 model ProjectWidget {
@@ -226,6 +228,9 @@ model Task {
   @@index([assigneeId])
   @@index([parentTaskId])
   @@index([priority])
+  @@index([creatorId])
+  @@index([projectId, statusId])
+  @@index([dueDate])
   @@map("tasks")
 }
 
@@ -288,6 +293,7 @@ model Comment {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   @@index([taskId, createdAt])
+  @@index([authorId])
   @@map("comments")
 }
 
@@ -329,7 +335,41 @@ model Template {
   projects Project[]
 
   @@index([isPublic])
+  @@index([createdById])
   @@map("templates")
+}
+
+// ──────────────────────────────────────────────
+// NOTIFICATIONS
+// ──────────────────────────────────────────────
+
+enum NotificationType {
+  TASK_ASSIGNED
+  TASK_UPDATED
+  TASK_COMMENTED
+  PROJECT_INVITED
+  PERMISSION_CHANGED
+  MENTION
+}
+
+model Notification {
+  id        String           @id @default(uuid()) @db.Uuid
+  userId    String           @map("user_id") @db.Uuid
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      NotificationType
+  title     String
+  body      String?
+  projectId String?          @map("project_id") @db.Uuid
+  taskId    String?          @map("task_id") @db.Uuid
+  actorId   String?          @map("actor_id") @db.Uuid
+  metadata  Json             @default("{}")
+  isRead    Boolean          @default(false) @map("is_read")
+  readAt    DateTime?        @map("read_at")
+  createdAt DateTime         @default(now()) @map("created_at")
+
+  @@index([userId, isRead])
+  @@index([userId, createdAt])
+  @@map("notifications")
 }
 
 // ──────────────────────────────────────────────
@@ -349,4 +389,24 @@ model ActivityLog {
   @@index([projectId, createdAt])
   @@index([userId])
   @@map("activity_logs")
+}
+
+// ──────────────────────────────────────────────
+// AUDIT LOG (Security Events)
+// ──────────────────────────────────────────────
+
+model AuditLog {
+  id        String   @id @default(uuid()) @db.Uuid
+  action    String
+  actorId   String?  @map("actor_id") @db.Uuid
+  targetId  String?  @map("target_id")
+  metadata  Json     @default("{}")
+  ip        String   @default("unknown")
+  userAgent String   @default("unknown") @map("user_agent")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([action])
+  @@index([actorId])
+  @@index([createdAt])
+  @@map("audit_logs")
 }

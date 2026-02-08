@@ -2,7 +2,11 @@ import { useState, useCallback, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { filesApi } from '../../api/files.api';
 import { useUIStore } from '../../stores/ui.store';
+import { FilePreviewModal } from '../file/FilePreviewModal';
 import type { WidgetProps } from './widget.types';
+import type { FileDTO } from '@pm/shared';
+
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
 
 const FILE_ICONS: Record<string, string> = {
   'application/pdf': '\uD83D\uDCC4',
@@ -10,6 +14,7 @@ const FILE_ICONS: Record<string, string> = {
   'image/jpeg': '\uD83D\uDDBC',
   'image/gif': '\uD83D\uDDBC',
   'image/svg+xml': '\uD83D\uDDBC',
+  'image/webp': '\uD83D\uDDBC',
   'text/plain': '\uD83D\uDCC3',
   'text/csv': '\uD83D\uDCCA',
   'application/zip': '\uD83D\uDCE6',
@@ -21,6 +26,8 @@ const FILE_ICONS: Record<string, string> = {
   default: '\uD83D\uDCC1',
 };
 
+type FilterType = 'all' | 'images' | 'documents' | 'other';
+
 function getFileIcon(mimeType: string): string {
   return FILE_ICONS[mimeType] || FILE_ICONS.default;
 }
@@ -31,6 +38,32 @@ function formatFileSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+function matchesFilter(file: FileDTO, filter: FilterType): boolean {
+  if (filter === 'all') return true;
+  if (filter === 'images') return file.mimeType.startsWith('image/');
+  if (filter === 'documents') {
+    return file.mimeType === 'application/pdf' ||
+      file.mimeType.startsWith('text/') ||
+      file.mimeType.includes('document') ||
+      file.mimeType.includes('spreadsheet') ||
+      file.mimeType === 'application/json';
+  }
+  // 'other'
+  return !file.mimeType.startsWith('image/') &&
+    file.mimeType !== 'application/pdf' &&
+    !file.mimeType.startsWith('text/') &&
+    !file.mimeType.includes('document') &&
+    !file.mimeType.includes('spreadsheet') &&
+    file.mimeType !== 'application/json';
+}
+
+function canPreview(mimeType: string): boolean {
+  return mimeType.startsWith('image/') ||
+    mimeType === 'application/pdf' ||
+    mimeType.startsWith('text/') ||
+    mimeType === 'application/json';
+}
+
 export function FilesWidget({ projectId }: WidgetProps) {
   const queryClient = useQueryClient();
   const addToast = useUIStore((s) => s.addToast);
@@ -38,11 +71,15 @@ export function FilesWidget({ projectId }: WidgetProps) {
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [filter, setFilter] = useState<FilterType>('all');
+  const [previewFile, setPreviewFile] = useState<{ file: FileDTO; url: string } | null>(null);
 
   const { data: files = [], isLoading } = useQuery({
     queryKey: ['files', projectId],
     queryFn: () => filesApi.list(projectId),
   });
+
+  const filteredFiles = files.filter((f) => matchesFilter(f, filter));
 
   const deleteMutation = useMutation({
     mutationFn: (fileId: string) => filesApi.delete(projectId, fileId),
@@ -55,6 +92,18 @@ export function FilesWidget({ projectId }: WidgetProps) {
       addToast({ type: 'error', message: 'Failed to delete file' });
     },
   });
+
+  const handlePreview = useCallback(
+    async (file: FileDTO) => {
+      try {
+        const url = await filesApi.getDownloadUrl(projectId, file.id);
+        setPreviewFile({ file, url });
+      } catch {
+        addToast({ type: 'error', message: 'Failed to load preview' });
+      }
+    },
+    [projectId, addToast]
+  );
 
   const handleDownload = useCallback(
     async (fileId: string, fileName: string) => {
@@ -74,32 +123,23 @@ export function FilesWidget({ projectId }: WidgetProps) {
   const handleUpload = useCallback(
     async (fileList: FileList | null) => {
       if (!fileList || fileList.length === 0) return;
+
+      // Check file size limits
+      for (let i = 0; i < fileList.length; i++) {
+        if (fileList[i].size > MAX_FILE_SIZE) {
+          addToast({
+            type: 'error',
+            message: `"${fileList[i].name}" exceeds 10 MB limit`,
+          });
+          return;
+        }
+      }
+
       setUploading(true);
 
       try {
         for (let i = 0; i < fileList.length; i++) {
-          const file = fileList[i];
-          // Get pre-signed upload URL
-          const { uploadUrl, fileKey } = await filesApi.getUploadUrl(
-            projectId,
-            file.name,
-            file.type || 'application/octet-stream'
-          );
-
-          // Upload to S3/storage
-          await fetch(uploadUrl, {
-            method: 'PUT',
-            body: file,
-            headers: { 'Content-Type': file.type || 'application/octet-stream' },
-          });
-
-          // Register file in DB
-          await filesApi.registerFile(projectId, {
-            originalName: file.name,
-            storagePath: fileKey,
-            mimeType: file.type || 'application/octet-stream',
-            sizeBytes: file.size,
-          });
+          await filesApi.upload(projectId, fileList[i]);
         }
 
         queryClient.invalidateQueries({ queryKey: ['files', projectId] });
@@ -171,6 +211,18 @@ export function FilesWidget({ projectId }: WidgetProps) {
     transition: 'all var(--transition-fast)',
   };
 
+  const filterBtnStyle = (active: boolean): React.CSSProperties => ({
+    background: active ? 'var(--color-accent)' : 'transparent',
+    color: active ? 'white' : 'var(--color-text-secondary)',
+    border: 'none',
+    cursor: 'pointer',
+    fontSize: '11px',
+    padding: '3px 8px',
+    borderRadius: 'var(--radius-full)',
+    transition: 'all var(--transition-fast)',
+    fontWeight: active ? 600 : 400,
+  });
+
   if (isLoading) {
     return (
       <div style={{ ...containerStyle, alignItems: 'center', justifyContent: 'center' }}>
@@ -184,7 +236,8 @@ export function FilesWidget({ projectId }: WidgetProps) {
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
         <span style={{ fontSize: '13px', color: 'var(--color-text-secondary)' }}>
-          {files.length} file{files.length !== 1 ? 's' : ''}
+          {filteredFiles.length} file{filteredFiles.length !== 1 ? 's' : ''}
+          {filter !== 'all' && ` (${filter})`}
         </span>
         <button
           style={{
@@ -211,6 +264,15 @@ export function FilesWidget({ projectId }: WidgetProps) {
         />
       </div>
 
+      {/* Filter bar */}
+      <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+        {(['all', 'images', 'documents', 'other'] as FilterType[]).map((f) => (
+          <button key={f} style={filterBtnStyle(filter === f)} onClick={() => setFilter(f)}>
+            {f.charAt(0).toUpperCase() + f.slice(1)}
+          </button>
+        ))}
+      </div>
+
       {/* Drop zone */}
       <div
         style={dropZoneStyle}
@@ -222,17 +284,22 @@ export function FilesWidget({ projectId }: WidgetProps) {
         onDragLeave={() => setDragOver(false)}
         onDrop={handleDrop}
       >
-        {uploading ? 'Uploading files...' : 'Drop files here or click to browse'}
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ verticalAlign: 'middle', marginRight: '6px' }}>
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+          <polyline points="17 8 12 3 7 8" />
+          <line x1="12" y1="3" x2="12" y2="15" />
+        </svg>
+        {uploading ? 'Uploading files...' : 'Drop files here or click to browse (max 10 MB)'}
       </div>
 
       {/* File list */}
       <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-        {files.length === 0 ? (
+        {filteredFiles.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '24px', color: 'var(--color-text-tertiary)' }}>
-            No files uploaded yet
+            {filter === 'all' ? 'No files uploaded yet' : `No ${filter} files`}
           </div>
         ) : (
-          files.map((file) => (
+          filteredFiles.map((file) => (
             <div
               key={file.id}
               style={fileRowStyle}
@@ -252,7 +319,11 @@ export function FilesWidget({ projectId }: WidgetProps) {
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
                     whiteSpace: 'nowrap' as const,
+                    cursor: canPreview(file.mimeType) ? 'pointer' : 'default',
+                    color: canPreview(file.mimeType) ? 'var(--color-accent)' : 'var(--color-text-primary)',
                   }}
+                  onClick={() => canPreview(file.mimeType) && handlePreview(file)}
+                  title={canPreview(file.mimeType) ? 'Click to preview' : file.originalName}
                 >
                   {file.originalName}
                 </div>
@@ -308,6 +379,18 @@ export function FilesWidget({ projectId }: WidgetProps) {
           ))
         )}
       </div>
+
+      {/* Preview modal */}
+      {previewFile && (
+        <FilePreviewModal
+          isOpen={true}
+          onClose={() => setPreviewFile(null)}
+          fileName={previewFile.file.originalName}
+          mimeType={previewFile.file.mimeType}
+          downloadUrl={previewFile.url}
+          fileSize={previewFile.file.sizeBytes}
+        />
+      )}
     </div>
   );
 }

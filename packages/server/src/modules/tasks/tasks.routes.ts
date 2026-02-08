@@ -9,9 +9,19 @@ import {
   updateTaskStatusSchema,
   reorderTaskSchema,
   createDependencySchema,
+  bulkTaskOperationSchema,
 } from '@pm/shared';
 
 const router = Router({ mergeParams: true });
+
+// POST /bulk - Bulk operations on tasks
+router.post(
+  '/bulk',
+  authenticate,
+  requireProjectRole('OWNER', 'EDITOR'),
+  validate(bulkTaskOperationSchema),
+  tasksController.bulkOperation.bind(tasksController),
+);
 
 // GET / - List all tasks for a project
 router.get(

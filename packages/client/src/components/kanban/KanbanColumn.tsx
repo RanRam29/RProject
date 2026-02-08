@@ -9,6 +9,9 @@ interface KanbanColumnProps {
   projectId: string;
   onTaskClick: (task: TaskDTO) => void;
   onAddTask: () => void;
+  selectedTaskIds?: Set<string>;
+  onTaskSelectionChange?: (taskId: string, isSelected: boolean) => void;
+  selectionMode?: boolean;
 }
 
 export function KanbanColumn({
@@ -18,6 +21,9 @@ export function KanbanColumn({
   projectId,
   onTaskClick,
   onAddTask,
+  selectedTaskIds,
+  onTaskSelectionChange,
+  selectionMode = false,
 }: KanbanColumnProps) {
   const { setNodeRef, isOver } = useDroppable({
     id: status.id,
@@ -130,6 +136,9 @@ export function KanbanColumn({
             task={task}
             projectId={projectId}
             onClick={() => onTaskClick(task)}
+            isSelected={selectedTaskIds?.has(task.id)}
+            onSelectionChange={onTaskSelectionChange}
+            selectionMode={selectionMode}
           />
         ))}
       </div>

@@ -2,10 +2,12 @@ import express from 'express';
 import helmet from 'helmet';
 import cors from 'cors';
 import morgan from 'morgan';
+import cookieParser from 'cookie-parser';
 
 import { corsOptions } from './config/cors.js';
 import { errorHandler } from './middleware/error-handler.middleware.js';
 import { defaultLimiter } from './middleware/rate-limit.middleware.js';
+import { csrfProtection } from './middleware/csrf.middleware.js';
 
 // Route imports
 import authRoutes from './modules/auth/auth.routes.js';
@@ -21,6 +23,7 @@ import adminRoutes from './modules/admin/admin.routes.js';
 import labelRoutes from './modules/labels/labels.routes.js';
 import commentRoutes from './modules/comments/comments.routes.js';
 import activityRoutes from './modules/activity/activity.routes.js';
+import notificationRoutes from './modules/notifications/notifications.routes.js';
 
 const createApp = (): express.Application => {
   const app = express();
@@ -28,11 +31,37 @@ const createApp = (): express.Application => {
   // ------------------------------------
   // Security & parsing middleware
   // ------------------------------------
-  app.use(helmet());
+  app.use(helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        imgSrc: ["'self'", 'data:', 'https:'],
+        connectSrc: ["'self'"],
+        fontSrc: ["'self'"],
+        objectSrc: ["'none'"],
+        frameAncestors: ["'none'"],
+      },
+    },
+    hsts: { maxAge: 31536000, includeSubDomains: true, preload: true },
+    referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+  }));
+  app.use((_req, res, next) => {
+    res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+    res.setHeader('X-Permitted-Cross-Domain-Policies', 'none');
+    next();
+  });
   app.use(cors(corsOptions));
-  app.use(express.json({ limit: '10mb' }));
+  app.use(csrfProtection);
+  app.use(cookieParser());
+  app.use(express.json({ limit: '1mb' }));
   app.use(express.urlencoded({ extended: true }));
-  app.use(morgan('dev'));
+  if (process.env.NODE_ENV !== 'production') {
+    app.use(morgan('dev'));
+  } else {
+    app.use(morgan('[:date[iso]] :method :url :status :response-time ms'));
+  }
   app.use(defaultLimiter);
 
   // ------------------------------------
@@ -56,6 +85,7 @@ const createApp = (): express.Application => {
   app.use('/api/v1/projects/:projectId/labels', labelRoutes);
   app.use('/api/v1/projects/:projectId/tasks/:taskId/comments', commentRoutes);
   app.use('/api/v1/projects/:projectId/activity', activityRoutes);
+  app.use('/api/v1/notifications', notificationRoutes);
   app.use('/api/v1/templates', templateRoutes);
   app.use('/api/v1/admin', adminRoutes);
 

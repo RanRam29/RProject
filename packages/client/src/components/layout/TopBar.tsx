@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { useTheme } from '../../hooks/useTheme';
+import { NotificationBell } from '../notifications/NotificationBell';
 
 /* ------------------------------------------------------------------ */
 /*  Inline SVG icon components                                         */
@@ -263,6 +264,9 @@ export const TopBar: React.FC<TopBarProps> = ({ onMenuClick, children }) => {
         >
           {theme === 'dark' ? <SunIcon /> : <MoonIcon />}
         </button>
+
+        {/* Notification bell */}
+        <NotificationBell />
 
         {/* User avatar dropdown */}
         <div ref={dropdownRef} style={{ position: 'relative' }}>

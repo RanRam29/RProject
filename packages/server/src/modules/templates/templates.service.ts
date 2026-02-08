@@ -27,7 +27,7 @@ export class TemplatesService {
     }
   }
 
-  async getById(templateId: string) {
+  async getById(templateId: string, userId?: string) {
     try {
       const template = await prisma.template.findUnique({
         where: { id: templateId },
@@ -40,6 +40,11 @@ export class TemplatesService {
 
       if (!template) {
         throw ApiError.notFound('Template not found');
+      }
+
+      // Verify access: template must be public or owned by the requesting user
+      if (userId && !template.isPublic && template.createdById !== userId) {
+        throw ApiError.forbidden('No access to this template');
       }
 
       return template;

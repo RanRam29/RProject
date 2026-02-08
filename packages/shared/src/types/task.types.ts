@@ -17,6 +17,11 @@ export interface TaskDTO {
   sortOrder: number;
   createdAt: string;
   updatedAt: string;
+  assignee?: {
+    id: string;
+    displayName: string;
+    email: string;
+  } | null;
   subtasks?: TaskDTO[];
   blockedBy?: TaskDependencyDTO[];
   blocking?: TaskDependencyDTO[];

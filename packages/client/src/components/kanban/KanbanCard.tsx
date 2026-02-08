@@ -9,12 +9,18 @@ interface KanbanCardProps {
   projectId: string;
   isDragging?: boolean;
   onClick?: () => void;
+  isSelected?: boolean;
+  onSelectionChange?: (taskId: string, isSelected: boolean) => void;
+  selectionMode?: boolean;
 }
 
 export const KanbanCard = memo(function KanbanCard({
   task,
   isDragging = false,
   onClick,
+  isSelected = false,
+  onSelectionChange,
+  selectionMode = false,
 }: KanbanCardProps) {
   const {
     attributes,
@@ -36,14 +42,15 @@ export const KanbanCard = memo(function KanbanCard({
   const style: React.CSSProperties = {
     transform: computedTransform,
     transition: computedTransition,
-    backgroundColor: 'var(--color-bg-elevated)',
+    backgroundColor: isSelected ? 'var(--color-accent-light)' : 'var(--color-bg-elevated)',
     borderRadius: 'var(--radius-md)',
     padding: '12px',
-    cursor: 'grab',
-    border: '1px solid var(--color-border)',
+    cursor: selectionMode ? 'pointer' : 'grab',
+    border: isSelected ? '1px solid var(--color-accent)' : '1px solid var(--color-border)',
     boxShadow: isBeingDragged ? 'var(--shadow-drag)' : 'var(--shadow-sm)',
     opacity: isSortableDragging ? 0.4 : 1,
     userSelect: 'none' as const,
+    position: 'relative',
   };
 
   const titleStyle: React.CSSProperties = {
@@ -83,27 +90,50 @@ export const KanbanCard = memo(function KanbanCard({
 
   const isOverdue = task.dueDate && new Date(task.dueDate) < new Date();
 
+  const getAssigneeInitials = (): string => {
+    if (task.assignee?.displayName) {
+      const parts = task.assignee.displayName.trim().split(/\s+/);
+      if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+      return parts[0][0].toUpperCase();
+    }
+    return 'U';
+  };
+
+  const handleCheckboxClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    onSelectionChange?.(task.id, !isSelected);
+  };
+
   return (
     <div
       ref={setNodeRef}
       style={style}
-      onClick={onClick}
-      {...attributes}
-      {...listeners}
+      onClick={selectionMode ? handleCheckboxClick : onClick}
+      {...(selectionMode ? {} : { ...attributes, ...listeners })}
       onMouseEnter={(e) => {
         if (!isBeingDragged) {
           e.currentTarget.style.boxShadow = 'var(--shadow-md)';
-          e.currentTarget.style.borderColor = 'var(--color-border-hover)';
+          if (!isSelected) e.currentTarget.style.borderColor = 'var(--color-border-hover)';
         }
       }}
       onMouseLeave={(e) => {
         if (!isBeingDragged) {
           e.currentTarget.style.boxShadow = 'var(--shadow-sm)';
-          e.currentTarget.style.borderColor = 'var(--color-border)';
+          if (!isSelected) e.currentTarget.style.borderColor = 'var(--color-border)';
         }
       }}
     >
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: '6px', ...titleStyle }}>
+        {selectionMode && (
+          <input
+            type="checkbox"
+            checked={isSelected}
+            onChange={() => onSelectionChange?.(task.id, !isSelected)}
+            onClick={(e) => e.stopPropagation()}
+            style={{ marginTop: '3px', cursor: 'pointer', flexShrink: 0 }}
+          />
+        )}
         {task.priority && task.priority !== TaskPriority.NONE && (
           <span
             style={{
@@ -208,8 +238,9 @@ export const KanbanCard = memo(function KanbanCard({
               color: 'var(--color-accent)',
               marginLeft: 'auto',
             }}
+            title={task.assignee?.displayName || 'Assigned'}
           >
-            U
+            {getAssigneeInitials()}
           </div>
         )}
       </div>

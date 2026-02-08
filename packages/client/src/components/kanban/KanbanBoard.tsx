@@ -22,6 +22,9 @@ interface KanbanBoardProps {
   onTaskStatusChange: (taskId: string, newStatusId: string, sortOrder: number) => void;
   onTaskClick: (task: TaskDTO) => void;
   onAddTask: (statusId: string) => void;
+  selectedTaskIds?: Set<string>;
+  onTaskSelectionChange?: (taskId: string, isSelected: boolean) => void;
+  selectionMode?: boolean;
 }
 
 export function KanbanBoard({
@@ -31,6 +34,9 @@ export function KanbanBoard({
   onTaskStatusChange,
   onTaskClick,
   onAddTask,
+  selectedTaskIds,
+  onTaskSelectionChange,
+  selectionMode = false,
 }: KanbanBoardProps) {
   const [activeTask, setActiveTask] = useState<TaskDTO | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
@@ -155,6 +161,9 @@ export function KanbanBoard({
               onTaskClick={onTaskClick}
               onAddTask={() => onAddTask(status.id)}
               projectId={projectId}
+              selectedTaskIds={selectedTaskIds}
+              onTaskSelectionChange={onTaskSelectionChange}
+              selectionMode={selectionMode}
             />
           </SortableContext>
         ))}

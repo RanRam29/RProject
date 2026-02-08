@@ -3,6 +3,10 @@ import { ApiError } from '../../utils/api-error.js';
 import { getIO } from '../../ws/ws.server.js';
 import { WS_EVENTS } from '../../ws/ws.events.js';
 import { activityService } from '../activity/activity.service.js';
+import { notificationsService } from '../notifications/notifications.service.js';
+import { sanitizeText } from '../../utils/sanitize.js';
+
+const MAX_COMMENT_LENGTH = 10_000;
 
 const authorSelect = {
   id: true,
@@ -35,6 +39,11 @@ export class CommentsService {
 
   async create(taskId: string, authorId: string, data: { content: string }) {
     try {
+      const sanitizedContent = sanitizeText(data.content, MAX_COMMENT_LENGTH);
+      if (!sanitizedContent) {
+        throw ApiError.badRequest('Comment content cannot be empty');
+      }
+
       const task = await prisma.task.findUnique({ where: { id: taskId } });
 
       if (!task) {
@@ -45,13 +54,39 @@ export class CommentsService {
         data: {
           taskId,
           authorId,
-          content: data.content,
+          content: sanitizedContent,
         },
         include: { author: { select: authorSelect } },
       });
 
       getIO().to(task.projectId).emit(WS_EVENTS.COMMENT_CREATED, { projectId: task.projectId, taskId, comment });
       activityService.log(task.projectId, authorId, 'comment.created', { taskId, taskTitle: task.title }).catch(() => {});
+
+      // Notify task assignee about the new comment (if not the author)
+      if (task.assigneeId && task.assigneeId !== authorId) {
+        notificationsService.create({
+          userId: task.assigneeId,
+          type: 'TASK_COMMENTED',
+          title: `New comment on "${task.title}"`,
+          body: data.content.length > 100 ? data.content.slice(0, 100) + '...' : data.content,
+          projectId: task.projectId,
+          taskId,
+          actorId: authorId,
+        }).catch(() => {});
+      }
+
+      // Also notify task creator if different from assignee and author
+      if (task.creatorId !== authorId && task.creatorId !== task.assigneeId) {
+        notificationsService.create({
+          userId: task.creatorId,
+          type: 'TASK_COMMENTED',
+          title: `New comment on "${task.title}"`,
+          body: data.content.length > 100 ? data.content.slice(0, 100) + '...' : data.content,
+          projectId: task.projectId,
+          taskId,
+          actorId: authorId,
+        }).catch(() => {});
+      }
 
       return comment;
     } catch (error) {
@@ -62,6 +97,11 @@ export class CommentsService {
 
   async update(commentId: string, userId: string, data: { content: string }) {
     try {
+      const sanitizedContent = sanitizeText(data.content, MAX_COMMENT_LENGTH);
+      if (!sanitizedContent) {
+        throw ApiError.badRequest('Comment content cannot be empty');
+      }
+
       const comment = await prisma.comment.findUnique({
         where: { id: commentId },
         include: { task: { select: { projectId: true } } },
@@ -78,7 +118,7 @@ export class CommentsService {
 
       const updated = await prisma.comment.update({
         where: { id: commentId },
-        data: { content: data.content },
+        data: { content: sanitizedContent },
         include: { author: { select: authorSelect } },
       });
 

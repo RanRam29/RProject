@@ -4,6 +4,7 @@ import { ApiError } from '../../utils/api-error.js';
 import { getIO } from '../../ws/ws.server.js';
 import { WS_EVENTS } from '../../ws/ws.events.js';
 import { activityService } from '../activity/activity.service.js';
+import { notificationsService } from '../notifications/notifications.service.js';
 
 interface TaskFilters {
   statusId?: string;
@@ -184,33 +185,34 @@ export class TasksService {
     },
   ) {
     try {
-      // Validate status belongs to project
-      const status = await prisma.taskStatus.findFirst({
-        where: { id: data.statusId, projectId },
-      });
+      // Parallelize independent validation queries
+      const [status, assigneePermission, lastTask] = await Promise.all([
+        prisma.taskStatus.findFirst({
+          where: { id: data.statusId, projectId },
+        }),
+        data.assigneeId
+          ? prisma.projectPermission.findFirst({
+              where: { projectId, userId: data.assigneeId },
+            })
+          : Promise.resolve(null),
+        data.sortOrder === undefined
+          ? prisma.task.findFirst({
+              where: { projectId, statusId: data.statusId },
+              orderBy: { sortOrder: 'desc' },
+            })
+          : Promise.resolve(null),
+      ]);
 
       if (!status) {
         throw ApiError.badRequest('Invalid status for this project');
       }
 
-      // Validate assignee has permission if provided
-      if (data.assigneeId) {
-        const permission = await prisma.projectPermission.findFirst({
-          where: { projectId, userId: data.assigneeId },
-        });
-
-        if (!permission) {
-          throw ApiError.badRequest('Assignee is not a member of this project');
-        }
+      if (data.assigneeId && !assigneePermission) {
+        throw ApiError.badRequest('Assignee is not a member of this project');
       }
 
-      // Determine sort order
       let sortOrder = data.sortOrder;
       if (sortOrder === undefined) {
-        const lastTask = await prisma.task.findFirst({
-          where: { projectId, statusId: data.statusId },
-          orderBy: { sortOrder: 'desc' },
-        });
         sortOrder = lastTask ? lastTask.sortOrder + 1 : 0;
       }
 
@@ -240,6 +242,19 @@ export class TasksService {
 
       getIO().to(projectId).emit(WS_EVENTS.TASK_CREATED, { projectId, task });
       activityService.log(projectId, userId, 'task.created', { taskId: task.id, title: task.title }).catch(() => {});
+
+      // Notify assignee if task is assigned to someone other than the creator
+      if (data.assigneeId && data.assigneeId !== userId) {
+        const creator = await prisma.user.findUnique({ where: { id: userId }, select: { displayName: true } });
+        notificationsService.create({
+          userId: data.assigneeId,
+          type: 'TASK_ASSIGNED',
+          title: `${creator?.displayName ?? 'Someone'} assigned you to "${task.title}"`,
+          projectId,
+          taskId: task.id,
+          actorId: userId,
+        }).catch(() => {});
+      }
 
       return task;
     } catch (error) {
@@ -316,22 +331,25 @@ export class TasksService {
         throw ApiError.notFound('Task not found');
       }
 
-      // Validate status belongs to same project
-      const status = await prisma.taskStatus.findFirst({
-        where: { id: statusId, projectId: task.projectId },
-      });
+      // Parallelize status validation and sort order lookup
+      const [status, lastTask] = await Promise.all([
+        prisma.taskStatus.findFirst({
+          where: { id: statusId, projectId: task.projectId },
+        }),
+        sortOrder === undefined
+          ? prisma.task.findFirst({
+              where: { projectId: task.projectId, statusId },
+              orderBy: { sortOrder: 'desc' },
+            })
+          : Promise.resolve(null),
+      ]);
 
       if (!status) {
         throw ApiError.badRequest('Invalid status for this project');
       }
 
-      // Determine sort order in new status column
       let newSortOrder = sortOrder;
       if (newSortOrder === undefined) {
-        const lastTask = await prisma.task.findFirst({
-          where: { projectId: task.projectId, statusId },
-          orderBy: { sortOrder: 'desc' },
-        });
         newSortOrder = lastTask ? lastTask.sortOrder + 1 : 0;
       }
 
@@ -431,31 +449,30 @@ export class TasksService {
         throw ApiError.notFound('Parent task not found');
       }
 
-      // Validate status belongs to same project
-      const status = await prisma.taskStatus.findFirst({
-        where: { id: data.statusId, projectId: parentTask.projectId },
-      });
+      // Parallelize independent validation queries
+      const [status, assigneePermission, lastSubtask] = await Promise.all([
+        prisma.taskStatus.findFirst({
+          where: { id: data.statusId, projectId: parentTask.projectId },
+        }),
+        data.assigneeId
+          ? prisma.projectPermission.findFirst({
+              where: { projectId: parentTask.projectId, userId: data.assigneeId },
+            })
+          : Promise.resolve(null),
+        prisma.task.findFirst({
+          where: { parentTaskId },
+          orderBy: { sortOrder: 'desc' },
+        }),
+      ]);
 
       if (!status) {
         throw ApiError.badRequest('Invalid status for this project');
       }
 
-      // Validate assignee if provided
-      if (data.assigneeId) {
-        const permission = await prisma.projectPermission.findFirst({
-          where: { projectId: parentTask.projectId, userId: data.assigneeId },
-        });
-
-        if (!permission) {
-          throw ApiError.badRequest('Assignee is not a member of this project');
-        }
+      if (data.assigneeId && !assigneePermission) {
+        throw ApiError.badRequest('Assignee is not a member of this project');
       }
 
-      // Determine sort order
-      const lastSubtask = await prisma.task.findFirst({
-        where: { parentTaskId },
-        orderBy: { sortOrder: 'desc' },
-      });
       const sortOrder = lastSubtask ? lastSubtask.sortOrder + 1 : 0;
 
       const subtask = await prisma.task.create({
@@ -589,6 +606,93 @@ export class TasksService {
     } catch (error) {
       if (error instanceof ApiError) throw error;
       throw ApiError.badRequest('Failed to remove dependency');
+    }
+  }
+  async bulkOperation(
+    projectId: string,
+    userId: string,
+    data: {
+      taskIds: string[];
+      operation: 'move' | 'assign' | 'delete' | 'setPriority';
+      statusId?: string;
+      assigneeId?: string | null;
+      priority?: string;
+    },
+  ) {
+    try {
+      // Verify all tasks belong to the project
+      const tasks = await prisma.task.findMany({
+        where: { id: { in: data.taskIds }, projectId },
+        select: { id: true, title: true },
+      });
+
+      if (tasks.length !== data.taskIds.length) {
+        throw ApiError.badRequest('Some tasks were not found in this project');
+      }
+
+      let result: { count: number };
+
+      switch (data.operation) {
+        case 'move': {
+          if (!data.statusId) throw ApiError.badRequest('statusId is required for move operation');
+          const status = await prisma.taskStatus.findFirst({ where: { id: data.statusId, projectId } });
+          if (!status) throw ApiError.badRequest('Invalid status for this project');
+          result = await prisma.task.updateMany({
+            where: { id: { in: data.taskIds }, projectId },
+            data: { statusId: data.statusId },
+          });
+          break;
+        }
+        case 'assign': {
+          if (data.assigneeId !== undefined && data.assigneeId !== null) {
+            const perm = await prisma.projectPermission.findFirst({
+              where: { projectId, userId: data.assigneeId },
+            });
+            if (!perm) throw ApiError.badRequest('Assignee is not a member of this project');
+          }
+          result = await prisma.task.updateMany({
+            where: { id: { in: data.taskIds }, projectId },
+            data: { assigneeId: data.assigneeId ?? null },
+          });
+          break;
+        }
+        case 'setPriority': {
+          if (!data.priority) throw ApiError.badRequest('priority is required for setPriority operation');
+          result = await prisma.task.updateMany({
+            where: { id: { in: data.taskIds }, projectId },
+            data: { priority: data.priority as TaskPriority },
+          });
+          break;
+        }
+        case 'delete': {
+          result = await prisma.task.deleteMany({
+            where: { id: { in: data.taskIds }, projectId },
+          });
+          data.taskIds.forEach((taskId) => {
+            getIO().to(projectId).emit(WS_EVENTS.TASK_DELETED, { projectId, taskId });
+          });
+          break;
+        }
+        default:
+          throw ApiError.badRequest('Invalid operation');
+      }
+
+      if (data.operation !== 'delete') {
+        // Emit a general update for all affected tasks
+        data.taskIds.forEach((taskId) => {
+          getIO().to(projectId).emit(WS_EVENTS.TASK_UPDATED, { projectId, taskId, changes: {} });
+        });
+      }
+
+      activityService.log(projectId, userId, `task.bulk.${data.operation}`, {
+        taskIds: data.taskIds,
+        count: result.count,
+      }).catch(() => {});
+
+      return { count: result.count, operation: data.operation };
+    } catch (error) {
+      if (error instanceof ApiError) throw error;
+      throw ApiError.badRequest('Failed to perform bulk operation');
     }
   }
 }

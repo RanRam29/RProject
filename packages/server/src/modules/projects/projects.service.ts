@@ -119,6 +119,11 @@ export class ProjectsService {
         throw ApiError.notFound('Template not found');
       }
 
+      // Verify user can access this template (public or owned by user)
+      if (!template.isPublic && template.createdById !== userId) {
+        throw ApiError.forbidden('No access to this template');
+      }
+
       const config = template.configJson as {
         statuses?: Array<{ name: string; color: string; sortOrder: number }>;
         widgets?: Array<{

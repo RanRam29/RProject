@@ -7,6 +7,7 @@ import { FilesWidget } from './FilesWidget';
 import { AIAssistantWidget } from './AIAssistantWidget';
 import { DependencyGraphWidget } from './DependencyGraphWidget';
 import { ActivityFeedWidget } from './ActivityFeedWidget';
+import { AnalyticsWidget } from './AnalyticsWidget';
 
 export const WidgetRegistry: Record<string, ComponentType<WidgetProps>> = {
   TASK_LIST: TaskListWidget,
@@ -16,15 +17,16 @@ export const WidgetRegistry: Record<string, ComponentType<WidgetProps>> = {
   AI_ASSISTANT: AIAssistantWidget,
   DEPENDENCY_GRAPH: DependencyGraphWidget,
   ACTIVITY_FEED: ActivityFeedWidget,
+  ANALYTICS: AnalyticsWidget,
 };
 
 export const WIDGET_CATALOG = [
   {
     type: 'TASK_LIST',
     title: 'Task List',
-    description: 'Simple list view of tasks with inline creation',
+    description: 'Table view with sortable columns, filtering, and inline creation',
     icon: '\u2630',
-    defaultSize: { width: 400, height: 400 },
+    defaultSize: { width: 900, height: 400 },
   },
   {
     type: 'KANBAN',
@@ -67,5 +69,12 @@ export const WIDGET_CATALOG = [
     description: 'Recent project activity from all team members',
     icon: '\uD83D\uDCCB',
     defaultSize: { width: 400, height: 400 },
+  },
+  {
+    type: 'ANALYTICS',
+    title: 'Project Analytics',
+    description: 'Task completion rates, status breakdown, and priority distribution',
+    icon: '\uD83D\uDCCA',
+    defaultSize: { width: 400, height: 500 },
   },
 ];

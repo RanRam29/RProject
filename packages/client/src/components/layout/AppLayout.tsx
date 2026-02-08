@@ -3,6 +3,7 @@ import { Outlet } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { TopBar } from './TopBar';
 import { useUIStore } from '../../stores/ui.store';
+import { CommandPalette } from '../ui/CommandPalette';
 
 /* ------------------------------------------------------------------ */
 /*  Constants                                                          */
@@ -186,6 +187,9 @@ export const AppLayout: React.FC = () => {
 
       {/* Toast container overlay */}
       <ToastContainer />
+
+      {/* Command palette (Ctrl+K) */}
+      <CommandPalette />
     </div>
   );
 };

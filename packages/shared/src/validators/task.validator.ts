@@ -7,9 +7,19 @@ const dateString = z.string().refine(
   { message: 'Invalid date string' }
 );
 
+// Limit task description size (JSON rich text) to 100KB
+const MAX_DESCRIPTION_BYTES = 100_000;
+const boundedDescription = z.unknown().optional().refine(
+  (val) => {
+    if (val === undefined || val === null) return true;
+    return JSON.stringify(val).length <= MAX_DESCRIPTION_BYTES;
+  },
+  { message: `Description must be under ${MAX_DESCRIPTION_BYTES / 1000}KB` }
+);
+
 export const createTaskSchema = z.object({
   title: z.string().min(1, 'Task title is required').max(500),
-  description: z.unknown().optional(),
+  description: boundedDescription,
   statusId: z.string().uuid('Invalid status ID'),
   assigneeId: z.string().uuid('Invalid assignee ID').optional(),
   parentTaskId: z.string().uuid('Invalid parent task ID').optional(),
@@ -20,7 +30,7 @@ export const createTaskSchema = z.object({
 
 export const updateTaskSchema = z.object({
   title: z.string().min(1).max(500).optional(),
-  description: z.unknown().optional(),
+  description: boundedDescription,
   assigneeId: z.string().uuid().nullable().optional(),
   priority: z.nativeEnum(TaskPriority).optional(),
   startDate: dateString.nullable().optional(),
@@ -52,4 +62,12 @@ export const reorderTaskSchema = z.object({
 
 export const createDependencySchema = z.object({
   blockingTaskId: z.string().uuid('Invalid blocking task ID'),
+});
+
+export const bulkTaskOperationSchema = z.object({
+  taskIds: z.array(z.string().uuid()).min(1, 'At least one task ID is required').max(100),
+  operation: z.enum(['move', 'assign', 'delete', 'setPriority']),
+  statusId: z.string().uuid().optional(),
+  assigneeId: z.string().uuid().nullable().optional(),
+  priority: z.nativeEnum(TaskPriority).optional(),
 });

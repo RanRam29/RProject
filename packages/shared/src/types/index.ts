@@ -8,3 +8,4 @@ export * from './ws-events.types.js';
 export * from './api.types.js';
 export * from './label.types.js';
 export * from './comment.types.js';
+export * from './notification.types.js';

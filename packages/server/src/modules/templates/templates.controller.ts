@@ -18,8 +18,9 @@ export class TemplatesController {
   async getById(req: Request, res: Response, next: NextFunction) {
     try {
       const templateId = req.params.templateId as string;
+      const userId = req.user!.id;
 
-      const template = await templatesService.getById(templateId);
+      const template = await templatesService.getById(templateId, userId);
 
       sendSuccess(res, template);
     } catch (error) {

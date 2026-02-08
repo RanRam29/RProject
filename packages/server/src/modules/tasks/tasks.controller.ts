@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { tasksService } from './tasks.service.js';
 import { sendSuccess, sendPaginated } from '../../utils/api-response.js';
 import { activityService } from '../activity/activity.service.js';
+import { notificationsService } from '../notifications/notifications.service.js';
 
 export class TasksController {
   async list(req: Request, res: Response, next: NextFunction) {
@@ -91,6 +92,19 @@ export class TasksController {
       });
 
       activityService.log(task.projectId, req.user!.id, 'task.updated', { taskId, title: task.title }).catch(() => {});
+
+      // Notify new assignee if assignment changed
+      if (assigneeId && assigneeId !== req.user!.id) {
+        notificationsService.create({
+          userId: assigneeId,
+          type: 'TASK_ASSIGNED',
+          title: `You were assigned to "${task.title}"`,
+          projectId: task.projectId,
+          taskId,
+          actorId: req.user!.id,
+        }).catch(() => {});
+      }
+
       sendSuccess(res, task);
     } catch (error) {
       next(error);
@@ -177,6 +191,26 @@ export class TasksController {
       const depId = req.params.depId as string;
 
       const result = await tasksService.removeDependency(depId);
+
+      sendSuccess(res, result);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async bulkOperation(req: Request, res: Response, next: NextFunction) {
+    try {
+      const projectId = req.params.projectId as string;
+      const userId = req.user!.id;
+      const { taskIds, operation, statusId, assigneeId, priority } = req.body;
+
+      const result = await tasksService.bulkOperation(projectId, userId, {
+        taskIds,
+        operation,
+        statusId,
+        assigneeId,
+        priority,
+      });
 
       sendSuccess(res, result);
     } catch (error) {

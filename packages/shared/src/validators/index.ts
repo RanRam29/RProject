@@ -6,3 +6,4 @@ export * from './template.validator.js';
 export * from './file.validator.js';
 export * from './label.validator.js';
 export * from './comment.validator.js';
+export * from './notification.validator.js';

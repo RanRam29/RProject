@@ -1,12 +1,21 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { randomUUID } from 'crypto';
+import { randomUUID, createHash } from 'crypto';
 import prisma from '../../config/db.js';
 import { env } from '../../config/env.js';
 import { ApiError } from '../../utils/api-error.js';
 import logger from '../../utils/logger.js';
+import { checkLockout, recordFailedAttempt, resetLockout, checkIpRateLimit, recordIpFailedAttempt } from '../../middleware/account-lockout.middleware.js';
 
 const SALT_ROUNDS = 12;
+
+/**
+ * Generate a fingerprint from user-agent + IP to bind tokens to a client.
+ * This prevents stolen tokens from being used on different devices.
+ */
+export function generateFingerprint(userAgent: string, ip: string): string {
+  return createHash('sha256').update(`${userAgent}|${ip}`).digest('hex').slice(0, 16);
+}
 
 interface TokenPair {
   accessToken: string;
@@ -69,12 +78,16 @@ function parseExpiresIn(expiresIn: string): number {
   }
 }
 
-async function generateTokens(user: UserPayload): Promise<TokenPair> {
+async function generateTokens(user: UserPayload, fingerprint?: string): Promise<TokenPair> {
+  const jti = randomUUID(); // Unique JWT ID for tracking
+
   const accessToken = jwt.sign(
     {
       sub: user.id,
       email: user.email,
       systemRole: user.systemRole,
+      jti,
+      ...(fingerprint && { fpt: fingerprint }),
     },
     env.JWT_SECRET,
     { expiresIn: env.JWT_EXPIRES_IN as jwt.SignOptions['expiresIn'] },
@@ -103,6 +116,7 @@ export const authService = {
     email: string,
     password: string,
     displayName: string,
+    fingerprint?: string,
   ): Promise<AuthResult> {
     const existingUser = await prisma.user.findUnique({ where: { email } });
     if (existingUser) {
@@ -125,7 +139,7 @@ export const authService = {
       id: user.id,
       email: user.email,
       systemRole: user.systemRole,
-    });
+    }, fingerprint);
 
     return {
       user: excludePasswordHash(user),
@@ -133,9 +147,29 @@ export const authService = {
     };
   },
 
-  async login(email: string, password: string): Promise<AuthResult> {
+  async login(email: string, password: string, ip?: string, fingerprint?: string): Promise<AuthResult> {
+    // Check IP-based rate limiting
+    if (ip) {
+      const ipLimitRemaining = checkIpRateLimit(ip);
+      if (ipLimitRemaining) {
+        throw ApiError.tooManyRequests(
+          `Too many login attempts from this IP. Try again in ${Math.ceil(ipLimitRemaining / 60)} minutes`,
+        );
+      }
+    }
+
+    // Check account lockout before any DB query
+    const lockoutRemaining = checkLockout(email);
+    if (lockoutRemaining) {
+      throw ApiError.tooManyRequests(
+        `Account temporarily locked. Try again in ${Math.ceil(lockoutRemaining / 60)} minutes`,
+      );
+    }
+
     const user = await prisma.user.findUnique({ where: { email } });
     if (!user) {
+      recordFailedAttempt(email);
+      if (ip) recordIpFailedAttempt(ip);
       throw ApiError.unauthorized('Invalid email or password');
     }
 
@@ -145,8 +179,13 @@ export const authService = {
 
     const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
     if (!isPasswordValid) {
+      recordFailedAttempt(email);
+      if (ip) recordIpFailedAttempt(ip);
       throw ApiError.unauthorized('Invalid email or password');
     }
+
+    // Successful login — reset lockout counter
+    resetLockout(email);
 
     logger.info(`User logged in: ${user.email}`);
 
@@ -154,7 +193,7 @@ export const authService = {
       id: user.id,
       email: user.email,
       systemRole: user.systemRole,
-    });
+    }, fingerprint);
 
     return {
       user: excludePasswordHash(user),
@@ -162,7 +201,7 @@ export const authService = {
     };
   },
 
-  async refreshToken(token: string): Promise<TokenPair> {
+  async refreshToken(token: string, fingerprint?: string): Promise<TokenPair> {
     const storedToken = await prisma.refreshToken.findUnique({
       where: { token },
       include: { user: true },
@@ -184,7 +223,7 @@ export const authService = {
       id: storedToken.user.id,
       email: storedToken.user.email,
       systemRole: storedToken.user.systemRole,
-    });
+    }, fingerprint);
 
     logger.info(`Token refreshed for user: ${storedToken.user.email}`);
 

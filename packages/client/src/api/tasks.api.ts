@@ -117,6 +117,24 @@ export const tasksApi = {
     return res.data.data!;
   },
 
+  // Bulk Operations
+  async bulkOperation(
+    projectId: string,
+    data: {
+      taskIds: string[];
+      operation: 'move' | 'assign' | 'delete' | 'setPriority';
+      statusId?: string;
+      assigneeId?: string | null;
+      priority?: string;
+    }
+  ): Promise<{ count: number; operation: string }> {
+    const res = await apiClient.post<ApiResponse<{ count: number; operation: string }>>(
+      `/projects/${projectId}/tasks/bulk`,
+      data
+    );
+    return res.data.data!;
+  },
+
   // Dependencies
   async addDependency(
     projectId: string,
