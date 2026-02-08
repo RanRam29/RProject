@@ -153,8 +153,9 @@ async function parsePDF(buffer: ArrayBuffer): Promise<ParsedTask[]> {
   // Dynamic import for code splitting
   const pdfjsLib = await import('pdfjs-dist');
 
-  // Set worker source
-  pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
+  // Use bundled worker via Vite import
+  const workerSrc = await import('pdfjs-dist/build/pdf.worker.min.mjs?url');
+  pdfjsLib.GlobalWorkerOptions.workerSrc = workerSrc.default;
 
   const pdf = await pdfjsLib.getDocument({ data: buffer }).promise;
   let fullText = '';
