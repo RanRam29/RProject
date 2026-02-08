@@ -158,18 +158,31 @@ async function parsePDF(buffer: ArrayBuffer): Promise<ParsedTask[]> {
   pdfjsLib.GlobalWorkerOptions.workerSrc = workerSrc.default;
 
   const pdf = await pdfjsLib.getDocument({ data: buffer }).promise;
-  let fullText = '';
+  const allLines: string[] = [];
 
   for (let i = 1; i <= pdf.numPages; i++) {
     const page = await pdf.getPage(i);
     const content = await page.getTextContent();
-    const pageText = content.items
-      .map((item) => ('str' in item ? item.str : ''))
-      .join(' ');
-    fullText += pageText + '\n';
+
+    // Group text items by Y position to reconstruct lines
+    const lineMap = new Map<number, string[]>();
+    for (const item of content.items) {
+      if (!('str' in item) || !item.str.trim()) continue;
+      // Round Y to nearest integer to group items on the same line
+      const y = Math.round('transform' in item ? (item.transform as number[])[5] : 0);
+      if (!lineMap.has(y)) lineMap.set(y, []);
+      lineMap.get(y)!.push(item.str);
+    }
+
+    // Sort by Y position descending (PDF coords: top of page = higher Y)
+    const sortedYs = [...lineMap.keys()].sort((a, b) => b - a);
+    for (const y of sortedYs) {
+      const lineText = lineMap.get(y)!.join(' ').trim();
+      if (lineText) allLines.push(lineText);
+    }
   }
 
-  return extractTasksFromText(fullText);
+  return extractTasksFromText(allLines.join('\n'));
 }
 
 function extractTasksFromText(text: string): ParsedTask[] {
@@ -233,7 +246,12 @@ function extractTasksFromText(text: string): ParsedTask[] {
   if (tasks.length === 0) {
     for (const line of lines) {
       const cleaned = line.trim();
-      if (cleaned.length >= 5 && cleaned.length <= 500 && !/^(page|table|figure|chapter|section|\d+$)/i.test(cleaned)) {
+      // Skip headers, page numbers, very short or very long text
+      if (
+        cleaned.length >= 3 &&
+        cleaned.length <= 300 &&
+        !/^(page\s*\d|table\s+of|figure\s+\d|chapter\s+\d|section\s+\d|\d+$|©|http)/i.test(cleaned)
+      ) {
         tasks.push({
           title: cleaned,
           description: '',
