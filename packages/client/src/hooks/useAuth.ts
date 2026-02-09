@@ -1,22 +1,31 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/auth.store';
 import { authApi } from '../api/auth.api';
 import type { LoginRequest, RegisterRequest } from '@pm/shared';
 
 export function useAuth() {
-  const { user, isAuthenticated, isLoading, login: storeLogin, logout: storeLogout, setUser, setLoading } = useAuthStore();
+  const { user, isAuthenticated, isLoading, hasHydrated, login: storeLogin, logout: storeLogout, setUser, setLoading } = useAuthStore();
+  const hydrating = useRef(false);
 
   useEffect(() => {
-    if (isAuthenticated && !user) {
+    // Only attempt to hydrate once, and only if we have a stored token but no user
+    if (isAuthenticated && !user && !hasHydrated && !hydrating.current) {
+      hydrating.current = true;
       authApi
         .me()
-        .then(setUser)
-        .catch(() => storeLogout());
-    } else if (!isAuthenticated) {
+        .then((fetchedUser) => {
+          setUser(fetchedUser);
+        })
+        .catch(() => {
+          // Token is truly invalid (refresh also failed) — log out
+          storeLogout();
+        });
+    } else if (!isAuthenticated && !hasHydrated) {
       setLoading(false);
+      useAuthStore.getState().setHydrated();
     }
-  }, [isAuthenticated, user, setUser, storeLogout, setLoading]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps -- run once on mount
 
   const login = async (data: LoginRequest) => {
     const result = await authApi.login(data);

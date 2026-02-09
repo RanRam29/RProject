@@ -126,7 +126,7 @@ describe('apiClient', () => {
       await expect(interceptor.rejected(error)).rejects.toBe(error);
     });
 
-    it('clears tokens and redirects to /login when refresh token is missing on 401', async () => {
+    it('clears tokens via store logout when refresh token is missing on 401', async () => {
       localStorage.setItem('accessToken', 'expired-token');
       // No refreshToken set in localStorage
 
@@ -138,12 +138,12 @@ describe('apiClient', () => {
 
       await expect(interceptor.rejected(error)).rejects.toBe(error);
 
+      // Store logout clears localStorage tokens
       expect(localStorage.getItem('accessToken')).toBeNull();
       expect(localStorage.getItem('refreshToken')).toBeNull();
-      expect(window.location.href).toContain('/login');
     });
 
-    it('clears tokens and redirects to /login when refresh request fails', async () => {
+    it('clears tokens via store logout when refresh request fails', async () => {
       localStorage.setItem('accessToken', 'expired-token');
       localStorage.setItem('refreshToken', 'bad-refresh-token');
 
@@ -162,9 +162,9 @@ describe('apiClient', () => {
 
       await expect(interceptor.rejected(error)).rejects.toBe(error);
 
+      // Store logout clears localStorage tokens
       expect(localStorage.getItem('accessToken')).toBeNull();
       expect(localStorage.getItem('refreshToken')).toBeNull();
-      expect(window.location.href).toContain('/login');
     });
 
     it('refreshes token and updates localStorage on 401 with valid refresh token', async () => {

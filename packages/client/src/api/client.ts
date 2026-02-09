@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { env } from '../config/env';
+import { useAuthStore } from '../stores/auth.store';
 
 const apiClient = axios.create({
   baseURL: env.API_URL,
@@ -39,9 +40,8 @@ apiClient.interceptors.response.use(
         originalRequest.headers.Authorization = `Bearer ${accessToken}`;
         return apiClient(originalRequest);
       } catch {
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
-        window.location.href = '/login';
+        // Use store logout to cleanly clear state (no hard page reload)
+        useAuthStore.getState().logout();
         return Promise.reject(error);
       }
     }

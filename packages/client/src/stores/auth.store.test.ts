@@ -21,6 +21,7 @@ describe('useAuthStore', () => {
       user: null,
       isAuthenticated: false,
       isLoading: true,
+      hasHydrated: false,
     });
   });
 

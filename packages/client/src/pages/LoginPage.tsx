@@ -1,5 +1,7 @@
 import React from 'react';
+import { Navigate } from 'react-router-dom';
 import { LoginForm } from '../components/auth/LoginForm';
+import { useAuthStore } from '../stores/auth.store';
 
 const pageStyle: React.CSSProperties = {
   display: 'flex',
@@ -57,6 +59,14 @@ const subtitleStyle: React.CSSProperties = {
 };
 
 export const LoginPage: React.FC = () => {
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const user = useAuthStore((s) => s.user);
+
+  // If already authenticated with a loaded user, redirect to dashboard
+  if (isAuthenticated && user) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
   return (
     <div style={pageStyle}>
       <div style={cardStyle}>

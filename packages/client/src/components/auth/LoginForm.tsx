@@ -70,7 +70,7 @@ export const LoginForm: React.FC = () => {
   };
 
   return (
-    <form onSubmit={handleSubmit} style={formStyle} noValidate>
+    <form onSubmit={handleSubmit} style={formStyle} noValidate autoComplete="off">
       {error && <div style={errorStyle}>{error}</div>}
 
       <Input
@@ -80,7 +80,7 @@ export const LoginForm: React.FC = () => {
         value={email}
         onChange={(e) => setEmail(e.target.value)}
         fullWidth
-        autoComplete="email"
+        autoComplete="username"
         autoFocus
       />
 
@@ -91,7 +91,7 @@ export const LoginForm: React.FC = () => {
         value={password}
         onChange={(e) => setPassword(e.target.value)}
         fullWidth
-        autoComplete="current-password"
+        autoComplete="new-password"
       />
 
       <Button type="submit" variant="primary" fullWidth loading={isSubmitting}>
