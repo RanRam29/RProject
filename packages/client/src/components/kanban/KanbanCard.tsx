@@ -29,7 +29,7 @@ export const KanbanCard = memo(function KanbanCard({
     transform,
     transition,
     isDragging: isSortableDragging,
-  } = useSortable({ id: task.id });
+  } = useSortable({ id: task.id, disabled: selectionMode });
 
   const isBeingDragged = isDragging || isSortableDragging;
 
