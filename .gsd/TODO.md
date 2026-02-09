@@ -1,8 +1,8 @@
 # 🚀 GSD DYNAMIC ROADMAP
 
 **Current Sprint:** Phase 5: Security, Stability & Core UX — IN PROGRESS
-**Overall Progress:** [##----------] 17%
-**Last Sync:** 2026-02-06
+**Overall Progress:** [###---------] 20%
+**Last Sync:** 2026-02-09
 
 ---
 
@@ -123,6 +123,13 @@
 ---
 
 ## 🪵 Activity Log (Recent)
+- [2026-02-09] [Lead] Phase 2.3 Views & Visualization marked DONE. CalendarWidget built, enum mismatches fixed.
+- [2026-02-09] [QA] 2.3 Compile check: 0 errors across shared + client packages. PASS.
+- [2026-02-09] [Dev] 2.3 CalendarWidget: month grid, task pills, navigation, FilterBar, click-to-create with date pre-fill.
+- [2026-02-09] [Dev] 2.3 Fixed ANALYTICS enum mismatch (shared enum + Zod validator synced to 9 widget types).
+- [2026-02-09] [Dev] 2.3 TaskDetailModal: added defaultDueDate prop for calendar click-to-create.
+- [2026-02-09] [DevOps] 2.3 Prisma db push: CALENDAR added to WidgetType enum.
+- [2026-02-09] [Dev] Fixed 2 pre-existing compile errors (LoginForm unused var, AdminPage Button style prop).
 - [2026-02-06] [Lead] 5.1 Security & Stability marked DONE. 70 compile errors fixed across server package.
 - [2026-02-06] [QA] 5.1 Compile check: 0 errors across all 3 packages. PASS.
 - [2026-02-06] [Dev] 5.1 Fixed type assertions in 11 controllers + 5 services (TaskPriority, ProjectRole, WidgetType, Prisma.InputJsonValue casts).

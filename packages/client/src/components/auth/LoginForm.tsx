@@ -63,12 +63,6 @@ export const LoginForm: React.FC = () => {
     marginTop: '8px',
   };
 
-  const linkStyle: React.CSSProperties = {
-    color: 'var(--color-accent)',
-    textDecoration: 'none',
-    fontWeight: 500,
-  };
-
   return (
     <form onSubmit={handleSubmit} style={formStyle} noValidate autoComplete="off">
       {error && <div style={errorStyle}>{error}</div>}

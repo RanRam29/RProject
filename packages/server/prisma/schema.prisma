@@ -139,6 +139,7 @@ enum WidgetType {
   DEPENDENCY_GRAPH
   ACTIVITY_FEED
   ANALYTICS
+  CALENDAR
 }
 
 model ProjectWidget {

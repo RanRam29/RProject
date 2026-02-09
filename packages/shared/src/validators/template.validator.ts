@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 const widgetConfigSchema = z.object({
-  type: z.enum(['TASK_LIST', 'KANBAN', 'TIMELINE', 'FILES']),
+  type: z.enum(['TASK_LIST', 'KANBAN', 'TIMELINE', 'FILES', 'AI_ASSISTANT', 'DEPENDENCY_GRAPH', 'ACTIVITY_FEED', 'ANALYTICS', 'CALENDAR']),
   title: z.string().min(1).max(100),
   positionX: z.number().int().min(0),
   positionY: z.number().int().min(0),

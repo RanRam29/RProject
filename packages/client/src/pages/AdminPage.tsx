@@ -414,19 +414,20 @@ function UserRow({
         {isSelf ? (
           <span style={{ fontSize: '12px', color: 'var(--color-text-tertiary)' }}>You</span>
         ) : user.isActive ? (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => {
-              if (window.confirm(`Are you sure you want to deactivate ${user.displayName}?`)) {
-                deactivateMutation.mutate();
-              }
-            }}
-            loading={deactivateMutation.isPending}
-            style={{ color: 'var(--color-danger)', fontSize: '12px' }}
-          >
-            Deactivate
-          </Button>
+          <span style={{ color: 'var(--color-danger)', fontSize: '12px' }}>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                if (window.confirm(`Are you sure you want to deactivate ${user.displayName}?`)) {
+                  deactivateMutation.mutate();
+                }
+              }}
+              loading={deactivateMutation.isPending}
+            >
+              Deactivate
+            </Button>
+          </span>
         ) : (
           <span style={{ fontSize: '12px', color: 'var(--color-text-tertiary)' }}>Deactivated</span>
         )}

@@ -22,6 +22,8 @@ interface TaskDetailModalProps {
   task?: TaskDTO | null;
   /** When creating a new task, pre-select this status */
   defaultStatusId?: string;
+  /** When creating a new task, pre-fill the due date (format: YYYY-MM-DD) */
+  defaultDueDate?: string;
   mode?: 'create' | 'edit';
 }
 
@@ -31,6 +33,7 @@ export function TaskDetailModal({
   projectId,
   task,
   defaultStatusId,
+  defaultDueDate,
   mode = task ? 'edit' : 'create',
 }: TaskDetailModalProps) {
   const queryClient = useQueryClient();
@@ -71,10 +74,10 @@ export function TaskDetailModal({
       setAssigneeId(null);
       setPriority(TaskPriority.NONE);
       setStartDate('');
-      setDueDate('');
+      setDueDate(defaultDueDate || '');
     }
     setShowDeleteConfirm(false);
-  }, [task, mode, isOpen, defaultStatusId, statuses]);
+  }, [task, mode, isOpen, defaultStatusId, defaultDueDate, statuses]);
 
   // Set default status when statuses load and no status is set
   useEffect(() => {

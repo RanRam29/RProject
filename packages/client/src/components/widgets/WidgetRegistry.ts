@@ -8,6 +8,7 @@ import { AIAssistantWidget } from './AIAssistantWidget';
 import { DependencyGraphWidget } from './DependencyGraphWidget';
 import { ActivityFeedWidget } from './ActivityFeedWidget';
 import { AnalyticsWidget } from './AnalyticsWidget';
+import { CalendarWidget } from './CalendarWidget';
 
 export const WidgetRegistry: Record<string, ComponentType<WidgetProps>> = {
   TASK_LIST: TaskListWidget,
@@ -18,6 +19,7 @@ export const WidgetRegistry: Record<string, ComponentType<WidgetProps>> = {
   DEPENDENCY_GRAPH: DependencyGraphWidget,
   ACTIVITY_FEED: ActivityFeedWidget,
   ANALYTICS: AnalyticsWidget,
+  CALENDAR: CalendarWidget,
 };
 
 export const WIDGET_CATALOG = [
@@ -76,5 +78,12 @@ export const WIDGET_CATALOG = [
     description: 'Task completion rates, status breakdown, and priority distribution',
     icon: '\uD83D\uDCCA',
     defaultSize: { width: 400, height: 500 },
+  },
+  {
+    type: 'CALENDAR',
+    title: 'Calendar',
+    description: 'Month-view calendar showing tasks by due date',
+    icon: '\uD83D\uDCC5',
+    defaultSize: { width: 800, height: 500 },
   },
 ];
