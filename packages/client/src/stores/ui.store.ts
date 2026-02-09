@@ -26,9 +26,15 @@ function getInitialTheme(): Theme {
   return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 }
 
+function getInitialSidebarOpen(): boolean {
+  const stored = localStorage.getItem('sidebarOpen');
+  if (stored === 'false') return false;
+  return true;
+}
+
 export const useUIStore = create<UIState>((set) => ({
   theme: getInitialTheme(),
-  sidebarOpen: true,
+  sidebarOpen: getInitialSidebarOpen(),
   toasts: [],
 
   toggleTheme: () =>
@@ -45,8 +51,16 @@ export const useUIStore = create<UIState>((set) => ({
     set({ theme });
   },
 
-  toggleSidebar: () => set((state) => ({ sidebarOpen: !state.sidebarOpen })),
-  setSidebarOpen: (sidebarOpen) => set({ sidebarOpen }),
+  toggleSidebar: () =>
+    set((state) => {
+      const newOpen = !state.sidebarOpen;
+      localStorage.setItem('sidebarOpen', String(newOpen));
+      return { sidebarOpen: newOpen };
+    }),
+  setSidebarOpen: (sidebarOpen) => {
+    localStorage.setItem('sidebarOpen', String(sidebarOpen));
+    set({ sidebarOpen });
+  },
 
   addToast: (toast) =>
     set((state) => {
