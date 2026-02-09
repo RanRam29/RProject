@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { randomUUID, createHash } from 'crypto';
+import { type SystemRole } from '@prisma/client';
 import prisma from '../../config/db.js';
 import { env } from '../../config/env.js';
 import { ApiError } from '../../utils/api-error.js';
@@ -122,7 +123,7 @@ export const authService = {
     password: string,
     displayName: string,
     fingerprint?: string,
-    systemRole?: string,
+    systemRole?: SystemRole,
   ): Promise<AuthResult> {
     const existingUser = await prisma.user.findUnique({ where: { email } });
     if (existingUser) {

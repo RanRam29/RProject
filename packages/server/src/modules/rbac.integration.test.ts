@@ -183,7 +183,14 @@ function makeRequest(
   let _body: unknown = undefined;
   let _headers: Record<string, string> = { 'content-type': 'application/json' };
 
-  const chain = {
+  const chain: {
+    set(key: string, value: string): typeof chain;
+    send(body: unknown): typeof chain;
+    then<T = { status: number; body: unknown }, R = never>(
+      resolve?: ((value: { status: number; body: unknown }) => T | PromiseLike<T>) | null,
+      reject?: ((err: unknown) => R | PromiseLike<R>) | null,
+    ): Promise<T | R>;
+  } = {
     set(key: string, value: string) {
       _headers[key] = value;
       return chain;
@@ -192,52 +199,37 @@ function makeRequest(
       _body = body;
       return chain;
     },
-    then(
-      resolve: (value: { status: number; body: unknown }) => void,
-      reject: (err: unknown) => void,
-    ) {
-      const http = require('http');
-      const addr = server.listen(0).address();
-      const port = typeof addr === 'object' && addr ? addr.port : 0;
+    then(resolve?, reject?) {
+      return new Promise<{ status: number; body: unknown }>((res, rej) => {
+        const http = require('http');
+        const addr = server.listen(0).address();
+        const port = typeof addr === 'object' && addr ? addr.port : 0;
 
-      const options = {
-        hostname: '127.0.0.1',
-        port,
-        path,
-        method,
-        headers: _headers,
-      };
+        const req = http.request(
+          { hostname: '127.0.0.1', port, path, method, headers: _headers },
+          (response: {
+            statusCode: number;
+            on: (event: string, cb: (data?: Buffer) => void) => void;
+          }) => {
+            let data = '';
+            response.on('data', (chunk?: Buffer) => {
+              if (chunk) data += chunk.toString();
+            });
+            response.on('end', () => {
+              server.close();
+              try {
+                res({ status: response.statusCode, body: JSON.parse(data) });
+              } catch {
+                res({ status: response.statusCode, body: data });
+              }
+            });
+          },
+        );
 
-      const req = http.request(
-        options,
-        (res: {
-          statusCode: number;
-          on: (event: string, cb: (data?: Buffer) => void) => void;
-        }) => {
-          let data = '';
-          res.on('data', (chunk: Buffer) => {
-            data += chunk.toString();
-          });
-          res.on('end', () => {
-            server.close();
-            try {
-              resolve({ status: res.statusCode, body: JSON.parse(data) });
-            } catch {
-              resolve({ status: res.statusCode, body: data });
-            }
-          });
-        },
-      );
-
-      req.on('error', (err: unknown) => {
-        server.close();
-        reject(err);
-      });
-
-      if (_body) {
-        req.write(JSON.stringify(_body));
-      }
-      req.end();
+        req.on('error', (err: unknown) => { server.close(); rej(err); });
+        if (_body) req.write(JSON.stringify(_body));
+        req.end();
+      }).then(resolve, reject);
     },
   };
 
