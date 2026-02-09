@@ -27,6 +27,14 @@ const TemplatesIcon: React.FC<{ size?: number }> = ({ size = 18 }) => (
   </svg>
 );
 
+const ArchiveIcon: React.FC<{ size?: number }> = ({ size = 18 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="21 8 21 21 3 21 3 8" />
+    <rect x="1" y="3" width="22" height="5" />
+    <line x1="10" y1="12" x2="14" y2="12" />
+  </svg>
+);
+
 const AdminIcon: React.FC<{ size?: number }> = ({ size = 18 }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <circle cx="12" cy="12" r="3" />
@@ -74,6 +82,7 @@ interface NavItem {
 const navItems: NavItem[] = [
   { to: '/', label: 'Dashboard', icon: <DashboardIcon /> },
   { to: '/templates', label: 'Templates', icon: <TemplatesIcon /> },
+  { to: '/archive', label: 'Archive', icon: <ArchiveIcon /> },
   { to: '/admin', label: 'Admin', icon: <AdminIcon />, adminOnly: true },
 ];
 

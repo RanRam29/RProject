@@ -8,8 +8,9 @@ export class ProjectsController {
       const userId = req.user!.id;
       const page = parseInt(req.query.page as string) || 1;
       const limit = parseInt(req.query.limit as string) || 20;
+      const status = req.query.status as string | undefined;
 
-      const result = await projectsService.list(userId, page, limit);
+      const result = await projectsService.list(userId, page, limit, status);
 
       sendPaginated(res, result.data, result.total, result.page, result.limit);
     } catch (error) {

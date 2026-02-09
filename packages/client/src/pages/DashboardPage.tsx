@@ -285,8 +285,8 @@ const DashboardPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
 
   const { data: projectsResponse, isLoading } = useQuery({
-    queryKey: ['projects'],
-    queryFn: () => projectsApi.list(),
+    queryKey: ['projects', 'ACTIVE'],
+    queryFn: () => projectsApi.list(1, 100, 'ACTIVE'),
   });
 
   const projects: ProjectDTO[] = projectsResponse?.data ?? [];

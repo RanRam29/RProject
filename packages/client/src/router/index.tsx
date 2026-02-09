@@ -10,6 +10,7 @@ import { NotFoundPage } from '../pages/NotFoundPage';
 const DashboardPage = lazy(() => import('../pages/DashboardPage'));
 const ProjectPage = lazy(() => import('../pages/ProjectPage'));
 const TemplatesPage = lazy(() => import('../pages/TemplatesPage'));
+const ArchivePage = lazy(() => import('../pages/ArchivePage'));
 const AdminPage = lazy(() => import('../pages/AdminPage'));
 const ProfilePage = lazy(() => import('../pages/ProfilePage'));
 
@@ -52,6 +53,7 @@ export function AppRouter() {
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/projects/:projectId" element={<ProjectPage />} />
             <Route path="/templates" element={<TemplatesPage />} />
+            <Route path="/archive" element={<ArchivePage />} />
             <Route path="/admin" element={<AdminPage />} />
             <Route path="/profile" element={<ProfilePage />} />
           </Route>

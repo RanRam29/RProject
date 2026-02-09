@@ -10,9 +10,9 @@ import type {
 } from '@pm/shared';
 
 export const projectsApi = {
-  async list(page = 1, limit = 20): Promise<PaginatedResponse<ProjectDTO>> {
+  async list(page = 1, limit = 20, status?: string): Promise<PaginatedResponse<ProjectDTO>> {
     const res = await apiClient.get<PaginatedResponse<ProjectDTO>>('/projects', {
-      params: { page, limit },
+      params: { page, limit, ...(status && { status }) },
     });
     return res.data;
   },

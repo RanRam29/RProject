@@ -6,14 +6,15 @@ import { getIO } from '../../ws/ws.server.js';
 import { WS_EVENTS } from '../../ws/ws.events.js';
 
 export class ProjectsService {
-  async list(userId: string, page = 1, limit = 20) {
+  async list(userId: string, page = 1, limit = 20, status?: string) {
     try {
       const skip = (page - 1) * limit;
 
-      const where = {
+      const where: Prisma.ProjectWhereInput = {
         permissions: {
           some: { userId },
         },
+        ...(status && { status: status as 'ACTIVE' | 'ARCHIVED' }),
       };
 
       const [projects, total] = await Promise.all([
