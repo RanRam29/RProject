@@ -1,6 +1,8 @@
 import React from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../../hooks/useAuth';
+import { projectsApi } from '../../api/projects.api';
 import { SystemRole } from '@pm/shared';
 import { Button } from '../ui/Button';
 
@@ -39,6 +41,13 @@ const AdminIcon: React.FC<{ size?: number }> = ({ size = 18 }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <circle cx="12" cy="12" r="3" />
     <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
+  </svg>
+);
+
+const SettingsIcon: React.FC<{ size?: number }> = ({ size = 18 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="3" />
+    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
   </svg>
 );
 
@@ -83,6 +92,7 @@ const navItems: NavItem[] = [
   { to: '/', label: 'Dashboard', icon: <DashboardIcon /> },
   { to: '/templates', label: 'Templates', icon: <TemplatesIcon /> },
   { to: '/archive', label: 'Archive', icon: <ArchiveIcon /> },
+  { to: '/settings', label: 'Settings', icon: <SettingsIcon />, adminOnly: true },
   { to: '/admin', label: 'Admin', icon: <AdminIcon />, adminOnly: true },
 ];
 
@@ -99,6 +109,15 @@ interface SidebarProps {
 
 export const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle, isMobile, onNavigate }) => {
   const { user } = useAuth();
+  const navigate = useNavigate();
+
+  const { data: recentProjectsData } = useQuery({
+    queryKey: ['projects', 'sidebar'],
+    queryFn: () => projectsApi.list(1, 5, 'ACTIVE'),
+    staleTime: 30_000,
+  });
+
+  const recentProjects = recentProjectsData?.data || [];
 
   const sidebarStyle: React.CSSProperties = {
     position: isMobile ? 'fixed' : 'relative',
@@ -261,14 +280,76 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle, isMobile,
         </nav>
 
         {/* Projects section */}
-        <div style={{ padding: '0 8px' }}>
+        <div style={{ padding: '0 8px', flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
           <div style={sectionLabelStyle}>Projects</div>
-          <div style={projectPlaceholderStyle}>No recent projects</div>
+          {recentProjects.length === 0 ? (
+            <div style={projectPlaceholderStyle}>No recent projects</div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', overflow: 'auto' }}>
+              {recentProjects.map((project) => (
+                <NavLink
+                  key={project.id}
+                  to={`/projects/${project.id}`}
+                  onClick={handleNavClick}
+                  style={({ isActive }) => ({
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '6px 12px',
+                    borderRadius: 'var(--radius-md)',
+                    fontSize: '13px',
+                    fontWeight: isActive ? 600 : 400,
+                    color: isActive ? 'var(--color-accent)' : 'var(--color-text-secondary)',
+                    backgroundColor: isActive ? 'var(--color-accent-light)' : 'transparent',
+                    textDecoration: 'none',
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    transition: 'all var(--transition-fast)',
+                  })}
+                  onMouseEnter={(e) => {
+                    const link = e.currentTarget;
+                    if (!link.classList.contains('active')) {
+                      link.style.backgroundColor = 'var(--color-bg-tertiary)';
+                      link.style.color = 'var(--color-text-primary)';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    const link = e.currentTarget;
+                    if (!link.classList.contains('active')) {
+                      link.style.backgroundColor = 'transparent';
+                      link.style.color = 'var(--color-text-secondary)';
+                    }
+                  }}
+                >
+                  <span
+                    style={{
+                      width: '8px',
+                      height: '8px',
+                      borderRadius: '50%',
+                      backgroundColor: 'var(--color-accent)',
+                      flexShrink: 0,
+                    }}
+                  />
+                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {project.name}
+                  </span>
+                </NavLink>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* New Project button at bottom */}
         <div style={bottomAreaStyle}>
-          <Button variant="primary" size="sm" fullWidth onClick={handleNavClick}>
+          <Button
+            variant="primary"
+            size="sm"
+            fullWidth
+            onClick={() => {
+              handleNavClick();
+              navigate('/dashboard');
+            }}
+          >
             <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
               <PlusIcon size={14} />
               New Project

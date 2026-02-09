@@ -5,6 +5,7 @@ import { useProjectPermission } from '../../hooks/usePermission';
 import { useUIStore } from '../../stores/ui.store';
 import { useWSStore } from '../../stores/ws.store';
 import { TeamManagementModal } from './TeamManagementModal';
+import { ProjectSettings } from './ProjectSettings';
 import type { ProjectDTO } from '@pm/shared';
 
 interface ProjectHeaderProps {
@@ -19,6 +20,7 @@ export function ProjectHeader({ project }: ProjectHeaderProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [name, setName] = useState(project.name);
   const [showTeam, setShowTeam] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
 
   const updateMutation = useMutation({
     mutationFn: (data: { name: string }) => projectsApi.update(project.id, data),
@@ -163,17 +165,24 @@ export function ProjectHeader({ project }: ProjectHeaderProps) {
           <>
             <button
               style={{ ...menuBtnStyle, fontSize: '13px' }}
+              onClick={() => setShowSettings(true)}
+              title="Project Settings"
+            >
+              &#9881; Settings
+            </button>
+            <button
+              style={{ ...menuBtnStyle, fontSize: '13px' }}
               onClick={() => setShowTeam(true)}
               title="Team & Permissions"
             >
               &#128101; Team
             </button>
             <button
-              style={menuBtnStyle}
+              style={{ ...menuBtnStyle, fontSize: '13px' }}
               onClick={() => archiveMutation.mutate()}
               title="Archive project"
             >
-              &#9881;
+              &#128451;
             </button>
           </>
         )}
@@ -182,6 +191,12 @@ export function ProjectHeader({ project }: ProjectHeaderProps) {
       <TeamManagementModal
         isOpen={showTeam}
         onClose={() => setShowTeam(false)}
+        projectId={project.id}
+      />
+
+      <ProjectSettings
+        isOpen={showSettings}
+        onClose={() => setShowSettings(false)}
         projectId={project.id}
       />
     </div>

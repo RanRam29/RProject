@@ -38,6 +38,7 @@ const TemplatesPage = lazyWithRetry(() => import('../pages/TemplatesPage'));
 const ArchivePage = lazyWithRetry(() => import('../pages/ArchivePage'));
 const AdminPage = lazyWithRetry(() => import('../pages/AdminPage'));
 const ProfilePage = lazyWithRetry(() => import('../pages/ProfilePage'));
+const SettingsPage = lazyWithRetry(() => import('../pages/SettingsPage'));
 
 function PageLoader() {
   return (
@@ -80,6 +81,7 @@ export function AppRouter() {
             <Route path="/templates" element={<TemplatesPage />} />
             <Route path="/archive" element={<ArchivePage />} />
             <Route path="/admin" element={<AdminPage />} />
+            <Route path="/settings" element={<SettingsPage />} />
             <Route path="/profile" element={<ProfilePage />} />
           </Route>
         </Route>

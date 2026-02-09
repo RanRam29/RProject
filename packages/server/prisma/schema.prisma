@@ -475,6 +475,19 @@ model ActivityLog {
 }
 
 // ──────────────────────────────────────────────
+// SYSTEM DEFAULTS (Singleton)
+// ──────────────────────────────────────────────
+
+model SystemDefaults {
+  id        String   @id @default("singleton")
+  statuses  Json     @default("[]")
+  labels    Json     @default("[]")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("system_defaults")
+}
+
+// ──────────────────────────────────────────────
 // AUDIT LOG (Security Events)
 // ──────────────────────────────────────────────
 

@@ -4,6 +4,7 @@ import { ApiError } from '../../utils/api-error.js';
 import { DEFAULT_TASK_STATUSES } from '@pm/shared';
 import { getIO } from '../../ws/ws.server.js';
 import { WS_EVENTS } from '../../ws/ws.events.js';
+import { systemDefaultsService } from '../system-defaults/system-defaults.service.js';
 
 export class ProjectsService {
   async list(userId: string, page = 1, limit = 20, status?: string) {
@@ -70,6 +71,10 @@ export class ProjectsService {
 
   async create(userId: string, name: string, description?: string) {
     try {
+      // Use system defaults if available, otherwise fall back to hardcoded defaults
+      const defaultStatuses = await systemDefaultsService.getDefaultStatuses();
+      const defaultLabels = await systemDefaultsService.getDefaultLabels();
+
       const project = await prisma.project.create({
         data: {
           name,
@@ -82,12 +87,21 @@ export class ProjectsService {
             },
           },
           taskStatuses: {
-            create: DEFAULT_TASK_STATUSES.map((status, index) => ({
+            create: defaultStatuses.map((status, index) => ({
               name: status.name,
               color: status.color,
               sortOrder: index,
+              isFinal: status.isFinal,
             })),
           },
+          ...(defaultLabels.length > 0 && {
+            labels: {
+              create: defaultLabels.map((label) => ({
+                name: label.name,
+                color: label.color,
+              })),
+            },
+          }),
         },
         include: {
           owner: {
