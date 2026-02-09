@@ -41,13 +41,14 @@ export function KanbanBoard({
   const [activeTask, setActiveTask] = useState<TaskDTO | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
 
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 8,
-      },
-    })
-  );
+  // Disable drag sensors in selection mode so DndContext doesn't
+  // intercept click events intended for card selection
+  const pointerSensor = useSensor(PointerSensor, {
+    activationConstraint: {
+      distance: 8,
+    },
+  });
+  const sensors = useSensors(...(selectionMode ? [] : [pointerSensor]));
 
   const tasksByStatus = useMemo(() => {
     const map: Record<string, TaskDTO[]> = {};

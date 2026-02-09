@@ -7,12 +7,37 @@ import { LoginPage } from '../pages/LoginPage';
 import { RegisterPage } from '../pages/RegisterPage';
 import { NotFoundPage } from '../pages/NotFoundPage';
 
-const DashboardPage = lazy(() => import('../pages/DashboardPage'));
-const ProjectPage = lazy(() => import('../pages/ProjectPage'));
-const TemplatesPage = lazy(() => import('../pages/TemplatesPage'));
-const ArchivePage = lazy(() => import('../pages/ArchivePage'));
-const AdminPage = lazy(() => import('../pages/AdminPage'));
-const ProfilePage = lazy(() => import('../pages/ProfilePage'));
+/**
+ * Retry wrapper for lazy imports — handles stale chunks after deploys.
+ * When Vercel deploys new code, old chunk filenames become 404s.
+ * This retries the import and reloads the page on final failure.
+ */
+function lazyWithRetry(importFn: () => Promise<{ default: React.ComponentType }>) {
+  return lazy(() =>
+    importFn().catch(() => {
+      // First retry after a short delay
+      return new Promise<{ default: React.ComponentType }>((resolve) => {
+        setTimeout(() => {
+          resolve(
+            importFn().catch(() => {
+              // Final failure — reload page to get fresh index.html with new chunk URLs
+              window.location.reload();
+              // Return a dummy to satisfy TypeScript (reload will interrupt)
+              return { default: () => null } as { default: React.ComponentType };
+            })
+          );
+        }, 1000);
+      });
+    })
+  );
+}
+
+const DashboardPage = lazyWithRetry(() => import('../pages/DashboardPage'));
+const ProjectPage = lazyWithRetry(() => import('../pages/ProjectPage'));
+const TemplatesPage = lazyWithRetry(() => import('../pages/TemplatesPage'));
+const ArchivePage = lazyWithRetry(() => import('../pages/ArchivePage'));
+const AdminPage = lazyWithRetry(() => import('../pages/AdminPage'));
+const ProfilePage = lazyWithRetry(() => import('../pages/ProfilePage'));
 
 function PageLoader() {
   return (
