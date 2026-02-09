@@ -18,7 +18,7 @@ export const permissionsApi = {
 
   async invite(projectId: string, data: InviteUserRequest): Promise<ProjectPermissionDTO> {
     const res = await apiClient.post<ApiResponse<ProjectPermissionDTO>>(
-      `/projects/${projectId}/permissions`,
+      `/projects/${projectId}/permissions/invite`,
       data
     );
     return res.data.data!;
