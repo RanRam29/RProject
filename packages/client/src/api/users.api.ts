@@ -65,4 +65,13 @@ export const usersApi = {
   async changePassword(id: string, currentPassword: string, newPassword: string): Promise<void> {
     await apiClient.patch(`/users/${id}/password`, { currentPassword, newPassword });
   },
+
+  async updateRole(id: string, role: string): Promise<UserDTO> {
+    const res = await apiClient.patch<ApiResponse<UserDTO>>(`/users/${id}/role`, { role });
+    return res.data.data!;
+  },
+
+  async deactivate(id: string): Promise<void> {
+    await apiClient.delete(`/users/${id}`);
+  },
 };

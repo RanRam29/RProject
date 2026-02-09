@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { usersService } from './users.service.js';
 import { sendSuccess } from '../../utils/api-response.js';
+import { ApiError } from '../../utils/api-error.js';
 import { audit } from '../../middleware/audit.middleware.js';
 import prisma from '../../config/db.js';
 
@@ -73,6 +74,9 @@ export const usersController = {
 
   async updateRole(req: Request, res: Response, next: NextFunction) {
     try {
+      if (req.user!.id === req.params.id) {
+        throw ApiError.forbidden('Cannot change your own role');
+      }
       const user = await usersService.updateRole(req.params.id as string, req.body.role);
       audit(req, 'admin.user_role_changed', { targetId: req.params.id as string, metadata: { newRole: req.body.role } });
       sendSuccess(res, user);
@@ -92,6 +96,9 @@ export const usersController = {
 
   async deactivate(req: Request, res: Response, next: NextFunction) {
     try {
+      if (req.user!.id === req.params.id) {
+        throw ApiError.forbidden('Cannot deactivate yourself');
+      }
       await usersService.deactivate(req.params.id as string);
       audit(req, 'admin.user_deactivated', { targetId: req.params.id as string });
       sendSuccess(res, { message: 'User deactivated' });

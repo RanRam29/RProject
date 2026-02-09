@@ -113,11 +113,16 @@ async function generateTokens(user: UserPayload, fingerprint?: string): Promise<
 }
 
 export const authService = {
+  async getUserCount(): Promise<number> {
+    return prisma.user.count();
+  },
+
   async register(
     email: string,
     password: string,
     displayName: string,
     fingerprint?: string,
+    systemRole?: string,
   ): Promise<AuthResult> {
     const existingUser = await prisma.user.findUnique({ where: { email } });
     if (existingUser) {
@@ -131,6 +136,7 @@ export const authService = {
         email,
         passwordHash,
         displayName,
+        ...(systemRole && { systemRole }),
       },
     });
 

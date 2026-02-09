@@ -207,12 +207,11 @@ describe('LoginForm', () => {
     expect(mockNavigate).not.toHaveBeenCalled();
   });
 
-  it('shows "Create one" link to /register', () => {
+  it('shows admin contact message instead of register link', () => {
     renderLoginForm();
 
-    const registerLink = screen.getByText('Create one');
-    expect(registerLink).toBeInTheDocument();
-    expect(registerLink.closest('a')).toHaveAttribute('href', '/register');
+    expect(screen.getByText('Contact your administrator to get an account.')).toBeInTheDocument();
+    expect(screen.queryByText('Create one')).not.toBeInTheDocument();
   });
 
   it('submit button shows loading state during submission', async () => {

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { Input } from '../ui/Input';
 import { Button } from '../ui/Button';
@@ -99,10 +99,7 @@ export const LoginForm: React.FC = () => {
       </Button>
 
       <div style={footerStyle}>
-        Don&apos;t have an account?{' '}
-        <Link to="/register" style={linkStyle}>
-          Create one
-        </Link>
+        Contact your administrator to get an account.
       </div>
     </form>
   );

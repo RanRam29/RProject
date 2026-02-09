@@ -1,7 +1,9 @@
 import React from 'react';
 import { Navigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { RegisterForm } from '../components/auth/RegisterForm';
 import { useAuthStore } from '../stores/auth.store';
+import { authApi } from '../api/auth.api';
 
 const pageStyle: React.CSSProperties = {
   display: 'flex',
@@ -62,9 +64,36 @@ export const RegisterPage: React.FC = () => {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const user = useAuthStore((s) => s.user);
 
+  // Check if system needs initial setup (no users exist)
+  const { data: setupData, isLoading } = useQuery({
+    queryKey: ['setup-check'],
+    queryFn: () => authApi.checkSetup(),
+    staleTime: 30_000,
+  });
+
   // If already authenticated, redirect to dashboard
   if (isAuthenticated && user) {
     return <Navigate to="/dashboard" replace />;
+  }
+
+  // If system already has users, registration is admin-only — redirect to login
+  if (!isLoading && setupData && !setupData.needsSetup) {
+    return <Navigate to="/login" replace />;
+  }
+
+  // Still loading setup check
+  if (isLoading) {
+    return (
+      <div style={pageStyle}>
+        <div style={{
+          width: '32px', height: '32px',
+          border: '3px solid var(--color-border)',
+          borderTopColor: 'var(--color-accent)',
+          borderRadius: '50%',
+          animation: 'spin 0.8s linear infinite',
+        }} />
+      </div>
+    );
   }
 
   return (
@@ -73,7 +102,7 @@ export const RegisterPage: React.FC = () => {
         <div style={logoSectionStyle}>
           <span style={logoMarkStyle}>PM</span>
           <h1 style={titleStyle}>ProjectMgr</h1>
-          <p style={subtitleStyle}>Create a new account to get started</p>
+          <p style={subtitleStyle}>Create the admin account to set up the system</p>
         </div>
         <RegisterForm />
       </div>

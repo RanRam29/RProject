@@ -1,7 +1,9 @@
 import React from 'react';
 import { Navigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { LoginForm } from '../components/auth/LoginForm';
 import { useAuthStore } from '../stores/auth.store';
+import { authApi } from '../api/auth.api';
 
 const pageStyle: React.CSSProperties = {
   display: 'flex',
@@ -62,9 +64,21 @@ export const LoginPage: React.FC = () => {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const user = useAuthStore((s) => s.user);
 
+  // Check if system needs initial setup (no users exist)
+  const { data: setupData } = useQuery({
+    queryKey: ['setup-check'],
+    queryFn: () => authApi.checkSetup(),
+    staleTime: 30_000,
+  });
+
   // If already authenticated with a loaded user, redirect to dashboard
   if (isAuthenticated && user) {
     return <Navigate to="/dashboard" replace />;
+  }
+
+  // If no users exist, redirect to register (initial setup)
+  if (setupData?.needsSetup) {
+    return <Navigate to="/register" replace />;
   }
 
   return (

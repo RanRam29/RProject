@@ -31,14 +31,40 @@ function clearRefreshTokenCookie(res: Response): void {
 }
 
 export const authController = {
+  /** Public registration is only allowed when no users exist (initial system setup).
+   *  After the first admin user is created, new users must be created by a SYS_ADMIN
+   *  via the admin panel (POST /users). */
   async register(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { email, password, displayName } = req.body;
+
+      // Check if any user exists — if so, block self-registration
+      const userCount = await authService.getUserCount();
+      if (userCount > 0) {
+        res.status(403).json({
+          success: false,
+          error: 'Self-registration is disabled. Please contact your system administrator.',
+        });
+        return;
+      }
+
       const fingerprint = getFingerprint(req);
-      const result = await authService.register(email, password, displayName, fingerprint);
+      // First user is always SYS_ADMIN
+      const result = await authService.register(email, password, displayName, fingerprint, 'SYS_ADMIN');
       audit(req, 'auth.register', { targetId: result.user.id });
       setRefreshTokenCookie(res, result.tokens.refreshToken);
       sendSuccess(res, result, 201);
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  /** Check if the system has any users — used by the client to decide whether
+   *  to show the registration page or the login page. */
+  async checkSetup(_req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const userCount = await authService.getUserCount();
+      sendSuccess(res, { needsSetup: userCount === 0 });
     } catch (error) {
       next(error);
     }

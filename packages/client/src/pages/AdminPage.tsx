@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import apiClient from '../api/client';
 import { usersApi } from '../api/users.api';
 import { useUIStore } from '../stores/ui.store';
+import { useAuthStore } from '../stores/auth.store';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import type { UserDTO, ApiResponse, PaginatedResponse } from '@pm/shared';
@@ -300,39 +301,15 @@ export default function AdminPage() {
                 <th style={thStyle}>Role</th>
                 <th style={thStyle}>Status</th>
                 <th style={thStyle}>Joined</th>
+                <th style={thStyle}>Actions</th>
               </tr>
             </thead>
             <tbody>
               {usersData?.data?.map((user) => (
-                <tr key={user.id}>
-                  <td style={tdStyle}>{user.displayName}</td>
-                  <td style={{ ...tdStyle, color: 'var(--color-text-secondary)' }}>{user.email}</td>
-                  <td style={tdStyle}>
-                    <span
-                      style={{
-                        fontSize: '11px',
-                        padding: '2px 8px',
-                        borderRadius: 'var(--radius-full)',
-                        backgroundColor: 'var(--color-accent-light)',
-                        color: 'var(--color-accent)',
-                        fontWeight: 500,
-                      }}
-                    >
-                      {user.systemRole}
-                    </span>
-                  </td>
-                  <td style={tdStyle}>
-                    <span style={{ color: user.isActive ? 'var(--color-success)' : 'var(--color-danger)' }}>
-                      {user.isActive ? 'Active' : 'Inactive'}
-                    </span>
-                  </td>
-                  <td style={{ ...tdStyle, color: 'var(--color-text-secondary)', fontSize: '13px' }}>
-                    {new Date(user.createdAt).toLocaleDateString()}
-                  </td>
-                </tr>
+                <UserRow key={user.id} user={user} selectStyle={selectStyle} tdStyle={tdStyle} />
               )) || (
                 <tr>
-                  <td style={tdStyle} colSpan={5}>
+                  <td style={tdStyle} colSpan={6}>
                     No users found
                   </td>
                 </tr>
@@ -348,5 +325,112 @@ export default function AdminPage() {
         </div>
       )}
     </div>
+  );
+}
+
+/* ─── UserRow sub-component ─── */
+
+function UserRow({
+  user,
+  selectStyle,
+  tdStyle,
+}: {
+  user: UserDTO;
+  selectStyle: React.CSSProperties;
+  tdStyle: React.CSSProperties;
+}) {
+  const queryClient = useQueryClient();
+  const addToast = useUIStore((s) => s.addToast);
+  const currentUserId = useAuthStore((s) => s.user?.id);
+  const isSelf = user.id === currentUserId;
+
+  const roleMutation = useMutation({
+    mutationFn: (newRole: string) => usersApi.updateRole(user.id, newRole),
+    onSuccess: (_data, newRole) => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
+      const label = SYSTEM_ROLES.find((r) => r.value === newRole)?.label ?? newRole;
+      addToast({ type: 'success', message: `${user.displayName}'s role changed to ${label}` });
+    },
+    onError: (err: Error) => {
+      addToast({ type: 'error', message: err.message || 'Failed to update role' });
+    },
+  });
+
+  const deactivateMutation = useMutation({
+    mutationFn: () => usersApi.deactivate(user.id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'stats'] });
+      addToast({ type: 'success', message: `${user.displayName} has been deactivated` });
+    },
+    onError: (err: Error) => {
+      addToast({ type: 'error', message: err.message || 'Failed to deactivate user' });
+    },
+  });
+
+  const badgeStyle = (active: boolean): React.CSSProperties => ({
+    display: 'inline-block',
+    padding: '2px 8px',
+    borderRadius: '9999px',
+    fontSize: '12px',
+    fontWeight: 500,
+    backgroundColor: active ? 'var(--color-success-light, rgba(34,197,94,0.12))' : 'var(--color-danger-light, rgba(239,68,68,0.12))',
+    color: active ? 'var(--color-success, #22c55e)' : 'var(--color-danger, #ef4444)',
+  });
+
+  return (
+    <tr>
+      <td style={tdStyle}>
+        <div style={{ fontWeight: 500 }}>{user.displayName}</div>
+      </td>
+      <td style={{ ...tdStyle, color: 'var(--color-text-secondary)' }}>{user.email}</td>
+      <td style={tdStyle}>
+        {isSelf ? (
+          <span style={{ fontSize: '13px', fontWeight: 500 }}>
+            {SYSTEM_ROLES.find((r) => r.value === user.systemRole)?.label ?? user.systemRole}
+          </span>
+        ) : (
+          <select
+            style={{ ...selectStyle, width: 'auto', minWidth: '140px' }}
+            value={user.systemRole}
+            disabled={roleMutation.isPending}
+            onChange={(e) => roleMutation.mutate(e.target.value)}
+          >
+            {SYSTEM_ROLES.map((r) => (
+              <option key={r.value} value={r.value}>
+                {r.label}
+              </option>
+            ))}
+          </select>
+        )}
+      </td>
+      <td style={tdStyle}>
+        <span style={badgeStyle(user.isActive)}>{user.isActive ? 'Active' : 'Inactive'}</span>
+      </td>
+      <td style={{ ...tdStyle, fontSize: '13px', color: 'var(--color-text-secondary)' }}>
+        {new Date(user.createdAt).toLocaleDateString()}
+      </td>
+      <td style={tdStyle}>
+        {isSelf ? (
+          <span style={{ fontSize: '12px', color: 'var(--color-text-tertiary)' }}>You</span>
+        ) : user.isActive ? (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              if (window.confirm(`Are you sure you want to deactivate ${user.displayName}?`)) {
+                deactivateMutation.mutate();
+              }
+            }}
+            loading={deactivateMutation.isPending}
+            style={{ color: 'var(--color-danger)', fontSize: '12px' }}
+          >
+            Deactivate
+          </Button>
+        ) : (
+          <span style={{ fontSize: '12px', color: 'var(--color-text-tertiary)' }}>Deactivated</span>
+        )}
+      </td>
+    </tr>
   );
 }

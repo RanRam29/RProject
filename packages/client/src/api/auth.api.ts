@@ -39,4 +39,9 @@ export const authApi = {
     const res = await apiClient.get<ApiResponse<UserDTO>>('/auth/me');
     return res.data.data!;
   },
+
+  async checkSetup(): Promise<{ needsSetup: boolean }> {
+    const res = await apiClient.get<ApiResponse<{ needsSetup: boolean }>>('/auth/setup-check');
+    return res.data.data!;
+  },
 };

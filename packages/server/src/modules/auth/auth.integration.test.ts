@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 // ── Mock Prisma ──────────────────────────────────────────────────────────────
 const mockUserFindUnique = vi.fn();
 const mockUserCreate = vi.fn();
+const mockUserCount = vi.fn();
 const mockRefreshTokenFindUnique = vi.fn();
 const mockRefreshTokenCreate = vi.fn();
 const mockRefreshTokenDelete = vi.fn();
@@ -14,6 +15,7 @@ vi.mock('../../config/db.js', () => ({
     user: {
       findUnique: (...args: unknown[]) => mockUserFindUnique(...args),
       create: (...args: unknown[]) => mockUserCreate(...args),
+      count: (...args: unknown[]) => mockUserCount(...args),
     },
     refreshToken: {
       findUnique: (...args: unknown[]) => mockRefreshTokenFindUnique(...args),
@@ -180,6 +182,7 @@ describe('Auth Integration Tests', () => {
     });
 
     it('returns 201 for valid registration', async () => {
+      mockUserCount.mockResolvedValue(0);
       mockUserFindUnique.mockResolvedValue(null);
       mockUserCreate.mockResolvedValue(testUser);
 
@@ -201,7 +204,25 @@ describe('Auth Integration Tests', () => {
       expect(body.data.tokens.accessToken).toBeDefined();
     });
 
+    it('returns 403 when users already exist (admin-only registration)', async () => {
+      mockUserCount.mockResolvedValue(1);
+
+      const app = createApp();
+      const res = await request(app).then((r) =>
+        r.post('/api/v1/auth/register')
+          .set('Origin', 'http://localhost:5173')
+          .send({
+            email: 'new@example.com',
+            password: 'Str0ng!Pass',
+            displayName: 'New User',
+          }),
+      );
+
+      expect(res.status).toBe(403);
+    });
+
     it('returns 409 for duplicate email', async () => {
+      mockUserCount.mockResolvedValue(0);
       mockUserFindUnique.mockResolvedValue(testUser);
 
       const app = createApp();
