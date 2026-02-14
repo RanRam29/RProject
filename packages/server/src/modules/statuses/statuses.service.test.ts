@@ -485,7 +485,7 @@ describe('StatusesService', () => {
 
       const result = await service.delete('status-1');
 
-      expect(result).toEqual({ message: 'Task status deleted successfully' });
+      expect(result).toEqual({ message: 'Task status deleted successfully', projectId: 'project-1', name: 'To Do' });
       expect(mockStatusDelete).toHaveBeenCalledWith({ where: { id: 'status-1' } });
     });
 

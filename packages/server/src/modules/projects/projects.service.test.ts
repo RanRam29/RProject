@@ -45,6 +45,17 @@ vi.mock('@pm/shared', () => ({
   ],
 }));
 
+vi.mock('../system-defaults/system-defaults.service.js', () => ({
+  systemDefaultsService: {
+    getDefaultStatuses: vi.fn().mockResolvedValue([
+      { name: 'To Do', color: '#6B7280', sortOrder: 0, isFinal: false },
+      { name: 'In Progress', color: '#3B82F6', sortOrder: 1, isFinal: false },
+      { name: 'Done', color: '#10B981', sortOrder: 2, isFinal: true },
+    ]),
+    getDefaultLabels: vi.fn().mockResolvedValue([]),
+  },
+}));
+
 import { ProjectsService } from './projects.service.js';
 import { ApiError } from '../../utils/api-error.js';
 
@@ -226,9 +237,9 @@ describe('ProjectsService', () => {
           },
           taskStatuses: {
             create: [
-              { name: 'To Do', color: '#6B7280', sortOrder: 0 },
-              { name: 'In Progress', color: '#3B82F6', sortOrder: 1 },
-              { name: 'Done', color: '#10B981', sortOrder: 2 },
+              { name: 'To Do', color: '#6B7280', sortOrder: 0, isFinal: false },
+              { name: 'In Progress', color: '#3B82F6', sortOrder: 1, isFinal: false },
+              { name: 'Done', color: '#10B981', sortOrder: 2, isFinal: true },
             ],
           },
         },

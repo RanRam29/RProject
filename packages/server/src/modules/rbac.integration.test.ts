@@ -158,6 +158,18 @@ vi.mock('./notifications/notifications.service.js', () => ({
   },
 }));
 
+// Mock system defaults service
+vi.mock('./system-defaults/system-defaults.service.js', () => ({
+  systemDefaultsService: {
+    getDefaultStatuses: vi.fn().mockResolvedValue([
+      { name: 'To Do', color: '#6B7280', sortOrder: 0, isFinal: false },
+      { name: 'In Progress', color: '#3B82F6', sortOrder: 1, isFinal: false },
+      { name: 'Done', color: '#10B981', sortOrder: 2, isFinal: true },
+    ]),
+    getDefaultLabels: vi.fn().mockResolvedValue([]),
+  },
+}));
+
 import jwt from 'jsonwebtoken';
 import createApp from '../app.js';
 
