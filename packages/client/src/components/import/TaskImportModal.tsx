@@ -406,20 +406,23 @@ export function TaskImportModal({ isOpen, onClose, projectId }: TaskImportModalP
 
     let success = 0;
     let failed = 0;
+    let lastError = '';
 
     for (const task of selected) {
       try {
         const matched = matchStatus(task.statusName, statuses);
         await tasksApi.create(projectId, {
           title: task.title,
-          description: task.description ? JSON.stringify({ text: task.description }) : undefined,
+          description: task.description ? { text: task.description } : undefined,
           statusId: matched?.id || defaultStatus.id,
           priority: task.priority,
           dueDate: task.dueDate || undefined,
         });
         success++;
-      } catch {
+      } catch (err) {
         failed++;
+        lastError = err instanceof Error ? err.message : String(err);
+        console.error(`Import failed for task "${task.title}":`, err);
       }
       setProgress({ done: success + failed, total: selected.length });
     }
@@ -428,7 +431,13 @@ export function TaskImportModal({ isOpen, onClose, projectId }: TaskImportModalP
     setImporting(false);
     setStep('done');
 
-    queryClient.invalidateQueries({ queryKey: ['tasks', projectId] });
+    if (failed > 0 && success === 0) {
+      addToast({ type: 'error', message: `All ${failed} tasks failed to import. ${lastError}` });
+    } else if (failed > 0) {
+      addToast({ type: 'warning', message: `${failed} task(s) failed to import. ${lastError}` });
+    }
+
+    await queryClient.invalidateQueries({ queryKey: ['tasks', projectId] });
   }, [parsedTasks, statuses, projectId, queryClient, addToast]);
 
   if (!isOpen) return null;
