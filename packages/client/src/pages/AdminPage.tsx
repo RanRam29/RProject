@@ -2,10 +2,12 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import apiClient from '../api/client';
 import { usersApi } from '../api/users.api';
+import { adminApi, type AdminLogDTO } from '../api/admin.api';
 import { useUIStore } from '../stores/ui.store';
 import { useAuthStore } from '../stores/auth.store';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
+import { timeAgo } from '../utils/activity.utils';
 import type { UserDTO, ApiResponse, PaginatedResponse } from '@pm/shared';
 
 type AdminTab = 'users' | 'logs';
@@ -320,9 +322,7 @@ export default function AdminPage() {
       )}
 
       {activeTab === 'logs' && (
-        <div style={{ textAlign: 'center', padding: '40px', color: 'var(--color-text-tertiary)' }}>
-          Activity logs will appear here
-        </div>
+        <ActivityLogsTab tableStyle={tableStyle} thStyle={thStyle} tdStyle={tdStyle} />
       )}
     </div>
   );
@@ -433,5 +433,136 @@ function UserRow({
         )}
       </td>
     </tr>
+  );
+}
+
+/* ─── ActivityLogsTab sub-component ─── */
+
+function ActivityLogsTab({
+  tableStyle,
+  thStyle,
+  tdStyle,
+}: {
+  tableStyle: React.CSSProperties;
+  thStyle: React.CSSProperties;
+  tdStyle: React.CSSProperties;
+}) {
+  const [page, setPage] = useState(1);
+  const [actionFilter, setActionFilter] = useState('');
+  const LIMIT = 25;
+
+  const { data: logsData, isLoading } = useQuery({
+    queryKey: ['admin', 'logs', page, actionFilter],
+    queryFn: () => adminApi.getLogs({
+      page,
+      limit: LIMIT,
+      action: actionFilter || undefined,
+    }),
+  });
+
+  const logs = logsData?.data ?? [];
+  const total = logsData?.total ?? 0;
+  const totalPages = Math.max(1, Math.ceil(total / LIMIT));
+
+  const filterRowStyle: React.CSSProperties = {
+    display: 'flex',
+    gap: '12px',
+    marginBottom: '16px',
+    alignItems: 'center',
+  };
+
+  const filterInputStyle: React.CSSProperties = {
+    padding: '7px 10px',
+    fontSize: '13px',
+    borderRadius: 'var(--radius-md)',
+    border: '1px solid var(--color-border)',
+    backgroundColor: 'var(--color-bg-primary)',
+    color: 'var(--color-text-primary)',
+    outline: 'none',
+    width: '200px',
+  };
+
+  return (
+    <>
+      <div style={filterRowStyle}>
+        <input
+          style={filterInputStyle}
+          placeholder="Filter by action (e.g. login)"
+          value={actionFilter}
+          onChange={(e) => { setActionFilter(e.target.value); setPage(1); }}
+        />
+        <span style={{ fontSize: '13px', color: 'var(--color-text-secondary)' }}>
+          {total} total log{total !== 1 ? 's' : ''}
+        </span>
+      </div>
+
+      {isLoading ? (
+        <div style={{ textAlign: 'center', padding: '40px', color: 'var(--color-text-tertiary)' }}>
+          Loading logs...
+        </div>
+      ) : logs.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: '40px', color: 'var(--color-text-tertiary)' }}>
+          No logs found.
+        </div>
+      ) : (
+        <table style={tableStyle}>
+          <thead>
+            <tr>
+              <th style={thStyle}>Time</th>
+              <th style={thStyle}>Action</th>
+              <th style={thStyle}>Actor ID</th>
+              <th style={thStyle}>Target</th>
+              <th style={thStyle}>IP</th>
+              <th style={thStyle}>Details</th>
+            </tr>
+          </thead>
+          <tbody>
+            {logs.map((log: AdminLogDTO) => (
+              <tr key={log.id}>
+                <td style={{ ...tdStyle, fontSize: '12px', whiteSpace: 'nowrap', color: 'var(--color-text-secondary)' }}>
+                  {timeAgo(log.createdAt)}
+                </td>
+                <td style={tdStyle}>
+                  <span style={{
+                    fontSize: '12px', padding: '2px 8px',
+                    borderRadius: 'var(--radius-full)',
+                    backgroundColor: 'var(--color-bg-tertiary)',
+                    fontFamily: 'var(--font-mono)',
+                  }}>
+                    {log.action}
+                  </span>
+                </td>
+                <td style={{ ...tdStyle, fontSize: '12px', fontFamily: 'var(--font-mono)', color: 'var(--color-text-secondary)' }}>
+                  {log.actorId ? `${log.actorId.slice(0, 8)}...` : '-'}
+                </td>
+                <td style={{ ...tdStyle, fontSize: '12px', color: 'var(--color-text-secondary)' }}>
+                  {log.targetId || '-'}
+                </td>
+                <td style={{ ...tdStyle, fontSize: '12px', fontFamily: 'var(--font-mono)', color: 'var(--color-text-tertiary)' }}>
+                  {log.ip || '-'}
+                </td>
+                <td style={{ ...tdStyle, fontSize: '11px', maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--color-text-tertiary)' }}>
+                  {Boolean(log.metadata) && Object.keys(log.metadata).length > 0 ? JSON.stringify(log.metadata) : '-'}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+
+      {totalPages > 1 && (
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '12px', marginTop: '16px' }}>
+          <Button variant="ghost" size="sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
+            Prev
+          </Button>
+          <span style={{ fontSize: '13px', color: 'var(--color-text-secondary)' }}>
+            Page {page} of {totalPages}
+          </span>
+          <Button variant="ghost" size="sm" disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)}>
+            Next
+          </Button>
+        </div>
+      )}
+    </>
   );
 }

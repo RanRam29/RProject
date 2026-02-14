@@ -1,34 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { activityApi } from '../../api/activity.api';
-import type { ActivityLogDTO } from '../../api/activity.api';
 import type { WidgetProps } from './widget.types';
-
-const ACTION_LABELS: Record<string, { verb: string; icon: string }> = {
-  'task.created': { verb: 'created a task', icon: '+' },
-  'task.updated': { verb: 'updated a task', icon: '~' },
-  'task.deleted': { verb: 'deleted a task', icon: '-' },
-  'comment.created': { verb: 'commented on a task', icon: '#' },
-};
-
-function formatAction(log: ActivityLogDTO): { verb: string; icon: string; detail: string } {
-  const config = ACTION_LABELS[log.action] || { verb: log.action, icon: '?' };
-  const title = (log.metadata as Record<string, string>)?.title
-    || (log.metadata as Record<string, string>)?.taskTitle
-    || '';
-  return { ...config, detail: title };
-}
-
-function timeAgo(dateStr: string): string {
-  const diff = Date.now() - new Date(dateStr).getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return 'just now';
-  if (mins < 60) return `${mins}m ago`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
-  const days = Math.floor(hrs / 24);
-  if (days < 7) return `${days}d ago`;
-  return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-}
+import { formatAction, timeAgo } from '../../utils/activity.utils';
 
 export function ActivityFeedWidget({ projectId }: WidgetProps) {
   const { data: logs = [], isLoading } = useQuery({
@@ -60,7 +33,7 @@ export function ActivityFeedWidget({ projectId }: WidgetProps) {
   return (
     <div style={containerStyle}>
       {logs.map((log) => {
-        const { verb, icon, detail } = formatAction(log);
+        const { verb, icon, detail } = formatAction(log.action, log.metadata as Record<string, unknown>);
         const initial = log.user?.displayName?.charAt(0).toUpperCase() || '?';
 
         return (

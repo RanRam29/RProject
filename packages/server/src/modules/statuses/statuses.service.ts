@@ -157,7 +157,7 @@ export class StatusesService {
 
       getIO().to(projectId).emit(WS_EVENTS.STATUS_DELETED, { projectId, statusId });
 
-      return { message: 'Task status deleted successfully' };
+      return { message: 'Task status deleted successfully', projectId, name: status.name };
     } catch (error) {
       if (error instanceof ApiError) throw error;
       throw ApiError.badRequest('Failed to delete task status');

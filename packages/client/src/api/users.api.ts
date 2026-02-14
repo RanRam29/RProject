@@ -32,11 +32,23 @@ export interface MyTaskDTO {
   assignee?: { id: string; displayName: string; email: string } | null;
 }
 
+export interface MyStatsDTO {
+  totalTasks: number;
+  overdueTasks: number;
+  completedThisWeek: number;
+  teamMembers: number;
+}
+
 export const usersApi = {
-  async getMyTasks(limit = 20): Promise<MyTaskDTO[]> {
+  async getMyTasks(limit = 20, params?: { dueAfter?: string; dueBefore?: string }): Promise<MyTaskDTO[]> {
     const res = await apiClient.get<ApiResponse<MyTaskDTO[]>>('/users/me/tasks', {
-      params: { limit },
+      params: { limit, ...params },
     });
+    return res.data.data!;
+  },
+
+  async getMyStats(): Promise<MyStatsDTO> {
+    const res = await apiClient.get<ApiResponse<MyStatsDTO>>('/users/me/stats');
     return res.data.data!;
   },
 

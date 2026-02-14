@@ -16,10 +16,13 @@
 - Widgets: 7 types (Task, Kanban, Timeline, Files, AI, Dependency Graph, Activity Feed).
 - Task Filtering: Shared FilterBar component + useTaskFilters hook. Filters: search, status, priority, assignee, label. Integrated into KanbanWidget + TaskListWidget.
 - User Profile: ProfilePage at /profile (edit display name, avatar URL, change password). TopBar dropdown has Profile link.
-- Activity Feed: ActivityLog model populated via activityService.log(). ActivityFeedWidget shows recent project activity. 4 events tracked: task CRUD + comments.
+- Activity Feed: ActivityLog model populated via activityService.log(). ActivityFeedWidget shows recent project activity. 21 events tracked across 7 modules.
+- Notifications: Full system — bell icon in TopBar, dropdown, WebSocket real-time push, 6 notification types (TASK_ASSIGNED, TASK_UPDATED, TASK_COMMENTED, PROJECT_INVITED, PERMISSION_CHANGED, MENTION).
+- Dashboard: Stats cards (tasks, overdue, completed, team), recent activity, upcoming deadlines.
 
 ## Active Goal
-- Phase 1-4 COMPLETE. Phase 5.1 (Security & Stability) COMPLETE. Phase 2.3 (Views & Visualization) COMPLETE. Ready for Phase 2.4 Notifications System.
+ Phases 1-5 COMPLETE. Phase 2.3 (Views & Visualization) COMPLETE.
+ CURRENT: Phase 6 — Templates & Time Tracking (both Prisma models exist, UI needed).
 
 ## Critical Rules
 - Always use Shared package for Types.

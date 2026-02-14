@@ -102,7 +102,7 @@ export class LabelsService {
 
       getIO().to(projectId).emit(WS_EVENTS.LABEL_DELETED, { projectId, labelId });
 
-      return { message: 'Label deleted successfully' };
+      return { message: 'Label deleted successfully', projectId, name: label.name };
     } catch (error) {
       if (error instanceof ApiError) throw error;
       throw ApiError.badRequest('Failed to delete label');
@@ -170,7 +170,7 @@ export class LabelsService {
 
       getIO().to(taskLabel.task.projectId).emit(WS_EVENTS.LABEL_UNASSIGNED, { projectId: taskLabel.task.projectId, taskId, labelId });
 
-      return { message: 'Label removed from task' };
+      return { message: 'Label removed from task', projectId: taskLabel.task.projectId };
     } catch (error) {
       if (error instanceof ApiError) throw error;
       throw ApiError.badRequest('Failed to remove label from task');

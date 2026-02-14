@@ -1,8 +1,8 @@
 # 🚀 GSD DYNAMIC ROADMAP
 
-**Current Sprint:** Phase 5: Security, Stability & Core UX — IN PROGRESS
-**Overall Progress:** [###---------] 20%
-**Last Sync:** 2026-02-09
+**Current Sprint:** Phase 6: Templates & Time Tracking — PENDING
+**Overall Progress:** [#####-------] 25%
+**Last Sync:** 2026-02-14
 
 ---
 
@@ -108,21 +108,41 @@
 - [x] Add missing validation middleware — ALREADY EXISTS (reorderTaskSchema + changePasswordSchema)
 - [x] Fix all pre-existing compile errors — FIXED (70 errors across 16 files)
 
-### 5.2 Dashboard Analytics — `PENDING`
-- [ ] Dashboard stats cards (total tasks, overdue, completed this week, team members)
-- [ ] Recent activity feed section on dashboard
-- [ ] Upcoming deadlines list
-- [ ] Wire up AdminPage activity logs tab
+### 5.2 Dashboard Analytics — `DONE`
+- [x] Dashboard stats cards (total tasks, overdue, completed this week, team members)
+- [x] Recent activity feed section on dashboard
+- [x] Upcoming deadlines list
+- [x] Wire up AdminPage activity logs tab
 
-### 5.3 Notification System — `PENDING`
-- [ ] Notification bell icon in TopBar with badge count
-- [ ] NotificationDropdown: recent notifications from WebSocket events
-- [ ] Connect to existing WebSocket events for real-time push
-- [ ] Expand activity logging to cover all entity types (10+ more events)
+### 5.3 Notification System — `DONE`
+- [x] Notification bell icon in TopBar with badge count
+- [x] NotificationDropdown: recent notifications from WebSocket events
+- [x] Connect to existing WebSocket events for real-time push
+- [x] Expand activity logging to cover all entity types (21 events across 7 modules)
+
+---
+
+## 📋 Phase 6: Templates & Time Tracking
+
+### 6.1 Task Templates — `PENDING`
+- [ ] Template management UI (create, edit, delete templates)
+- [ ] Apply template when creating a task (pre-fill fields)
+- [ ] Template listing page / section
+
+### 6.2 Time Tracking UI — `PENDING`
+- [ ] Time logging UI on task detail (start/stop timer, manual entry)
+- [ ] Time summary per task and per project
+- [ ] Dashboard integration (time tracked this week)
 
 ---
 
 ## 🪵 Activity Log (Recent)
+- [2026-02-14] [Lead] Phase 5.2 Dashboard Analytics marked DONE. Stats cards, activity feed, deadlines on dashboard.
+- [2026-02-14] [Lead] Phase 5.3 Notification System marked DONE. Bell icon, dropdown, WebSocket push, 21 activity events.
+- [2026-02-14] [Dev] TASK_UPDATED notification added for assignees. Status change activity logging added.
+- [2026-02-14] [Dev] Activity logging expanded to 7 controllers (files, labels, permissions, projects, statuses, tasks, users).
+- [2026-02-14] [Dev] Dashboard: stats cards, recent activity, upcoming deadlines. Admin: activity logs tab.
+- [2026-02-14] [Architect] Phase 6 defined: Templates & Time Tracking (both models exist in Prisma, UI needed).
 - [2026-02-09] [Lead] Phase 2.3 Views & Visualization marked DONE. CalendarWidget built, enum mismatches fixed.
 - [2026-02-09] [QA] 2.3 Compile check: 0 errors across shared + client packages. PASS.
 - [2026-02-09] [Dev] 2.3 CalendarWidget: month grid, task pills, navigation, FilterBar, click-to-create with date pre-fill.

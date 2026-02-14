@@ -268,7 +268,7 @@ export class FilesService {
 
       getIO().to(projectId).emit(WS_EVENTS.FILE_DELETED, { projectId, fileId });
 
-      return { message: 'File deleted successfully' };
+      return { message: 'File deleted successfully', projectId, fileName: file.originalName };
     } catch (error) {
       if (error instanceof ApiError) throw error;
       throw ApiError.badRequest('Failed to delete file');

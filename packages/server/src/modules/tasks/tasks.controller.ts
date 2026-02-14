@@ -122,6 +122,16 @@ export class TasksController {
           taskId,
           actorId: userId,
         }).catch(() => {});
+      } else if (task.assigneeId && task.assigneeId !== userId && !assigneeId) {
+        // Notify existing assignee of other task changes (title, priority, due date, etc.)
+        notificationsService.create({
+          userId: task.assigneeId,
+          type: 'TASK_UPDATED',
+          title: `"${task.title}" was updated`,
+          projectId: task.projectId,
+          taskId,
+          actorId: userId,
+        }).catch(() => {});
       }
 
       sendSuccess(res, task);
@@ -153,6 +163,13 @@ export class TasksController {
           oldTask.status.name,
           task.status.name,
         ).catch(() => {});
+
+        activityService.log(task.projectId, userId, 'task.status_changed', {
+          taskId,
+          title: task.title,
+          oldStatus: oldTask.status.name,
+          newStatus: task.status.name,
+        }).catch(() => {});
       }
 
       sendSuccess(res, task);

@@ -3,12 +3,26 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { projectsApi } from '../api/projects.api';
 import { usersApi, type MyTaskDTO } from '../api/users.api';
+import { activityApi, type ActivityLogDTO } from '../api/activity.api';
 import { BreadcrumbNav } from '../components/layout/BreadcrumbNav';
 import { Button } from '../components/ui/Button';
 import { useUIStore } from '../stores/ui.store';
 import { useAuthStore } from '../stores/auth.store';
 import { PRIORITY_CONFIG } from '@pm/shared';
 import type { ProjectDTO } from '@pm/shared';
+import { formatAction, timeAgo } from '../utils/activity.utils';
+
+/* ------------------------------------------------------------------ */
+/*  Global Styles                                                      */
+/* ------------------------------------------------------------------ */
+
+const dashboardStyles = `
+  @media (max-width: 768px) {
+    .dashboard-grid {
+      grid-template-columns: 1fr !important;
+    }
+  }
+`;
 
 /* ------------------------------------------------------------------ */
 /*  Inline icons                                                       */
@@ -174,6 +188,270 @@ const NewProjectModal: React.FC<NewProjectModalProps> = ({ isOpen, onClose }) =>
           </div>
         </form>
       </div>
+    </div>
+  );
+};
+
+/* ------------------------------------------------------------------ */
+/*  Stats Cards Section                                                */
+/* ------------------------------------------------------------------ */
+
+const StatsCardsSection: React.FC = () => {
+  const { data: stats } = useQuery({
+    queryKey: ['my-stats'],
+    queryFn: () => usersApi.getMyStats(),
+    staleTime: 60_000,
+  });
+
+  const cards = [
+    { label: 'Active Tasks', value: stats?.totalTasks ?? '-', color: 'var(--color-accent)' },
+    { label: 'Overdue', value: stats?.overdueTasks ?? '-', color: 'var(--color-danger)' },
+    { label: 'Completed This Week', value: stats?.completedThisWeek ?? '-', color: 'var(--color-success)' },
+    { label: 'Team Members', value: stats?.teamMembers ?? '-', color: 'var(--color-text-secondary)' },
+  ];
+
+  return (
+    <div style={{ 
+      display: 'grid', 
+      gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', 
+      gap: '12px', 
+      marginBottom: '28px' 
+    }}>
+      {cards.map((card) => (
+        <div key={card.label} style={{
+          padding: '16px 20px',
+          borderRadius: 'var(--radius-lg)',
+          border: '1px solid var(--color-border)',
+          backgroundColor: 'var(--color-bg-elevated)',
+          animation: 'fadeIn var(--transition-normal) ease',
+        }}>
+          <div style={{ fontSize: '28px', fontWeight: 700, color: card.color }}>{card.value}</div>
+          <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)', marginTop: '2px' }}>{card.label}</div>
+        </div>
+      ))}
+    </div>
+  );
+};
+
+/* ------------------------------------------------------------------ */
+/*  Recent Activity Section                                            */
+/* ------------------------------------------------------------------ */
+
+const RecentActivitySection: React.FC = () => {
+  const navigate = useNavigate();
+  const { data: logs = [], isLoading } = useQuery({
+    queryKey: ['my-activity'],
+    queryFn: () => activityApi.listUserActivity(10),
+    staleTime: 30_000,
+  });
+
+  if (isLoading) {
+    return (
+      <div style={{ padding: '16px', color: 'var(--color-text-tertiary)', fontSize: '13px' }}>
+        Loading activity...
+      </div>
+    );
+  }
+
+  if (logs.length === 0) {
+    return (
+      <div style={{ padding: '24px', color: 'var(--color-text-tertiary)', fontSize: '13px', textAlign: 'center' }}>
+        No recent activity across your projects.
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+      {logs.map((log: ActivityLogDTO) => {
+        const { verb, icon, detail } = formatAction(log.action, log.metadata as Record<string, unknown>);
+        const initial = log.user?.displayName?.charAt(0).toUpperCase() || '?';
+        const handleNavigate = () => navigate(`/projects/${log.projectId}`);
+        const handleKeyDown = (e: React.KeyboardEvent) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            handleNavigate();
+          }
+        };
+        const ariaLabel = `${log.user?.displayName || 'Unknown'} ${verb}${detail ? ` - ${detail}` : ''}${log.project ? ` in ${log.project.name}` : ''}`;
+
+        return (
+          <div
+            key={log.id}
+            role="button"
+            tabIndex={0}
+            style={{
+              display: 'flex', alignItems: 'center', gap: '10px',
+              padding: '8px 12px', borderRadius: 'var(--radius-md)',
+              cursor: 'pointer', transition: 'background var(--transition-fast)',
+              outline: 'none',
+            }}
+            onClick={handleNavigate}
+            onKeyDown={handleKeyDown}
+            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+            onFocus={(e) => { e.currentTarget.style.outline = '2px solid var(--color-accent)'; e.currentTarget.style.outlineOffset = '-2px'; }}
+            onBlur={(e) => { e.currentTarget.style.outline = 'none'; }}
+            aria-label={ariaLabel}
+          >
+            <div style={{
+              width: 28, height: 28, borderRadius: '50%',
+              backgroundColor: 'var(--color-accent)', display: 'flex',
+              alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+              overflow: 'hidden',
+            }}>
+              {log.user?.avatarUrl ? (
+                <img src={log.user.avatarUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              ) : (
+                <span style={{ fontSize: '12px', fontWeight: 600, color: 'white' }}>{initial}</span>
+              )}
+            </div>
+            <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '1px' }}>
+              <div style={{ display: 'flex', gap: '4px', alignItems: 'baseline', fontSize: '13px' }}>
+                <span style={{ fontWeight: 600, color: 'var(--color-text-primary)', whiteSpace: 'nowrap' }}>
+                  {log.user?.displayName || 'Unknown'}
+                </span>
+                <span style={{ color: 'var(--color-text-secondary)' }}>{verb}</span>
+              </div>
+              {detail && (
+                <span style={{ fontSize: '12px', color: 'var(--color-text-tertiary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {detail}
+                </span>
+              )}
+            </div>
+            {log.project && (
+              <span style={{
+                fontSize: '10px', color: 'var(--color-text-tertiary)',
+                padding: '1px 6px', backgroundColor: 'var(--color-bg-tertiary)',
+                borderRadius: 'var(--radius-sm)', whiteSpace: 'nowrap',
+              }}>
+                {log.project.name}
+              </span>
+            )}
+            <span style={{
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+              width: 20, height: 20, borderRadius: 'var(--radius-sm)',
+              backgroundColor: 'var(--color-bg-tertiary)', fontSize: '11px',
+              fontWeight: 700, color: 'var(--color-text-tertiary)', flexShrink: 0,
+            }}>
+              {icon}
+            </span>
+            <span style={{ fontSize: '11px', color: 'var(--color-text-tertiary)', whiteSpace: 'nowrap', flexShrink: 0 }}>
+              {timeAgo(log.createdAt)}
+            </span>
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
+/* ------------------------------------------------------------------ */
+/*  Upcoming Deadlines Section                                         */
+/* ------------------------------------------------------------------ */
+
+const UpcomingDeadlinesSection: React.FC = () => {
+  const navigate = useNavigate();
+  const now = new Date();
+  const weekFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+
+  const { data: tasks = [], isLoading } = useQuery({
+    queryKey: ['upcoming-deadlines'],
+    queryFn: () => usersApi.getMyTasks(10, {
+      dueAfter: now.toISOString(),
+      dueBefore: weekFromNow.toISOString(),
+    }),
+    staleTime: 60_000,
+  });
+
+  if (isLoading) {
+    return (
+      <div style={{ padding: '16px', color: 'var(--color-text-tertiary)', fontSize: '13px' }}>
+        Loading deadlines...
+      </div>
+    );
+  }
+
+  if (tasks.length === 0) {
+    return (
+      <div style={{ padding: '24px', color: 'var(--color-text-tertiary)', fontSize: '13px', textAlign: 'center' }}>
+        No upcoming deadlines in the next 7 days.
+      </div>
+    );
+  }
+
+  const getDueDateColor = (dateStr: string) => {
+    const due = new Date(dateStr);
+    const diffMs = due.getTime() - now.getTime();
+    const diffDays = diffMs / (1000 * 60 * 60 * 24);
+    if (diffDays < 1) return 'var(--color-danger)';
+    if (diffDays < 2) return 'var(--color-warning)';
+    return 'var(--color-text-secondary)';
+  };
+
+  const getDueLabel = (dateStr: string) => {
+    const due = new Date(dateStr);
+    const diffMs = due.getTime() - now.getTime();
+    const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+    if (diffDays <= 0) return 'Today';
+    if (diffDays === 1) return 'Tomorrow';
+    return due.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+  };
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+      {tasks.map((task: MyTaskDTO) => {
+        const priorityCfg = PRIORITY_CONFIG[task.priority as keyof typeof PRIORITY_CONFIG];
+        const handleNavigate = () => navigate(`/projects/${task.projectId}`);
+        const handleKeyDown = (e: React.KeyboardEvent) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            handleNavigate();
+          }
+        };
+        return (
+          <div
+            key={task.id}
+            role="button"
+            tabIndex={0}
+            style={{
+              display: 'flex', alignItems: 'center', gap: '10px',
+              padding: '8px 12px', borderRadius: 'var(--radius-md)',
+              cursor: 'pointer', transition: 'background var(--transition-fast)',
+            }}
+            onClick={handleNavigate}
+            onKeyDown={handleKeyDown}
+            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+          >
+            {priorityCfg && task.priority !== 'NONE' && (
+              <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: priorityCfg.color, flexShrink: 0 }} />
+            )}
+            <span style={{
+              flex: 1, fontSize: '13px', fontWeight: 500,
+              color: 'var(--color-text-primary)',
+              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+            }}>
+              {task.title}
+            </span>
+            <span style={{
+              fontSize: '11px', color: 'var(--color-text-tertiary)',
+              padding: '1px 6px', backgroundColor: 'var(--color-bg-tertiary)',
+              borderRadius: 'var(--radius-sm)', whiteSpace: 'nowrap',
+            }}>
+              {task.project?.name || 'Unknown'}
+            </span>
+            {task.dueDate && (
+              <span style={{
+                fontSize: '12px', fontWeight: 600, whiteSpace: 'nowrap',
+                color: getDueDateColor(task.dueDate),
+              }}>
+                {getDueLabel(task.dueDate)}
+              </span>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 };
@@ -370,8 +648,18 @@ const DashboardPage: React.FC = () => {
     cursor: 'pointer',
   };
 
+  const panelStyle: React.CSSProperties = {
+    backgroundColor: 'var(--color-bg-elevated)',
+    border: '1px solid var(--color-border)',
+    borderRadius: 'var(--radius-lg)',
+    overflow: 'hidden',
+    maxHeight: '320px',
+    overflowY: 'auto',
+  };
+
   return (
     <>
+      <style>{dashboardStyles}</style>
       <BreadcrumbNav items={[{ label: 'Dashboard' }]} />
 
       <div style={{ marginTop: '16px' }}>
@@ -414,23 +702,46 @@ const DashboardPage: React.FC = () => {
           </div>
         </div>
 
-        {/* My Tasks Section */}
+        {/* Stats Cards */}
+        <StatsCardsSection />
+
+        {/* Two-column grid: My Tasks + Upcoming Deadlines */}
+        <div className="dashboard-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '32px' }}>
+          <div>
+            <div style={sectionHeaderStyle}>
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                <path d="M2.5 0a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2h-11zm5.854 10.854a.5.5 0 0 1-.708 0l-3-3a.5.5 0 1 1 .708-.708L8 9.793l5.146-5.147a.5.5 0 0 1 .708.708l-5.5 5.5z" />
+              </svg>
+              My Tasks
+            </div>
+            <div style={panelStyle}>
+              <MyTasksSection />
+            </div>
+          </div>
+          <div>
+            <div style={sectionHeaderStyle}>
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                <path d="M11 6.5a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5v-1zm-3 0a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5v-1zm-5 3a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5v-1zm3 0a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5v-1z" />
+                <path d="M3.5 0a.5.5 0 0 1 .5.5V1h8V.5a.5.5 0 0 1 1 0V1h1a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V3a2 2 0 0 1 2-2h1V.5a.5.5 0 0 1 .5-.5zM1 4v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V4H1z" />
+              </svg>
+              Upcoming Deadlines
+            </div>
+            <div style={panelStyle}>
+              <UpcomingDeadlinesSection />
+            </div>
+          </div>
+        </div>
+
+        {/* Recent Activity */}
         <div style={sectionStyle}>
           <div style={sectionHeaderStyle}>
             <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-              <path d="M2.5 0a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2h-11zm5.854 10.854a.5.5 0 0 1-.708 0l-3-3a.5.5 0 1 1 .708-.708L8 9.793l5.146-5.147a.5.5 0 0 1 .708.708l-5.5 5.5z" />
+              <path fillRule="evenodd" d="M1 8a7 7 0 1 0 14 0A7 7 0 0 0 1 8zm15 0A8 8 0 1 1 0 8a8 8 0 0 1 16 0zM8 3.5a.5.5 0 0 0-1 0V9a.5.5 0 0 0 .252.434l3.5 2a.5.5 0 0 0 .496-.868L8 8.71V3.5z" />
             </svg>
-            My Tasks
+            Recent Activity
           </div>
-          <div style={{
-            backgroundColor: 'var(--color-bg-elevated)',
-            border: '1px solid var(--color-border)',
-            borderRadius: 'var(--radius-lg)',
-            overflow: 'hidden',
-            maxHeight: '320px',
-            overflowY: 'auto',
-          }}>
-            <MyTasksSection />
+          <div style={panelStyle}>
+            <RecentActivitySection />
           </div>
         </div>
 

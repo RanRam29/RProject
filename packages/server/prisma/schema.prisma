@@ -251,6 +251,7 @@ model Task {
   priority     TaskPriority @default(NONE)
   startDate    DateTime?  @map("start_date")
   dueDate      DateTime?  @map("due_date")
+  completedAt  DateTime?  @map("completed_at")
   sortOrder    Int        @default(0) @map("sort_order")
   createdAt    DateTime   @default(now()) @map("created_at")
   updatedAt    DateTime   @updatedAt @map("updated_at")
@@ -270,6 +271,7 @@ model Task {
   @@index([creatorId])
   @@index([projectId, statusId])
   @@index([dueDate])
+  @@index([completedAt])
   @@map("tasks")
 }
 

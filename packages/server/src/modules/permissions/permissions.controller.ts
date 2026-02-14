@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { permissionsService } from './permissions.service.js';
 import { sendSuccess } from '../../utils/api-response.js';
+import { activityService } from '../activity/activity.service.js';
 
 export class PermissionsController {
   async list(req: Request, res: Response, next: NextFunction) {
@@ -27,6 +28,10 @@ export class PermissionsController {
         customRoleId,
       );
 
+      activityService.log(projectId, req.user!.id, 'member.invited', { userId: permission.user.id, role }).catch((err) => {
+        console.error('Failed to log activity:', err);
+      });
+
       sendSuccess(res, permission, 201);
     } catch (error) {
       next(error);
@@ -45,6 +50,10 @@ export class PermissionsController {
         capabilities,
       );
 
+      const projectId = req.params.projectId as string;
+      const newRole = permission.role || permission.customRoleId || role;
+      activityService.log(projectId, req.user!.id, 'member.role_changed', { userId: permission.user.id, newRole }).catch(() => {});
+
       sendSuccess(res, permission);
     } catch (error) {
       next(error);
@@ -55,7 +64,10 @@ export class PermissionsController {
     try {
       const permId = req.params.permId as string;
 
+      const projectId = req.params.projectId as string;
       const result = await permissionsService.remove(permId);
+
+      activityService.log(projectId, req.user!.id, 'member.removed', {}).catch(() => {});
 
       sendSuccess(res, result);
     } catch (error) {

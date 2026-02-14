@@ -10,6 +10,8 @@ router.use(authenticate);
 
 // Must be before /:id to avoid route conflict
 router.get('/me/tasks', usersController.getMyTasks);
+router.get('/me/stats', usersController.getMyStats);
+router.get('/me/activity', usersController.getMyActivity);
 
 router.post('/', requireSystemRole('SYS_ADMIN'), validate(createUserSchema), usersController.create);
 router.get('/', requireSystemRole('SYS_ADMIN'), usersController.list);

@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { filesService } from './files.service.js';
 import { sendSuccess } from '../../utils/api-response.js';
+import { activityService } from '../activity/activity.service.js';
 
 export class FilesController {
   async list(req: Request, res: Response, next: NextFunction) {
@@ -32,6 +33,8 @@ export class FilesController {
         size: file.size,
         buffer: file.buffer,
       });
+
+      activityService.log(projectId, userId, 'file.uploaded', { fileName: file.originalname }).catch(() => {});
 
       sendSuccess(res, result, 201);
     } catch (error) {
@@ -69,6 +72,8 @@ export class FilesController {
         size,
         taskId,
       });
+
+      activityService.log(projectId, userId, 'file.uploaded', { fileName: name }).catch(() => {});
 
       sendSuccess(res, file, 201);
     } catch (error) {
@@ -112,6 +117,8 @@ export class FilesController {
       const fileId = req.params.fileId as string;
 
       const result = await filesService.delete(fileId);
+
+      activityService.log(result.projectId, req.user!.id, 'file.deleted', { fileName: result.fileName }).catch(() => {});
 
       sendSuccess(res, result);
     } catch (error) {

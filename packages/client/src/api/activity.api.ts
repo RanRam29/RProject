@@ -12,6 +12,10 @@ export interface ActivityLogDTO {
     displayName: string;
     avatarUrl: string | null;
   };
+  project?: {
+    id: string;
+    name: string;
+  };
 }
 
 export const activityApi = {
@@ -19,6 +23,14 @@ export const activityApi = {
     const res = await apiClient.get<{ success: boolean; data: ActivityLogDTO[] }>(
       `/projects/${projectId}/activity`,
       { params: { page, limit } }
+    );
+    return res.data.data;
+  },
+
+  async listUserActivity(limit = 15): Promise<ActivityLogDTO[]> {
+    const res = await apiClient.get<{ success: boolean; data: ActivityLogDTO[] }>(
+      '/users/me/activity',
+      { params: { limit } }
     );
     return res.data.data;
   },
