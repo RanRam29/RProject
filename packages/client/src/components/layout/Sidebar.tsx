@@ -251,23 +251,21 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle, isMobile,
             <span style={logoMarkStyle}>PM</span>
             <span style={logoTextStyle}>ProjectMgr</span>
           </div>
-          {!isMobile && (
-            <button
-              style={collapseButtonStyle}
-              onClick={onToggle}
-              title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)';
-                e.currentTarget.style.color = 'var(--color-text-primary)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = 'transparent';
-                e.currentTarget.style.color = 'var(--color-text-tertiary)';
-              }}
-            >
-              <CollapseIcon collapsed={collapsed} />
-            </button>
-          )}
+          <button
+            style={collapseButtonStyle}
+            onClick={onToggle}
+            title={isMobile ? 'Close sidebar' : collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)';
+              e.currentTarget.style.color = 'var(--color-text-primary)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'transparent';
+              e.currentTarget.style.color = 'var(--color-text-tertiary)';
+            }}
+          >
+            {isMobile ? '\u2715' : <CollapseIcon collapsed={collapsed} />}
+          </button>
         </div>
 
         {/* Main navigation */}
