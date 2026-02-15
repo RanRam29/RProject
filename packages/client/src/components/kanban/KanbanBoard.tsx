@@ -4,6 +4,7 @@ import {
   DragOverlay,
   closestCorners,
   PointerSensor,
+  TouchSensor,
   useSensor,
   useSensors,
   type DragStartEvent,
@@ -48,7 +49,13 @@ export function KanbanBoard({
       distance: 8,
     },
   });
-  const sensors = useSensors(...(selectionMode ? [] : [pointerSensor]));
+  const touchSensor = useSensor(TouchSensor, {
+    activationConstraint: {
+      delay: 250,
+      tolerance: 5,
+    },
+  });
+  const sensors = useSensors(...(selectionMode ? [] : [pointerSensor, touchSensor]));
 
   const tasksByStatus = useMemo(() => {
     const map: Record<string, TaskDTO[]> = {};
@@ -138,6 +145,8 @@ export function KanbanBoard({
     overflowX: 'auto',
     minHeight: '400px',
     alignItems: 'flex-start',
+    WebkitOverflowScrolling: 'touch',
+    scrollSnapType: 'x proximity',
   };
 
   return (

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useEffect, useCallback } from 'react';
 import { Outlet } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { TopBar } from './TopBar';
@@ -26,7 +26,7 @@ const ToastContainer: React.FC = () => {
     display: 'flex',
     flexDirection: 'column',
     gap: '8px',
-    maxWidth: '400px',
+    maxWidth: 'min(400px, calc(100vw - 24px))',
     width: '100%',
     pointerEvents: 'none',
   };
@@ -111,8 +111,7 @@ const ToastContainer: React.FC = () => {
 /* ------------------------------------------------------------------ */
 
 export const AppLayout: React.FC = () => {
-  const { sidebarOpen, toggleSidebar, setSidebarOpen } = useUIStore();
-  const [isMobile, setIsMobile] = useState(window.innerWidth < MOBILE_BREAKPOINT);
+  const { sidebarOpen, toggleSidebar, setSidebarOpen, isMobile, setIsMobile } = useUIStore();
 
   // Responsive: track viewport width
   useEffect(() => {
@@ -129,7 +128,7 @@ export const AppLayout: React.FC = () => {
     handleResize();
 
     return () => window.removeEventListener('resize', handleResize);
-  }, [setSidebarOpen]);
+  }, [setSidebarOpen, setIsMobile]);
 
   const handleSidebarToggle = useCallback(() => {
     toggleSidebar();
@@ -160,7 +159,7 @@ export const AppLayout: React.FC = () => {
   const contentStyle: React.CSSProperties = {
     flex: 1,
     overflow: 'auto',
-    padding: '24px',
+    padding: isMobile ? '12px' : '24px',
     backgroundColor: 'var(--color-bg-secondary)',
   };
 

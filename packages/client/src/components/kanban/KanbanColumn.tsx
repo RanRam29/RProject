@@ -44,6 +44,7 @@ export function KanbanColumn({
     border: isOver || isOverlay
       ? '2px dashed var(--color-accent)'
       : '2px solid transparent',
+    scrollSnapAlign: 'start',
   };
 
   const headerStyle: React.CSSProperties = {

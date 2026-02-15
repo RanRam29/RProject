@@ -11,11 +11,13 @@ interface Toast {
 interface UIState {
   theme: Theme;
   sidebarOpen: boolean;
+  isMobile: boolean;
   toasts: Toast[];
   toggleTheme: () => void;
   setTheme: (theme: Theme) => void;
   toggleSidebar: () => void;
   setSidebarOpen: (open: boolean) => void;
+  setIsMobile: (isMobile: boolean) => void;
   addToast: (toast: Omit<Toast, 'id'>) => void;
   removeToast: (id: string) => void;
 }
@@ -35,6 +37,7 @@ function getInitialSidebarOpen(): boolean {
 export const useUIStore = create<UIState>((set) => ({
   theme: getInitialTheme(),
   sidebarOpen: getInitialSidebarOpen(),
+  isMobile: typeof window !== 'undefined' ? window.innerWidth < 768 : false,
   toasts: [],
 
   toggleTheme: () =>
@@ -61,6 +64,7 @@ export const useUIStore = create<UIState>((set) => ({
     localStorage.setItem('sidebarOpen', String(sidebarOpen));
     set({ sidebarOpen });
   },
+  setIsMobile: (isMobile) => set({ isMobile }),
 
   addToast: (toast) =>
     set((state) => {

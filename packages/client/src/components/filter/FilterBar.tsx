@@ -165,8 +165,8 @@ const searchWrap: React.CSSProperties = {
   borderRadius: 'var(--radius-md)',
   backgroundColor: 'var(--color-bg-elevated)',
   transition: 'border-color var(--transition-fast)',
-  minWidth: 180,
-  flex: '0 1 220px',
+  minWidth: 0,
+  flex: '1 1 180px',
 };
 
 const searchIcon: React.CSSProperties = {
@@ -205,6 +205,8 @@ const selectStyle: React.CSSProperties = {
   cursor: 'pointer',
   outline: 'none',
   maxWidth: 150,
+  minWidth: 0,
+  flex: '1 1 100px',
 };
 
 const activeSelectStyle: React.CSSProperties = {

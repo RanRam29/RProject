@@ -66,6 +66,7 @@ export const NotificationBell: React.FC = () => {
     right: 0,
     marginTop: '4px',
     width: '380px',
+    maxWidth: 'calc(100vw - 16px)',
     maxHeight: '480px',
     backgroundColor: 'var(--color-bg-elevated)',
     border: '1px solid var(--color-border)',

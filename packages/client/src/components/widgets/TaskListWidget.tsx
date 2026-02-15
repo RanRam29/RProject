@@ -26,6 +26,7 @@ const PRIORITY_ORDER: Record<string, number> = {
 export function TaskListWidget({ projectId }: WidgetProps) {
   const queryClient = useQueryClient();
   const addToast = useUIStore((s) => s.addToast);
+  const isMobile = useUIStore((s) => s.isMobile);
   const [selectedTask, setSelectedTask] = useState<TaskDTO | null>(null);
   const [showCreate, setShowCreate] = useState(false);
   const [showImport, setShowImport] = useState(false);
@@ -335,13 +336,78 @@ export function TaskListWidget({ projectId }: WidgetProps) {
         </form>
       </div>
 
-      {/* Table */}
+      {/* Task List */}
       <div style={{ flex: 1, overflow: 'auto' }}>
         {sortedTasks.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '24px', color: 'var(--color-text-tertiary)' }}>
             {activeCount > 0 ? 'No tasks match the current filters.' : 'No tasks yet. Click "+ New Task" to create one.'}
           </div>
+        ) : isMobile ? (
+          /* Mobile card layout */
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '8px' }}>
+            {sortedTasks.map((task) => {
+              const status = statusMap[task.statusId];
+              const isOverdue = task.dueDate && new Date(task.dueDate) < new Date() && !status?.isFinal;
+              const priorityCfg = PRIORITY_CONFIG[task.priority];
+              return (
+                <div
+                  key={task.id}
+                  onClick={() => setSelectedTask(task)}
+                  style={{
+                    padding: '12px',
+                    borderRadius: 'var(--radius-md)',
+                    border: '1px solid var(--color-border)',
+                    backgroundColor: 'var(--color-bg-elevated)',
+                    cursor: 'pointer',
+                    transition: 'background var(--transition-fast)',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                    <input
+                      type="checkbox"
+                      checked={status?.isFinal || false}
+                      onChange={(e) => { e.stopPropagation(); handleToggle(task); }}
+                      style={{ width: '18px', height: '18px', accentColor: 'var(--color-accent)', flexShrink: 0 }}
+                    />
+                    <span style={{
+                      flex: 1,
+                      fontWeight: 500,
+                      fontSize: '14px',
+                      textDecoration: status?.isFinal ? 'line-through' : 'none',
+                      color: status?.isFinal ? 'var(--color-text-tertiary)' : 'var(--color-text-primary)',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                    }}>{task.title}</span>
+                  </div>
+                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center', paddingLeft: '26px' }}>
+                    {status && (
+                      <span style={{
+                        fontSize: '11px', padding: '2px 8px', borderRadius: 'var(--radius-full)',
+                        backgroundColor: status.color + '20', color: status.color, fontWeight: 500,
+                      }}>{status.name}</span>
+                    )}
+                    {priorityCfg && task.priority !== 'NONE' && (
+                      <span style={{ fontSize: '11px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: priorityCfg.color }} />
+                        {priorityCfg.label}
+                      </span>
+                    )}
+                    {task.dueDate && (
+                      <span style={{
+                        fontSize: '11px',
+                        color: isOverdue ? 'var(--color-danger)' : 'var(--color-text-tertiary)',
+                      }}>
+                        {new Date(task.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         ) : (
+          /* Desktop table layout */
           <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '700px' }}>
             <thead>
               <tr>

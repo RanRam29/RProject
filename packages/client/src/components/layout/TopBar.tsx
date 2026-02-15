@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { useTheme } from '../../hooks/useTheme';
 import { NotificationBell } from '../notifications/NotificationBell';
+import { useUIStore } from '../../stores/ui.store';
 
 /* ------------------------------------------------------------------ */
 /*  Inline SVG icon components                                         */
@@ -64,6 +65,7 @@ export const TopBar: React.FC<TopBarProps> = ({ onMenuClick, children }) => {
   const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
+  const isMobile = useUIStore(s => s.isMobile);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -113,8 +115,8 @@ export const TopBar: React.FC<TopBarProps> = ({ onMenuClick, children }) => {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    width: '36px',
-    height: '36px',
+    width: '40px',
+    height: '40px',
     border: 'none',
     borderRadius: 'var(--radius-md)',
     backgroundColor: 'transparent',
@@ -285,24 +287,26 @@ export const TopBar: React.FC<TopBarProps> = ({ onMenuClick, children }) => {
             ) : (
               <span style={avatarCircleStyle}>{userInitials}</span>
             )}
-            <span style={{ fontSize: '13px', fontWeight: 500 }}>{user?.displayName ?? ''}</span>
-            <svg
-              width="12"
-              height="12"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              style={{
-                color: 'var(--color-text-tertiary)',
-                transition: 'transform var(--transition-fast)',
-                transform: dropdownOpen ? 'rotate(180deg)' : 'rotate(0deg)',
-              }}
-            >
-              <polyline points="6 9 12 15 18 9" />
-            </svg>
+            {!isMobile && <span style={{ fontSize: '13px', fontWeight: 500 }}>{user?.displayName ?? ''}</span>}
+            {!isMobile && (
+              <svg
+                width="12"
+                height="12"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                style={{
+                  color: 'var(--color-text-tertiary)',
+                  transition: 'transform var(--transition-fast)',
+                  transform: dropdownOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+                }}
+              >
+                <polyline points="6 9 12 15 18 9" />
+              </svg>
+            )}
           </button>
 
           {/* Dropdown menu */}

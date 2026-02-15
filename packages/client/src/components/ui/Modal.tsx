@@ -55,6 +55,8 @@ export const Modal: React.FC<ModalProps> = ({
 
   if (!isOpen) return null;
 
+  const isNarrow = window.innerWidth < 768;
+
   const overlayStyle: React.CSSProperties = {
     position: 'fixed',
     inset: 0,
@@ -63,7 +65,7 @@ export const Modal: React.FC<ModalProps> = ({
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 1000,
-    padding: '24px',
+    padding: isNarrow ? '8px' : '24px',
     backdropFilter: 'blur(4px)',
     animation: 'fadeIn var(--transition-fast) ease',
   };
@@ -117,7 +119,7 @@ export const Modal: React.FC<ModalProps> = ({
   };
 
   const bodyStyle: React.CSSProperties = {
-    padding: '24px',
+    padding: isNarrow ? '16px' : '24px',
     overflowY: 'auto',
     flex: 1,
   };

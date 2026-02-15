@@ -101,7 +101,7 @@ export default function AdminPage() {
 
   const statsGridStyle: React.CSSProperties = {
     display: 'grid',
-    gridTemplateColumns: 'repeat(3, 1fr)',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
     gap: '16px',
     marginBottom: '24px',
   };
@@ -238,7 +238,7 @@ export default function AdminPage() {
                     {createError}
                   </div>
                 )}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px' }}>
                   <Input
                     label="Display Name"
                     value={newDisplayName}
@@ -295,29 +295,31 @@ export default function AdminPage() {
             )}
           </div>
 
-          <table style={tableStyle}>
-            <thead>
-              <tr>
-                <th style={thStyle}>Name</th>
-                <th style={thStyle}>Email</th>
-                <th style={thStyle}>Role</th>
-                <th style={thStyle}>Status</th>
-                <th style={thStyle}>Joined</th>
-                <th style={thStyle}>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {usersData?.data?.map((user) => (
-                <UserRow key={user.id} user={user} selectStyle={selectStyle} tdStyle={tdStyle} />
-              )) || (
+          <div style={{ overflowX: 'auto' }}>
+            <table style={tableStyle}>
+              <thead>
                 <tr>
-                  <td style={tdStyle} colSpan={6}>
-                    No users found
-                  </td>
+                  <th style={thStyle}>Name</th>
+                  <th style={thStyle}>Email</th>
+                  <th style={thStyle}>Role</th>
+                  <th style={thStyle}>Status</th>
+                  <th style={thStyle}>Joined</th>
+                  <th style={thStyle}>Actions</th>
                 </tr>
-              )}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {usersData?.data?.map((user) => (
+                  <UserRow key={user.id} user={user} selectStyle={selectStyle} tdStyle={tdStyle} />
+                )) || (
+                  <tr>
+                    <td style={tdStyle} colSpan={6}>
+                      No users found
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         </>
       )}
 
@@ -505,49 +507,51 @@ function ActivityLogsTab({
           No logs found.
         </div>
       ) : (
-        <table style={tableStyle}>
-          <thead>
-            <tr>
-              <th style={thStyle}>Time</th>
-              <th style={thStyle}>Action</th>
-              <th style={thStyle}>Actor ID</th>
-              <th style={thStyle}>Target</th>
-              <th style={thStyle}>IP</th>
-              <th style={thStyle}>Details</th>
-            </tr>
-          </thead>
-          <tbody>
-            {logs.map((log: AdminLogDTO) => (
-              <tr key={log.id}>
-                <td style={{ ...tdStyle, fontSize: '12px', whiteSpace: 'nowrap', color: 'var(--color-text-secondary)' }}>
-                  {timeAgo(log.createdAt)}
-                </td>
-                <td style={tdStyle}>
-                  <span style={{
-                    fontSize: '12px', padding: '2px 8px',
-                    borderRadius: 'var(--radius-full)',
-                    backgroundColor: 'var(--color-bg-tertiary)',
-                    fontFamily: 'var(--font-mono)',
-                  }}>
-                    {log.action}
-                  </span>
-                </td>
-                <td style={{ ...tdStyle, fontSize: '12px', fontFamily: 'var(--font-mono)', color: 'var(--color-text-secondary)' }}>
-                  {log.actorId ? `${log.actorId.slice(0, 8)}...` : '-'}
-                </td>
-                <td style={{ ...tdStyle, fontSize: '12px', color: 'var(--color-text-secondary)' }}>
-                  {log.targetId || '-'}
-                </td>
-                <td style={{ ...tdStyle, fontSize: '12px', fontFamily: 'var(--font-mono)', color: 'var(--color-text-tertiary)' }}>
-                  {log.ip || '-'}
-                </td>
-                <td style={{ ...tdStyle, fontSize: '11px', maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--color-text-tertiary)' }}>
-                  {Boolean(log.metadata) && Object.keys(log.metadata).length > 0 ? JSON.stringify(log.metadata) : '-'}
-                </td>
+        <div style={{ overflowX: 'auto' }}>
+          <table style={tableStyle}>
+            <thead>
+              <tr>
+                <th style={thStyle}>Time</th>
+                <th style={thStyle}>Action</th>
+                <th style={thStyle}>Actor ID</th>
+                <th style={thStyle}>Target</th>
+                <th style={thStyle}>IP</th>
+                <th style={thStyle}>Details</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {logs.map((log: AdminLogDTO) => (
+                <tr key={log.id}>
+                  <td style={{ ...tdStyle, fontSize: '12px', whiteSpace: 'nowrap', color: 'var(--color-text-secondary)' }}>
+                    {timeAgo(log.createdAt)}
+                  </td>
+                  <td style={tdStyle}>
+                    <span style={{
+                      fontSize: '12px', padding: '2px 8px',
+                      borderRadius: 'var(--radius-full)',
+                      backgroundColor: 'var(--color-bg-tertiary)',
+                      fontFamily: 'var(--font-mono)',
+                    }}>
+                      {log.action}
+                    </span>
+                  </td>
+                  <td style={{ ...tdStyle, fontSize: '12px', fontFamily: 'var(--font-mono)', color: 'var(--color-text-secondary)' }}>
+                    {log.actorId ? `${log.actorId.slice(0, 8)}...` : '-'}
+                  </td>
+                  <td style={{ ...tdStyle, fontSize: '12px', color: 'var(--color-text-secondary)' }}>
+                    {log.targetId || '-'}
+                  </td>
+                  <td style={{ ...tdStyle, fontSize: '12px', fontFamily: 'var(--font-mono)', color: 'var(--color-text-tertiary)' }}>
+                    {log.ip || '-'}
+                  </td>
+                  <td style={{ ...tdStyle, fontSize: '11px', maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--color-text-tertiary)' }}>
+                    {Boolean(log.metadata) && Object.keys(log.metadata).length > 0 ? JSON.stringify(log.metadata) : '-'}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
 
       {totalPages > 1 && (

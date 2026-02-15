@@ -1,5 +1,6 @@
 import { useState, useCallback, type ReactNode } from 'react';
 import { useProjectPermission } from '../../hooks/usePermission';
+import { useUIStore } from '../../stores/ui.store';
 
 const SIZE_PRESETS = [
   { label: 'S', width: 400, height: 300 },
@@ -32,6 +33,7 @@ export function WidgetContainer({
   const [isHovered, setIsHovered] = useState(false);
   const [showSizeMenu, setShowSizeMenu] = useState(false);
   const { isOwner } = useProjectPermission(projectId);
+  const isMobile = useUIStore(s => s.isMobile);
 
   const currentSizeIndex = SIZE_PRESETS.findIndex(
     (s) => s.width === width && s.height === height
@@ -57,6 +59,7 @@ export function WidgetContainer({
 
   const containerStyle: React.CSSProperties = {
     width: `${width}px`,
+    maxWidth: '100%',
     minHeight: `${height}px`,
     backgroundColor: 'var(--color-bg-elevated)',
     borderRadius: 'var(--radius-lg)',
@@ -88,7 +91,7 @@ export function WidgetContainer({
   const actionsStyle: React.CSSProperties = {
     display: 'flex',
     gap: '2px',
-    opacity: isHovered && isOwner ? 1 : 0,
+    opacity: (isMobile && isOwner) || (isHovered && isOwner) ? 1 : 0,
     transition: 'opacity var(--transition-fast)',
     alignItems: 'center',
   };
