@@ -75,10 +75,17 @@ export class NotificationsService {
 
   private async sendEmailForNotification(input: CreateNotificationInput) {
     // Fetch the target user to check email preference
-    const user = await prisma.user.findUnique({
-      where: { id: input.userId },
-      select: { email: true, displayName: true, emailNotifications: true },
-    });
+    let user: { email: string; displayName: string; emailNotifications: boolean } | null = null;
+    try {
+      user = await prisma.user.findUnique({
+        where: { id: input.userId },
+        select: { email: true, displayName: true, emailNotifications: true },
+      });
+    } catch (err) {
+      // emailNotifications column may not exist if migration hasn't been applied yet
+      logger.warn(`Could not fetch email preferences for user ${input.userId}: ${err instanceof Error ? err.message : err}`);
+      return;
+    }
 
     if (!user || !user.emailNotifications) return;
 

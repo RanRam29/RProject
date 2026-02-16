@@ -6,6 +6,7 @@ import { sendSuccess, sendPaginated } from '../../utils/api-response.js';
 import { activityService } from '../activity/activity.service.js';
 import { notificationsService } from '../notifications/notifications.service.js';
 import prisma from '../../config/db.js';
+import logger from '../../utils/logger.js';
 
 export class TasksController {
   async list(req: Request, res: Response, next: NextFunction) {
@@ -112,8 +113,10 @@ export class TasksController {
 
       activityService.log(task.projectId, userId, 'task.updated', { taskId, title: task.title }).catch(() => {});
 
-      // Notify new assignee if assignment changed
-      if (assigneeId && assigneeId !== userId) {
+      // Notify assignee about task changes
+      const assigneeChanged = assigneeId && assigneeId !== oldTask?.assigneeId;
+      if (assigneeChanged && assigneeId !== userId) {
+        // New assignee notification
         notificationsService.create({
           userId: assigneeId,
           type: 'TASK_ASSIGNED',
@@ -121,8 +124,10 @@ export class TasksController {
           projectId: task.projectId,
           taskId,
           actorId: userId,
-        }).catch(() => {});
-      } else if (task.assigneeId && task.assigneeId !== userId && !assigneeId) {
+        }).catch((err) => {
+          logger.error(`Failed to create TASK_ASSIGNED notification: ${err instanceof Error ? err.message : err}`);
+        });
+      } else if (task.assigneeId && task.assigneeId !== userId) {
         // Notify existing assignee of other task changes (title, priority, due date, etc.)
         notificationsService.create({
           userId: task.assigneeId,
@@ -131,7 +136,9 @@ export class TasksController {
           projectId: task.projectId,
           taskId,
           actorId: userId,
-        }).catch(() => {});
+        }).catch((err) => {
+          logger.error(`Failed to create TASK_UPDATED notification: ${err instanceof Error ? err.message : err}`);
+        });
       }
 
       sendSuccess(res, task);
