@@ -13,8 +13,12 @@ const server = http.createServer(app);
 import { initializeWebSocket } from './ws/ws.server.js';
 initializeWebSocket(server);
 
+// Start due date reminder scheduler
+import { startDueDateReminders } from './modules/emails/due-date-reminder.js';
+
 server.listen(env.PORT, () => {
   logger.info(`Server running on port ${env.PORT}`);
+  startDueDateReminders();
 });
 
 export default server;

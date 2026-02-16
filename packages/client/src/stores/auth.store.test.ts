@@ -10,6 +10,7 @@ const mockUser: UserDTO = {
   avatarUrl: null,
   systemRole: SystemRole.VIEWER_ONLY,
   isActive: true,
+  emailNotifications: true,
   createdAt: '2025-01-01T00:00:00Z',
   updatedAt: '2025-01-01T00:00:00Z',
 };

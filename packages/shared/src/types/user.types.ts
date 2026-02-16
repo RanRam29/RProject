@@ -7,6 +7,7 @@ export interface UserDTO {
   avatarUrl: string | null;
   systemRole: SystemRole;
   isActive: boolean;
+  emailNotifications: boolean;
   createdAt: string;
   updatedAt: string;
 }

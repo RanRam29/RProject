@@ -52,6 +52,7 @@ function excludePasswordHash(user: {
   avatarUrl: string | null;
   systemRole: string;
   isActive: boolean;
+  emailNotifications: boolean;
   createdAt: Date;
   updatedAt: Date;
 }) {

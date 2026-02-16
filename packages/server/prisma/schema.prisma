@@ -39,6 +39,7 @@ model User {
   passwordResetTokens    PasswordResetToken[]
   emailVerificationTokens EmailVerificationToken[]
   emailVerified          Boolean    @default(false) @map("email_verified")
+  emailNotifications     Boolean    @default(true)  @map("email_notifications")
   createdTemplates       Template[]
   comments               Comment[]
   notifications          Notification[]

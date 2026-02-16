@@ -61,10 +61,13 @@ export function TaskListWidget({ projectId }: WidgetProps) {
 
   const { filters, filteredTasks, updateFilter, clearFilters, activeCount } = useTaskFilters(tasks);
 
-  const statusMap: Record<string, TaskStatusDTO> = {};
-  statuses.forEach((s) => {
-    statusMap[s.id] = s;
-  });
+  const statusMap = useMemo(() => {
+    const map: Record<string, TaskStatusDTO> = {};
+    statuses.forEach((s) => {
+      map[s.id] = s;
+    });
+    return map;
+  }, [statuses]);
 
   const sortedTasks = useMemo(() => {
     const sorted = [...filteredTasks];

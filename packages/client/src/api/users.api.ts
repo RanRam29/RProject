@@ -69,7 +69,7 @@ export const usersApi = {
     return res.data.data!;
   },
 
-  async update(id: string, data: { displayName?: string; avatarUrl?: string }): Promise<SharedUserDTO> {
+  async update(id: string, data: { displayName?: string; avatarUrl?: string; emailNotifications?: boolean }): Promise<SharedUserDTO> {
     const res = await apiClient.patch<ApiResponse<SharedUserDTO>>(`/users/${id}`, data);
     return res.data.data!;
   },

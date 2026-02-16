@@ -60,7 +60,9 @@ export function TaskDetailModal({
       setTitle(task.title);
       setDescription(
         typeof task.description === 'string' ? task.description :
-        task.description ? JSON.stringify(task.description) : ''
+        task.description && typeof task.description === 'object' && 'text' in task.description
+          ? String((task.description as { text: string }).text)
+          : ''
       );
       setStatusId(task.statusId);
       setAssigneeId(task.assigneeId || null);

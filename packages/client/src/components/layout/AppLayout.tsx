@@ -1,4 +1,4 @@
-import React, { useEffect, useCallback } from 'react';
+import React, { useEffect, useCallback, useRef } from 'react';
 import { Outlet } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { TopBar } from './TopBar';
@@ -114,11 +114,15 @@ export const AppLayout: React.FC = () => {
   const { sidebarOpen, toggleSidebar, setSidebarOpen, isMobile, setIsMobile } = useUIStore();
 
   // Responsive: track viewport width
+  const wasMobileRef = useRef(window.innerWidth < MOBILE_BREAKPOINT);
   useEffect(() => {
     const handleResize = () => {
       const mobile = window.innerWidth < MOBILE_BREAKPOINT;
+      const wasMobile = wasMobileRef.current;
+      wasMobileRef.current = mobile;
       setIsMobile(mobile);
-      if (mobile) {
+      // Only close sidebar when transitioning from desktop to mobile
+      if (mobile && !wasMobile) {
         setSidebarOpen(false);
       }
     };

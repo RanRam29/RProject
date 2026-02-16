@@ -13,6 +13,7 @@ export default function ProfilePage() {
   // Profile form
   const [displayName, setDisplayName] = useState(user?.displayName || '');
   const [avatarUrl, setAvatarUrl] = useState(user?.avatarUrl || '');
+  const [emailNotifications, setEmailNotifications] = useState(user?.emailNotifications ?? true);
 
   // Password form
   const [currentPassword, setCurrentPassword] = useState('');
@@ -28,6 +29,21 @@ export default function ProfilePage() {
     },
     onError: () => {
       addToast({ type: 'error', message: 'Failed to update profile' });
+    },
+  });
+
+  const emailPrefMutation = useMutation({
+    mutationFn: (enabled: boolean) =>
+      usersApi.update(user!.id, { emailNotifications: enabled }),
+    onSuccess: (updated) => {
+      setUser(updated);
+      setEmailNotifications(updated.emailNotifications);
+      addToast({ type: 'success', message: updated.emailNotifications ? 'Email notifications enabled' : 'Email notifications disabled' });
+    },
+    onError: () => {
+      // Revert local state on failure
+      setEmailNotifications((prev) => !prev);
+      addToast({ type: 'error', message: 'Failed to update email preference' });
     },
   });
 
@@ -146,6 +162,42 @@ export default function ProfilePage() {
           >
             {profileMutation.isPending ? 'Saving...' : 'Save Changes'}
           </button>
+        </div>
+
+        {/* Notification Preferences Section */}
+        <div style={sectionStyle}>
+          <h3 style={sectionTitleStyle}>Notification Preferences</h3>
+
+          <div style={toggleRowStyle}>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: '14px', fontWeight: 500, color: 'var(--color-text-primary)' }}>
+                Email Notifications
+              </div>
+              <div style={{ fontSize: '13px', color: 'var(--color-text-secondary)', marginTop: '2px' }}>
+                Receive emails for task assignments, updates, comments, and due date reminders
+              </div>
+            </div>
+            <button
+              style={{
+                ...toggleBtnStyle,
+                backgroundColor: emailNotifications ? 'var(--color-accent)' : 'var(--color-bg-tertiary, #ccc)',
+              }}
+              onClick={() => {
+                const next = !emailNotifications;
+                setEmailNotifications(next);
+                emailPrefMutation.mutate(next);
+              }}
+              disabled={emailPrefMutation.isPending}
+              title={emailNotifications ? 'Disable email notifications' : 'Enable email notifications'}
+            >
+              <span
+                style={{
+                  ...toggleKnobStyle,
+                  transform: emailNotifications ? 'translateX(20px)' : 'translateX(2px)',
+                }}
+              />
+            </button>
+          </div>
         </div>
 
         {/* Password Section */}
@@ -323,4 +375,32 @@ const primaryBtnStyle: React.CSSProperties = {
   borderRadius: 'var(--radius-md)',
   cursor: 'pointer',
   alignSelf: 'flex-start',
+};
+
+const toggleRowStyle: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: '16px',
+};
+
+const toggleBtnStyle: React.CSSProperties = {
+  position: 'relative',
+  width: '44px',
+  height: '24px',
+  borderRadius: '12px',
+  border: 'none',
+  cursor: 'pointer',
+  flexShrink: 0,
+  transition: 'background-color var(--transition-fast)',
+  padding: 0,
+};
+
+const toggleKnobStyle: React.CSSProperties = {
+  display: 'block',
+  width: '20px',
+  height: '20px',
+  borderRadius: '50%',
+  backgroundColor: 'white',
+  transition: 'transform var(--transition-fast)',
+  boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
 };

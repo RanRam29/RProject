@@ -118,7 +118,7 @@ function parseExcel(buffer: ArrayBuffer): ParsedTask[] {
 
 function detectColumns(headers: string[]): Record<string, string> {
   const map: Record<string, string> = {
-    title: headers[0],
+    title: '',
     description: '',
     priority: '',
     dueDate: '',
@@ -142,6 +142,11 @@ function detectColumns(headers: string[]): Record<string, string> {
     if (/status|state|stage|column|phase/i.test(lower)) {
       map.status = h;
     }
+  }
+
+  // Fallback: if no title column detected, use first column
+  if (!map.title) {
+    map.title = headers[0];
   }
 
   return map;

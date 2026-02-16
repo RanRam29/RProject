@@ -24,7 +24,7 @@ export class UsersService {
       },
       select: {
         id: true, email: true, displayName: true, avatarUrl: true,
-        systemRole: true, isActive: true, createdAt: true, updatedAt: true,
+        systemRole: true, isActive: true, emailNotifications: true, createdAt: true, updatedAt: true,
       },
     });
 
@@ -67,20 +67,20 @@ export class UsersService {
       where: { id },
       select: {
         id: true, email: true, displayName: true, avatarUrl: true,
-        systemRole: true, isActive: true, createdAt: true, updatedAt: true,
+        systemRole: true, isActive: true, emailNotifications: true, createdAt: true, updatedAt: true,
       },
     });
     if (!user) throw ApiError.notFound('User not found');
     return user;
   }
 
-  async update(id: string, data: { displayName?: string; avatarUrl?: string }) {
+  async update(id: string, data: { displayName?: string; avatarUrl?: string; emailNotifications?: boolean }) {
     return prisma.user.update({
       where: { id },
       data,
       select: {
         id: true, email: true, displayName: true, avatarUrl: true,
-        systemRole: true, isActive: true, createdAt: true, updatedAt: true,
+        systemRole: true, isActive: true, emailNotifications: true, createdAt: true, updatedAt: true,
       },
     });
   }
@@ -91,7 +91,7 @@ export class UsersService {
       data: { systemRole: role as 'SYS_ADMIN' | 'PROJECT_CREATOR' | 'TEMPLATE_MANAGER' | 'VIEWER_ONLY' },
       select: {
         id: true, email: true, displayName: true, avatarUrl: true,
-        systemRole: true, isActive: true, createdAt: true, updatedAt: true,
+        systemRole: true, isActive: true, emailNotifications: true, createdAt: true, updatedAt: true,
       },
     });
   }

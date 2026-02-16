@@ -216,6 +216,129 @@ function taskAssignmentHtml(taskUrl: string, assignerName: string, taskTitle: st
 </html>`.trim();
 }
 
+function taskUpdatedHtml(taskUrl: string, updaterName: string, taskTitle: string, projectName: string, recipientName: string): string {
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Task Updated</title>
+</head>
+<body style="margin:0;padding:0;background-color:#f4f4f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f4f5;padding:40px 20px;">
+    <tr>
+      <td align="center">
+        <table width="560" cellpadding="0" cellspacing="0" style="background-color:#ffffff;border-radius:8px;padding:40px;">
+          <tr>
+            <td>
+              <h1 style="color:#18181b;font-size:24px;margin:0 0 16px;">Task Updated</h1>
+              <p style="color:#3f3f46;font-size:16px;line-height:24px;margin:0 0 24px;">Hi ${recipientName},</p>
+              <p style="color:#3f3f46;font-size:16px;line-height:24px;margin:0 0 24px;">
+                <strong>${updaterName}</strong> updated a task in <strong>${projectName}</strong>:
+              </p>
+              <div style="background-color:#f4f4f5;border-radius:6px;padding:16px;margin:0 0 24px;">
+                <p style="color:#18181b;font-size:16px;font-weight:600;margin:0;">${taskTitle}</p>
+              </div>
+              <table cellpadding="0" cellspacing="0" style="margin:0 0 24px;">
+                <tr>
+                  <td style="background-color:#2563eb;border-radius:6px;padding:12px 24px;">
+                    <a href="${taskUrl}" style="color:#ffffff;text-decoration:none;font-size:16px;font-weight:600;">View Task</a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`.trim();
+}
+
+function taskCommentedHtml(taskUrl: string, commenterName: string, taskTitle: string, projectName: string, recipientName: string, commentPreview: string): string {
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>New Comment on Task</title>
+</head>
+<body style="margin:0;padding:0;background-color:#f4f4f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f4f5;padding:40px 20px;">
+    <tr>
+      <td align="center">
+        <table width="560" cellpadding="0" cellspacing="0" style="background-color:#ffffff;border-radius:8px;padding:40px;">
+          <tr>
+            <td>
+              <h1 style="color:#18181b;font-size:24px;margin:0 0 16px;">New Comment</h1>
+              <p style="color:#3f3f46;font-size:16px;line-height:24px;margin:0 0 24px;">Hi ${recipientName},</p>
+              <p style="color:#3f3f46;font-size:16px;line-height:24px;margin:0 0 24px;">
+                <strong>${commenterName}</strong> commented on <strong>${taskTitle}</strong> in <strong>${projectName}</strong>:
+              </p>
+              <div style="background-color:#f4f4f5;border-radius:6px;padding:16px;margin:0 0 24px;border-left:4px solid #2563eb;">
+                <p style="color:#3f3f46;font-size:14px;line-height:22px;margin:0;font-style:italic;">${commentPreview}</p>
+              </div>
+              <table cellpadding="0" cellspacing="0" style="margin:0 0 24px;">
+                <tr>
+                  <td style="background-color:#2563eb;border-radius:6px;padding:12px 24px;">
+                    <a href="${taskUrl}" style="color:#ffffff;text-decoration:none;font-size:16px;font-weight:600;">View Comment</a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`.trim();
+}
+
+function dueDateReminderHtml(taskUrl: string, taskTitle: string, projectName: string, recipientName: string, dueDate: string): string {
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Task Due Soon</title>
+</head>
+<body style="margin:0;padding:0;background-color:#f4f4f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f4f5;padding:40px 20px;">
+    <tr>
+      <td align="center">
+        <table width="560" cellpadding="0" cellspacing="0" style="background-color:#ffffff;border-radius:8px;padding:40px;">
+          <tr>
+            <td>
+              <h1 style="color:#18181b;font-size:24px;margin:0 0 16px;">Task Due Soon</h1>
+              <p style="color:#3f3f46;font-size:16px;line-height:24px;margin:0 0 24px;">Hi ${recipientName},</p>
+              <p style="color:#3f3f46;font-size:16px;line-height:24px;margin:0 0 24px;">
+                Your task in <strong>${projectName}</strong> is due on <strong>${dueDate}</strong>:
+              </p>
+              <div style="background-color:#fef3c7;border-radius:6px;padding:16px;margin:0 0 24px;border-left:4px solid #f59e0b;">
+                <p style="color:#18181b;font-size:16px;font-weight:600;margin:0;">${taskTitle}</p>
+              </div>
+              <table cellpadding="0" cellspacing="0" style="margin:0 0 24px;">
+                <tr>
+                  <td style="background-color:#f59e0b;border-radius:6px;padding:12px 24px;">
+                    <a href="${taskUrl}" style="color:#ffffff;text-decoration:none;font-size:16px;font-weight:600;">View Task</a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`.trim();
+}
+
 // ──────────────────────────────────────────────
 // Email Service
 // ──────────────────────────────────────────────
@@ -303,6 +426,59 @@ export const emailService = {
     const taskUrl = `${env.CLIENT_URL}/projects/${projectId}/tasks/${taskId}`;
     const html = taskAssignmentHtml(taskUrl, assignerName, taskTitle, projectName, recipientName);
     return sendEmail(to, `New task: ${taskTitle} — GSD`, html);
+  },
+
+  /**
+   * Send a task updated notification email.
+   */
+  async sendTaskUpdated(
+    to: string,
+    recipientName: string,
+    updaterName: string,
+    taskTitle: string,
+    projectName: string,
+    projectId: string,
+    taskId: string,
+  ): Promise<SendEmailResult> {
+    const taskUrl = `${env.CLIENT_URL}/projects/${projectId}/tasks/${taskId}`;
+    const html = taskUpdatedHtml(taskUrl, updaterName, taskTitle, projectName, recipientName);
+    return sendEmail(to, `Task updated: ${taskTitle} — GSD`, html);
+  },
+
+  /**
+   * Send a task commented notification email.
+   */
+  async sendTaskCommented(
+    to: string,
+    recipientName: string,
+    commenterName: string,
+    taskTitle: string,
+    projectName: string,
+    projectId: string,
+    taskId: string,
+    commentPreview: string,
+  ): Promise<SendEmailResult> {
+    const taskUrl = `${env.CLIENT_URL}/projects/${projectId}/tasks/${taskId}`;
+    const preview = commentPreview.length > 200 ? commentPreview.slice(0, 200) + '...' : commentPreview;
+    const html = taskCommentedHtml(taskUrl, commenterName, taskTitle, projectName, recipientName, preview);
+    return sendEmail(to, `New comment on: ${taskTitle} — GSD`, html);
+  },
+
+  /**
+   * Send a due date reminder email.
+   */
+  async sendDueDateReminder(
+    to: string,
+    recipientName: string,
+    taskTitle: string,
+    projectName: string,
+    projectId: string,
+    taskId: string,
+    dueDate: string,
+  ): Promise<SendEmailResult> {
+    const taskUrl = `${env.CLIENT_URL}/projects/${projectId}/tasks/${taskId}`;
+    const html = dueDateReminderHtml(taskUrl, taskTitle, projectName, recipientName, dueDate);
+    return sendEmail(to, `Reminder: ${taskTitle} is due ${dueDate} — GSD`, html);
   },
 };
 

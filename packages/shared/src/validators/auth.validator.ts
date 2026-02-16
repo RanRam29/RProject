@@ -59,6 +59,7 @@ export const createUserSchema = z.object({
 export const updateUserSchema = z.object({
   displayName: z.string().min(1).max(100).optional(),
   avatarUrl: z.string().url('Invalid URL').max(500).nullable().optional(),
+  emailNotifications: z.boolean().optional(),
 });
 
 export const changePasswordSchema = z.object({
