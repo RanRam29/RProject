@@ -29,6 +29,9 @@ export interface EnvConfig {
   // Email (Resend)
   RESEND_API_KEY: string;
   EMAIL_FROM: string;
+  // AI (Google Gemini)
+  GEMINI_API_KEY: string;
+  GEMINI_MODEL: string;
 }
 
 export const env: EnvConfig = {
@@ -44,6 +47,8 @@ export const env: EnvConfig = {
   S3_BUCKET_NAME: process.env.S3_BUCKET_NAME || '',
   RESEND_API_KEY: process.env.RESEND_API_KEY || '',
   EMAIL_FROM: process.env.EMAIL_FROM || 'GSD <noreply@gsd.app>',
+  GEMINI_API_KEY: process.env.GEMINI_API_KEY || '',
+  GEMINI_MODEL: process.env.GEMINI_MODEL || 'gemini-2.0-flash',
 };
 
 export default env;

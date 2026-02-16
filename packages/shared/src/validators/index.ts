@@ -9,3 +9,4 @@ export * from './comment.validator.js';
 export * from './notification.validator.js';
 export * from './email.validator.js';
 export * from './time-tracking.validator.js';
+export * from './ai.validator.js';

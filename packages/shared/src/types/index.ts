@@ -10,3 +10,4 @@ export * from './label.types.js';
 export * from './comment.types.js';
 export * from './notification.types.js';
 export * from './system-defaults.types.js';
+export * from './ai.types.js';

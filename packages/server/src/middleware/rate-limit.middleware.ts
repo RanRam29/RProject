@@ -15,3 +15,11 @@ export const authLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
 });
+
+export const aiLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 20,
+  message: { success: false, error: 'AI rate limit exceeded, please slow down' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});

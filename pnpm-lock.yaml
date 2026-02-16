@@ -102,6 +102,9 @@ importers:
 
   packages/server:
     dependencies:
+      '@google/generative-ai':
+        specifier: ^0.24.1
+        version: 0.24.1
       '@pm/shared':
         specifier: workspace:*
         version: link:../shared
@@ -676,6 +679,10 @@ packages:
     peerDependenciesMeta:
       '@noble/hashes':
         optional: true
+
+  '@google/generative-ai@0.24.1':
+    resolution: {integrity: sha512-MqO+MLfM6kjxcKoy0p1wRzG3b4ZZXtPI+z2IE26UogS2Cm/XHO+7gGRBh6gcJsOiIVoH93UwKvW4HdgiOZCy9Q==}
+    engines: {node: '>=18.0.0'}
 
   '@jridgewell/gen-mapping@0.3.13':
     resolution: {integrity: sha512-2kkt/7niJ6MgEPxF0bYdQ6etZaA+fQvDcLKckhy1yIQOzaoKjBBjSj63/aLVjYE3qhRt5dvM+uUyfCg6UKCBbA==}
@@ -2764,6 +2771,8 @@ snapshots:
     optional: true
 
   '@exodus/bytes@1.11.0': {}
+
+  '@google/generative-ai@0.24.1': {}
 
   '@jridgewell/gen-mapping@0.3.13':
     dependencies:

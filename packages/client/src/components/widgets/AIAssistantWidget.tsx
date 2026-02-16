@@ -1,34 +1,47 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { tasksApi } from '../../api/tasks.api';
+import { aiApi } from '../../api/ai.api';
 import type { WidgetProps } from './widget.types';
-import type { TaskStatusDTO } from '@pm/shared';
+import { TaskPriority } from '@pm/shared';
+import type { TaskStatusDTO, CreateTaskRequest } from '@pm/shared';
 
 interface ChatMessage {
   id: string;
   role: 'user' | 'assistant';
   content: string;
   timestamp: Date;
+  isStreaming?: boolean;
+}
+
+interface PendingTask {
+  title: string;
+  statusId: string;
+  statusName: string;
+  priority?: TaskPriority;
+  dueDate?: string;
 }
 
 export function AIAssistantWidget({ projectId }: WidgetProps) {
   const queryClient = useQueryClient();
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      id: 'welcome',
-      role: 'assistant',
-      content: 'Hello! I\'m your project AI assistant. I can help you:\n\n' +
-        '- **Analyze** your project status\n' +
-        '- **Create tasks** from natural language\n' +
-        '- **Identify** overdue and at-risk items\n' +
-        '- **Suggest** next steps\n\n' +
-        'Try: "project summary", "create task: Design login page", or "what\'s overdue?"',
-      timestamp: new Date(),
-    },
-  ]);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [taskCreationMode, setTaskCreationMode] = useState<'auto' | 'confirm'>('confirm');
+  const [pendingTask, setPendingTask] = useState<PendingTask | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const isStreamingRef = useRef(false);
+
+  // ── Data queries ──────────────────────────────
+
+  const { data: aiStatus } = useQuery({
+    queryKey: ['ai-status', projectId],
+    queryFn: () => aiApi.getStatus(projectId),
+    staleTime: 5 * 60 * 1000,
+    retry: false,
+    meta: { silent: true },
+  });
+  const isAIEnabled = aiStatus?.available ?? false;
 
   const { data: tasks = [] } = useQuery({
     queryKey: ['tasks', projectId],
@@ -41,7 +54,7 @@ export function AIAssistantWidget({ projectId }: WidgetProps) {
   });
 
   const createTaskMutation = useMutation({
-    mutationFn: (data: { title: string; statusId: string; startDate?: string; dueDate?: string }) =>
+    mutationFn: (data: CreateTaskRequest) =>
       tasksApi.create(projectId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks', projectId] });
@@ -51,9 +64,36 @@ export function AIAssistantWidget({ projectId }: WidgetProps) {
   const statusMap: Record<string, TaskStatusDTO> = {};
   statuses.forEach((s) => { statusMap[s.id] = s; });
 
+  // ── Welcome message (set once when AI status resolves) ──
+
+  useEffect(() => {
+    const welcomeContent = isAIEnabled
+      ? 'Hello! I\'m your **AI-powered** project assistant. Ask me anything about your project:\n\n' +
+        '- **Analyze** your project status and risks\n' +
+        '- **Create tasks** from natural language\n' +
+        '- **Get insights** on bottlenecks and priorities\n' +
+        '- **Generate** plans, reports, and recommendations\n\n' +
+        'Try asking a question like "What are the biggest risks?" or use the quick actions above.'
+      : 'Hello! I\'m your project assistant. I can help you:\n\n' +
+        '- **Analyze** your project status\n' +
+        '- **Create tasks** from natural language\n' +
+        '- **Identify** overdue and at-risk items\n' +
+        '- **Suggest** next steps\n\n' +
+        'Try: "project summary", "create task: Design login page", or "what\'s overdue?"';
+
+    setMessages([{
+      id: 'welcome',
+      role: 'assistant',
+      content: welcomeContent,
+      timestamp: new Date(),
+    }]);
+  }, [isAIEnabled]);
+
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  // ── Helpers ───────────────────────────────────
 
   const addMessage = useCallback((role: 'user' | 'assistant', content: string) => {
     setMessages((prev) => [
@@ -61,6 +101,65 @@ export function AIAssistantWidget({ projectId }: WidgetProps) {
       { id: crypto.randomUUID(), role, content, timestamp: new Date() },
     ]);
   }, []);
+
+  // ── AI streaming handler ──────────────────────
+
+  const handleAIMessage = useCallback(async (userInput: string) => {
+    const history = messages
+      .filter((m) => m.id !== 'welcome')
+      .slice(-20) // Keep last 20 messages for context
+      .map((m) => ({ role: m.role, content: m.content }));
+
+    const assistantId = crypto.randomUUID();
+    setMessages((prev) => [
+      ...prev,
+      { id: assistantId, role: 'assistant', content: '', timestamp: new Date(), isStreaming: true },
+    ]);
+    isStreamingRef.current = true;
+
+    try {
+      await aiApi.chatStream(
+        projectId,
+        { message: userInput, history },
+        (text) => {
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === assistantId ? { ...m, content: m.content + text } : m,
+            ),
+          );
+        },
+        () => {
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === assistantId ? { ...m, isStreaming: false } : m,
+            ),
+          );
+          isStreamingRef.current = false;
+        },
+        (error) => {
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === assistantId
+                ? { ...m, content: m.content || `Sorry, an error occurred: ${error}`, isStreaming: false }
+                : m,
+            ),
+          );
+          isStreamingRef.current = false;
+        },
+      );
+    } catch {
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === assistantId
+            ? { ...m, content: 'Sorry, failed to connect to AI service.', isStreaming: false }
+            : m,
+        ),
+      );
+      isStreamingRef.current = false;
+    }
+  }, [projectId, messages]);
+
+  // ── Client-side analysis functions (fallback) ─
 
   const getProjectSummary = useCallback((): string => {
     const totalTasks = tasks.length;
@@ -142,13 +241,11 @@ export function AIAssistantWidget({ projectId }: WidgetProps) {
 
     const suggestions: string[] = [];
 
-    // Check tasks without dates
     const noDates = tasks.filter((t) => !t.startDate && !t.dueDate);
     if (noDates.length > 0) {
       suggestions.push(`**${noDates.length} task(s)** have no dates. Add dates to track them on the timeline.`);
     }
 
-    // Check completion rate
     const finalStatus = statuses.find((s) => s.isFinal);
     const completed = finalStatus ? tasks.filter((t) => t.statusId === finalStatus.id).length : 0;
     const rate = totalTasks > 0 ? (completed / totalTasks) * 100 : 0;
@@ -159,7 +256,6 @@ export function AIAssistantWidget({ projectId }: WidgetProps) {
       suggestions.push('Progress is slow. Consider breaking large tasks into smaller ones.');
     }
 
-    // Check if all tasks are in same status
     const statusCounts: Record<string, number> = {};
     tasks.forEach((t) => { statusCounts[t.statusId] = (statusCounts[t.statusId] || 0) + 1; });
     const maxInOneStatus = Math.max(...Object.values(statusCounts));
@@ -178,84 +274,111 @@ export function AIAssistantWidget({ projectId }: WidgetProps) {
     return '**Suggestions:**\n\n' + suggestions.map((s, i) => `${i + 1}. ${s}`).join('\n\n');
   }, [tasks, statuses, statusMap]);
 
+  // ── Client-side task creation with NLP parsing ─
+
+  const handleLocalTaskCreation = useCallback(
+    async (taskText: string): Promise<string | null> => {
+      const defaultStatus = statuses.find((s) => !s.isFinal) || statuses[0];
+      if (!defaultStatus) return 'No statuses configured. Please add statuses first.';
+
+      let text = taskText;
+
+      // Parse priority from text
+      let priority: TaskPriority | undefined;
+      const priorityPatterns: [RegExp, TaskPriority][] = [
+        [/,?\s*(urgent|critical)\s*(?:priority)?/i, TaskPriority.URGENT],
+        [/,?\s*high\s*(?:priority)?/i, TaskPriority.HIGH],
+        [/,?\s*medium\s*(?:priority)?/i, TaskPriority.MEDIUM],
+        [/,?\s*low\s*(?:priority)?/i, TaskPriority.LOW],
+      ];
+      for (const [pattern, pValue] of priorityPatterns) {
+        if (pattern.test(text)) {
+          priority = pValue;
+          text = text.replace(pattern, '');
+          break;
+        }
+      }
+
+      // Parse due date from text
+      let dueDate: string | undefined;
+      const dueDatePatterns: [RegExp, () => Date][] = [
+        [/,?\s*due\s*(?:by\s+)?tomorrow/i, () => { const d = new Date(); d.setDate(d.getDate() + 1); return d; }],
+        [/,?\s*due\s*(?:by\s+)?today/i, () => new Date()],
+        [/,?\s*due\s*(?:by\s+)?(?:next\s+)?friday/i, () => { const d = new Date(); d.setDate(d.getDate() + ((5 - d.getDay() + 7) % 7 || 7)); return d; }],
+        [/,?\s*due\s*(?:by\s+)?(?:next\s+)?monday/i, () => { const d = new Date(); d.setDate(d.getDate() + ((1 - d.getDay() + 7) % 7 || 7)); return d; }],
+        [/,?\s*due\s*(?:in\s+)?(\d+)\s*days?/i, () => { const m = text.match(/due\s*(?:in\s+)?(\d+)\s*days?/i); const d = new Date(); d.setDate(d.getDate() + (m ? parseInt(m[1]) : 7)); return d; }],
+      ];
+      for (const [pattern, getDate] of dueDatePatterns) {
+        if (pattern.test(text)) {
+          const d = getDate();
+          dueDate = d.toISOString().slice(0, 10);
+          text = text.replace(pattern, '');
+          break;
+        }
+      }
+
+      const title = text.replace(/\s+/g, ' ').trim();
+      const capitalizedTitle = title.charAt(0).toUpperCase() + title.slice(1);
+
+      // Confirm mode: show preview card
+      if (taskCreationMode === 'confirm') {
+        setPendingTask({
+          title: capitalizedTitle,
+          statusId: defaultStatus.id,
+          statusName: defaultStatus.name,
+          priority,
+          dueDate,
+        });
+        let preview = `**Task Preview:**\n- Title: **${capitalizedTitle}**\n- Status: ${defaultStatus.name}`;
+        if (priority) preview += `\n- Priority: **${priority}**`;
+        if (dueDate) preview += `\n- Due: **${dueDate}**`;
+        preview += '\n\nClick **Create** below to confirm, or **Cancel** to discard.';
+        return preview;
+      }
+
+      // Auto mode: create immediately
+      try {
+        await createTaskMutation.mutateAsync({
+          title: capitalizedTitle,
+          statusId: defaultStatus.id,
+          priority,
+          dueDate,
+        });
+        let response = `Task created: **"${capitalizedTitle}"** in "${defaultStatus.name}"`;
+        if (priority) response += ` | Priority: **${priority}**`;
+        if (dueDate) response += ` | Due: **${dueDate}**`;
+        return response;
+      } catch {
+        return 'Failed to create task. Please try again.';
+      }
+    },
+    [statuses, taskCreationMode, createTaskMutation],
+  );
+
+  // ── Client-side command parser (fallback mode) ─
+
   const parseAndExecute = useCallback(
     async (userInput: string) => {
       const lower = userInput.toLowerCase().trim();
 
-      // Project summary
       if (lower.includes('summary') || lower.includes('status') || lower.includes('overview')) {
         return getProjectSummary();
       }
 
-      // Overdue analysis
       if (lower.includes('overdue') || lower.includes('late') || lower.includes('behind')) {
         return getOverdueAnalysis();
       }
 
-      // Suggestions
       if (lower.includes('suggest') || lower.includes('recommend') || lower.includes('what should') || lower.includes('next step')) {
         return getSuggestions();
       }
 
-      // Create task with NLP-like parsing for priority and due dates
       const createMatch = lower.match(/create\s+task[:\s]+(.+)/i) || lower.match(/add\s+task[:\s]+(.+)/i) || lower.match(/new\s+task[:\s]+(.+)/i);
       if (createMatch) {
-        let taskText = createMatch[1].trim();
-        const defaultStatus = statuses.find((s) => !s.isFinal) || statuses[0];
-        if (!defaultStatus) return 'No statuses configured. Please add statuses first.';
-
-        // Parse priority from text
-        let priority: string | undefined;
-        const priorityPatterns: [RegExp, string][] = [
-          [/,?\s*(urgent|critical)\s*(?:priority)?/i, 'URGENT'],
-          [/,?\s*high\s*(?:priority)?/i, 'HIGH'],
-          [/,?\s*medium\s*(?:priority)?/i, 'MEDIUM'],
-          [/,?\s*low\s*(?:priority)?/i, 'LOW'],
-        ];
-        for (const [pattern, pValue] of priorityPatterns) {
-          if (pattern.test(taskText)) {
-            priority = pValue;
-            taskText = taskText.replace(pattern, '');
-            break;
-          }
-        }
-
-        // Parse due date from text
-        let dueDate: string | undefined;
-        const dueDatePatterns: [RegExp, () => Date][] = [
-          [/,?\s*due\s*(?:by\s+)?tomorrow/i, () => { const d = new Date(); d.setDate(d.getDate() + 1); return d; }],
-          [/,?\s*due\s*(?:by\s+)?today/i, () => new Date()],
-          [/,?\s*due\s*(?:by\s+)?(?:next\s+)?friday/i, () => { const d = new Date(); d.setDate(d.getDate() + ((5 - d.getDay() + 7) % 7 || 7)); return d; }],
-          [/,?\s*due\s*(?:by\s+)?(?:next\s+)?monday/i, () => { const d = new Date(); d.setDate(d.getDate() + ((1 - d.getDay() + 7) % 7 || 7)); return d; }],
-          [/,?\s*due\s*(?:in\s+)?(\d+)\s*days?/i, () => { const m = taskText.match(/due\s*(?:in\s+)?(\d+)\s*days?/i); const d = new Date(); d.setDate(d.getDate() + (m ? parseInt(m[1]) : 7)); return d; }],
-        ];
-        for (const [pattern, getDate] of dueDatePatterns) {
-          if (pattern.test(taskText)) {
-            const d = getDate();
-            dueDate = d.toISOString().slice(0, 10);
-            taskText = taskText.replace(pattern, '');
-            break;
-          }
-        }
-
-        const title = taskText.replace(/\s+/g, ' ').trim();
-
-        try {
-          await createTaskMutation.mutateAsync({
-            title: title.charAt(0).toUpperCase() + title.slice(1),
-            statusId: defaultStatus.id,
-            dueDate,
-          });
-          let response = `Task created: **"${title}"** in "${defaultStatus.name}"`;
-          if (priority) response += ` | Priority: **${priority}**`;
-          if (dueDate) response += ` | Due: **${dueDate}**`;
-          return response;
-        } catch {
-          return 'Failed to create task. Please try again.';
-        }
+        const result = await handleLocalTaskCreation(createMatch[1].trim());
+        if (result) return result;
       }
 
-      // Workload / stats
       if (lower.includes('workload') || lower.includes('stats') || lower.includes('statistics')) {
         const total = tasks.length;
         const withDues = tasks.filter((t) => t.dueDate).length;
@@ -282,7 +405,6 @@ export function AIAssistantWidget({ projectId }: WidgetProps) {
         return result;
       }
 
-      // Help
       if (lower.includes('help') || lower === '?') {
         return '**Available Commands:**\n\n' +
           '- **"project summary"** - Overview of project status\n' +
@@ -304,7 +426,21 @@ export function AIAssistantWidget({ projectId }: WidgetProps) {
         '- "suggest next steps"\n' +
         '- "help" for all commands';
     },
-    [tasks, statuses, statusMap, getProjectSummary, getOverdueAnalysis, getSuggestions, createTaskMutation]
+    [tasks, statuses, statusMap, getProjectSummary, getOverdueAnalysis, getSuggestions, handleLocalTaskCreation]
+  );
+
+  // ── Unified message handler ───────────────────
+
+  const processMessage = useCallback(
+    async (userInput: string) => {
+      if (isAIEnabled) {
+        await handleAIMessage(userInput);
+      } else {
+        const response = await parseAndExecute(userInput);
+        addMessage('assistant', response);
+      }
+    },
+    [isAIEnabled, handleAIMessage, parseAndExecute, addMessage],
   );
 
   const handleSubmit = useCallback(
@@ -318,16 +454,40 @@ export function AIAssistantWidget({ projectId }: WidgetProps) {
       setIsProcessing(true);
 
       try {
-        const response = await parseAndExecute(userMsg);
-        addMessage('assistant', response);
+        await processMessage(userMsg);
       } catch {
         addMessage('assistant', 'Sorry, something went wrong. Please try again.');
       } finally {
         setIsProcessing(false);
       }
     },
-    [input, isProcessing, addMessage, parseAndExecute]
+    [input, isProcessing, addMessage, processMessage],
   );
+
+  // ── Task confirmation handlers ────────────────
+
+  const handleConfirmTask = useCallback(async () => {
+    if (!pendingTask) return;
+    try {
+      await createTaskMutation.mutateAsync({
+        title: pendingTask.title,
+        statusId: pendingTask.statusId,
+        priority: pendingTask.priority,
+        dueDate: pendingTask.dueDate,
+      });
+      addMessage('assistant', `Task created: **"${pendingTask.title}"** in "${pendingTask.statusName}"`);
+    } catch {
+      addMessage('assistant', 'Failed to create task. Please try again.');
+    }
+    setPendingTask(null);
+  }, [pendingTask, createTaskMutation, addMessage]);
+
+  const handleCancelTask = useCallback(() => {
+    setPendingTask(null);
+    addMessage('assistant', 'Task creation cancelled.');
+  }, [addMessage]);
+
+  // ── Quick actions ─────────────────────────────
 
   const quickActions = [
     { label: 'Summary', command: 'project summary' },
@@ -335,6 +495,15 @@ export function AIAssistantWidget({ projectId }: WidgetProps) {
     { label: 'Suggestions', command: 'suggest next steps' },
     { label: 'Stats', command: 'stats' },
   ];
+
+  const handleQuickAction = useCallback((command: string) => {
+    if (isProcessing) return;
+    addMessage('user', command);
+    setIsProcessing(true);
+    processMessage(command).finally(() => setIsProcessing(false));
+  }, [isProcessing, addMessage, processMessage]);
+
+  // ── Styles ────────────────────────────────────
 
   const containerStyle: React.CSSProperties = {
     display: 'flex',
@@ -370,11 +539,33 @@ export function AIAssistantWidget({ projectId }: WidgetProps) {
     padding: '8px 12px',
   };
 
-  // Safe markdown-like rendering (no dangerouslySetInnerHTML)
+  const pillStyle: React.CSSProperties = {
+    padding: '3px 8px',
+    fontSize: '11px',
+    border: '1px solid var(--color-border)',
+    borderRadius: 'var(--radius-full)',
+    backgroundColor: 'transparent',
+    color: 'var(--color-text-secondary)',
+    cursor: 'pointer',
+    transition: 'all var(--transition-fast)',
+  };
+
+  const badgeStyle: React.CSSProperties = {
+    padding: '2px 6px',
+    fontSize: '9px',
+    fontWeight: 600,
+    letterSpacing: '0.5px',
+    borderRadius: 'var(--radius-full)',
+    backgroundColor: isAIEnabled ? 'var(--color-accent)' : 'var(--color-bg-secondary)',
+    color: isAIEnabled ? 'white' : 'var(--color-text-tertiary)',
+    textTransform: 'uppercase',
+  };
+
+  // ── Markdown rendering ────────────────────────
+
   const renderLine = (line: string, key: number) => {
     if (!line) return <div key={key}>&nbsp;</div>;
 
-    // Split on **bold** markers and render as React elements
     const parts: React.ReactNode[] = [];
     const regex = /\*\*(.+?)\*\*/g;
     let lastIndex = 0;
@@ -398,39 +589,25 @@ export function AIAssistantWidget({ projectId }: WidgetProps) {
     return content.split('\n').map((line, i) => renderLine(line, i));
   };
 
+  // ── Render ────────────────────────────────────
+
   return (
     <div style={containerStyle}>
-      {/* Quick actions */}
+      {/* Header bar: quick actions + mode badge + settings */}
       <div style={{
         display: 'flex',
         gap: '4px',
         padding: '8px 12px',
         borderBottom: '1px solid var(--color-border)',
         flexWrap: 'wrap',
+        alignItems: 'center',
       }}>
         {quickActions.map((action) => (
           <button
             key={action.label}
-            onClick={() => {
-              setInput(action.command);
-              // Auto-submit
-              addMessage('user', action.command);
-              setIsProcessing(true);
-              parseAndExecute(action.command).then((r) => {
-                addMessage('assistant', r);
-                setIsProcessing(false);
-              });
-            }}
-            style={{
-              padding: '3px 8px',
-              fontSize: '11px',
-              border: '1px solid var(--color-border)',
-              borderRadius: 'var(--radius-full)',
-              backgroundColor: 'transparent',
-              color: 'var(--color-text-secondary)',
-              cursor: 'pointer',
-              transition: 'all var(--transition-fast)',
-            }}
+            onClick={() => handleQuickAction(action.command)}
+            disabled={isProcessing}
+            style={pillStyle}
             onMouseEnter={(e) => {
               e.currentTarget.style.borderColor = 'var(--color-accent)';
               e.currentTarget.style.color = 'var(--color-accent)';
@@ -443,6 +620,27 @@ export function AIAssistantWidget({ projectId }: WidgetProps) {
             {action.label}
           </button>
         ))}
+
+        {/* Spacer */}
+        <div style={{ flex: 1 }} />
+
+        {/* Task creation mode toggle */}
+        <button
+          onClick={() => setTaskCreationMode((m) => m === 'auto' ? 'confirm' : 'auto')}
+          title={`Task creation: ${taskCreationMode}. Click to toggle.`}
+          style={{
+            ...pillStyle,
+            fontSize: '10px',
+            opacity: 0.7,
+          }}
+        >
+          {taskCreationMode === 'confirm' ? '✓ Confirm' : '⚡ Auto'}
+        </button>
+
+        {/* AI/Local badge */}
+        <span style={badgeStyle}>
+          {isAIEnabled ? 'AI' : 'Local'}
+        </span>
       </div>
 
       {/* Chat area */}
@@ -450,9 +648,55 @@ export function AIAssistantWidget({ projectId }: WidgetProps) {
         {messages.map((msg) => (
           <div key={msg.id} style={msgStyle(msg.role)}>
             {renderContent(msg.content)}
+            {msg.isStreaming && (
+              <span style={{ opacity: 0.5, fontSize: '12px' }}> ●</span>
+            )}
           </div>
         ))}
-        {isProcessing && (
+
+        {/* Pending task confirmation card */}
+        {pendingTask && (
+          <div style={{
+            alignSelf: 'flex-start',
+            maxWidth: '85%',
+            padding: '8px 12px',
+            display: 'flex',
+            gap: '6px',
+          }}>
+            <button
+              onClick={handleConfirmTask}
+              style={{
+                padding: '4px 12px',
+                fontSize: '12px',
+                backgroundColor: 'var(--color-accent)',
+                color: 'white',
+                border: 'none',
+                borderRadius: 'var(--radius-md)',
+                cursor: 'pointer',
+                fontWeight: 600,
+              }}
+            >
+              Create
+            </button>
+            <button
+              onClick={handleCancelTask}
+              style={{
+                padding: '4px 12px',
+                fontSize: '12px',
+                backgroundColor: 'transparent',
+                color: 'var(--color-text-secondary)',
+                border: '1px solid var(--color-border)',
+                borderRadius: 'var(--radius-md)',
+                cursor: 'pointer',
+              }}
+            >
+              Cancel
+            </button>
+          </div>
+        )}
+
+        {/* Processing indicator (only for non-AI mode; AI mode shows inline streaming) */}
+        {isProcessing && !isAIEnabled && (
           <div style={{ ...msgStyle('assistant'), opacity: 0.6 }}>
             Thinking...
           </div>
@@ -467,7 +711,7 @@ export function AIAssistantWidget({ projectId }: WidgetProps) {
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder='Try "project summary" or "create task: ..."'
+            placeholder={isAIEnabled ? 'Ask anything about your project...' : 'Try "project summary" or "create task: ..."'}
             disabled={isProcessing}
             style={{
               flex: 1,

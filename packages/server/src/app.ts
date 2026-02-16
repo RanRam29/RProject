@@ -26,6 +26,7 @@ import activityRoutes from './modules/activity/activity.routes.js';
 import notificationRoutes from './modules/notifications/notifications.routes.js';
 import emailRoutes from './modules/emails/email.routes.js';
 import systemDefaultsRoutes from './modules/system-defaults/system-defaults.routes.js';
+import aiRoutes from './modules/ai/ai.routes.js';
 
 const createApp = (): express.Application => {
   const app = express();
@@ -92,6 +93,7 @@ const createApp = (): express.Application => {
   app.use('/api/v1/templates', templateRoutes);
   app.use('/api/v1/admin', adminRoutes);
   app.use('/api/v1/system-defaults', systemDefaultsRoutes);
+  app.use('/api/v1/projects/:projectId/ai', aiRoutes);
 
   // ------------------------------------
   // Error handling (must be registered last)
