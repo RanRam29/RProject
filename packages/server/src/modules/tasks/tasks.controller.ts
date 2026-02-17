@@ -7,6 +7,19 @@ import { activityService } from '../activity/activity.service.js';
 import { notificationsService } from '../notifications/notifications.service.js';
 import prisma from '../../config/db.js';
 import logger from '../../utils/logger.js';
+import { ApiError } from '../../utils/api-error.js';
+
+/** Parse a date string safely — only accepts ISO-like formats (YYYY-MM-DD...) */
+function safeParseDate(val: string): Date {
+  if (!/^\d{4}-\d{2}-\d{2}/.test(val)) {
+    throw ApiError.badRequest(`Invalid date format: "${val}". Use YYYY-MM-DD.`);
+  }
+  const d = new Date(val);
+  if (isNaN(d.getTime())) {
+    throw ApiError.badRequest(`Invalid date: "${val}"`);
+  }
+  return d;
+}
 
 export class TasksController {
   async list(req: Request, res: Response, next: NextFunction) {
@@ -66,8 +79,8 @@ export class TasksController {
         statusId,
         assigneeId,
         priority,
-        startDate: startDate ? new Date(startDate) : undefined,
-        dueDate: dueDate ? new Date(dueDate) : undefined,
+        startDate: startDate ? safeParseDate(startDate) : undefined,
+        dueDate: dueDate ? safeParseDate(dueDate) : undefined,
         sortOrder,
       });
 
@@ -95,10 +108,10 @@ export class TasksController {
         assigneeId,
         priority,
         startDate: startDate !== undefined
-          ? (startDate ? new Date(startDate) : null)
+          ? (startDate ? safeParseDate(startDate) : null)
           : undefined,
         dueDate: dueDate !== undefined
-          ? (dueDate ? new Date(dueDate) : null)
+          ? (dueDate ? safeParseDate(dueDate) : null)
           : undefined,
       });
 
@@ -114,11 +127,13 @@ export class TasksController {
       activityService.log(task.projectId, userId, 'task.updated', { taskId, title: task.title }).catch(() => {});
 
       // Notify assignee about task changes
-      const assigneeChanged = assigneeId && assigneeId !== oldTask?.assigneeId;
-      if (assigneeChanged && assigneeId !== userId) {
-        // New assignee notification
+      const newAssigneeId = task.assigneeId;
+      const oldAssigneeId = oldTask?.assigneeId ?? null;
+
+      if (newAssigneeId && newAssigneeId !== oldAssigneeId && newAssigneeId !== userId) {
+        // Assignment changed to someone else → TASK_ASSIGNED
         notificationsService.create({
-          userId: assigneeId,
+          userId: newAssigneeId,
           type: 'TASK_ASSIGNED',
           title: `You were assigned to "${task.title}"`,
           projectId: task.projectId,
@@ -127,18 +142,22 @@ export class TasksController {
         }).catch((err) => {
           logger.error(`Failed to create TASK_ASSIGNED notification: ${err instanceof Error ? err.message : err}`);
         });
-      } else if (task.assigneeId && task.assigneeId !== userId) {
-        // Notify existing assignee of other task changes (title, priority, due date, etc.)
-        notificationsService.create({
-          userId: task.assigneeId,
-          type: 'TASK_UPDATED',
-          title: `"${task.title}" was updated`,
-          projectId: task.projectId,
-          taskId,
-          actorId: userId,
-        }).catch((err) => {
-          logger.error(`Failed to create TASK_UPDATED notification: ${err instanceof Error ? err.message : err}`);
-        });
+      } else if (newAssigneeId && newAssigneeId === oldAssigneeId && newAssigneeId !== userId) {
+        // Assignee didn't change — notify of other field changes
+        const hasFieldChanges = title !== undefined || priority !== undefined
+          || dueDate !== undefined || startDate !== undefined;
+        if (hasFieldChanges) {
+          notificationsService.create({
+            userId: newAssigneeId,
+            type: 'TASK_UPDATED',
+            title: `"${task.title}" was updated`,
+            projectId: task.projectId,
+            taskId,
+            actorId: userId,
+          }).catch((err) => {
+            logger.error(`Failed to create TASK_UPDATED notification: ${err instanceof Error ? err.message : err}`);
+          });
+        }
       }
 
       sendSuccess(res, task);
@@ -224,8 +243,8 @@ export class TasksController {
         statusId,
         assigneeId,
         priority,
-        startDate: startDate ? new Date(startDate) : undefined,
-        dueDate: dueDate ? new Date(dueDate) : undefined,
+        startDate: startDate ? safeParseDate(startDate) : undefined,
+        dueDate: dueDate ? safeParseDate(dueDate) : undefined,
       });
 
       sendSuccess(res, subtask, 201);
