@@ -34,14 +34,18 @@ export function AIAssistantWidget({ projectId }: WidgetProps) {
 
   // ── Data queries ──────────────────────────────
 
-  const { data: aiStatus } = useQuery({
+  const { data: aiStatus, error: aiError } = useQuery({
     queryKey: ['ai-status', projectId],
     queryFn: () => aiApi.getStatus(projectId),
     staleTime: 5 * 60 * 1000,
-    retry: false,
-    meta: { silent: true },
+    retry: 1,
   });
   const isAIEnabled = aiStatus?.available ?? false;
+
+  useEffect(() => {
+    if (aiStatus) console.log('[AI Widget] Status:', aiStatus);
+    if (aiError) console.error('[AI Widget] Status check failed:', aiError);
+  }, [aiStatus, aiError]);
 
   const { data: tasks = [] } = useQuery({
     queryKey: ['tasks', projectId],
@@ -551,13 +555,17 @@ export function AIAssistantWidget({ projectId }: WidgetProps) {
   };
 
   const badgeStyle: React.CSSProperties = {
-    padding: '2px 6px',
-    fontSize: '9px',
+    padding: '3px 8px',
+    fontSize: '11px',
     fontWeight: 600,
     letterSpacing: '0.5px',
     borderRadius: 'var(--radius-full)',
-    backgroundColor: isAIEnabled ? 'var(--color-accent)' : 'var(--color-bg-secondary)',
-    color: isAIEnabled ? 'white' : 'var(--color-text-tertiary)',
+    backgroundColor: isAIEnabled
+      ? 'var(--color-accent)'
+      : aiError
+        ? '#dc2626'
+        : 'var(--color-bg-secondary)',
+    color: isAIEnabled || aiError ? 'white' : 'var(--color-text-tertiary)',
     textTransform: 'uppercase',
   };
 
@@ -638,8 +646,8 @@ export function AIAssistantWidget({ projectId }: WidgetProps) {
         </button>
 
         {/* AI/Local badge */}
-        <span style={badgeStyle}>
-          {isAIEnabled ? 'AI' : 'Local'}
+        <span style={badgeStyle} title={aiError ? String(aiError) : undefined}>
+          {isAIEnabled ? 'AI \u2728' : aiError ? '\u26A0 Local' : 'Local'}
         </span>
       </div>
 

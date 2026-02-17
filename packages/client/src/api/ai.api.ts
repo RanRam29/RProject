@@ -45,7 +45,12 @@ export const aiApi = {
     });
 
     if (!response.ok) {
-      onError(`AI request failed (${response.status})`);
+      try {
+        const errorBody = await response.json();
+        onError(errorBody?.error || `AI request failed (${response.status})`);
+      } catch {
+        onError(`AI request failed (${response.status})`);
+      }
       return;
     }
 
