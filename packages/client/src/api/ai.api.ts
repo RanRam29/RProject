@@ -8,6 +8,23 @@ import type {
   ApiResponse,
 } from '@pm/shared';
 
+/**
+ * Ensure a valid access token is available by triggering
+ * a lightweight request through apiClient (which handles
+ * 401 → refresh automatically via interceptors).
+ * Returns the current access token from localStorage.
+ */
+async function getFreshToken(): Promise<string | null> {
+  try {
+    // A HEAD-style request that goes through the axios interceptor.
+    // If the token is expired, the interceptor will refresh it first.
+    await apiClient.get('/auth/me');
+  } catch {
+    // If refresh also fails, there's no valid token.
+  }
+  return localStorage.getItem('accessToken');
+}
+
 export const aiApi = {
   /** Check if AI backend is available */
   async getStatus(projectId: string): Promise<AIStatusResponse> {
@@ -34,15 +51,29 @@ export const aiApi = {
     onDone: () => void,
     onError: (error: string) => void,
   ): Promise<void> {
-    const token = localStorage.getItem('accessToken');
-    const response = await fetch(`${env.API_URL}/projects/${projectId}/ai/chat/stream`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
-      body: JSON.stringify(data),
-    });
+    const url = `${env.API_URL}/projects/${projectId}/ai/chat/stream`;
+    const body = JSON.stringify(data);
+
+    const doFetch = async (token: string | null) =>
+      fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body,
+      });
+
+    let token = localStorage.getItem('accessToken');
+    let response = await doFetch(token);
+
+    // If 401, attempt token refresh and retry once
+    if (response.status === 401) {
+      token = await getFreshToken();
+      if (token) {
+        response = await doFetch(token);
+      }
+    }
 
     if (!response.ok) {
       try {

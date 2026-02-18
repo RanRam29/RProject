@@ -5,7 +5,7 @@ import { useUIStore } from '../../stores/ui.store';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
-import type { TaskDTO } from '@pm/shared';
+import type { TaskDTO, UpdateTaskRequest } from '@pm/shared';
 import { TaskPriority, PRIORITY_CONFIG } from '@pm/shared';
 import { LabelSelector } from '../label/LabelSelector';
 import { CommentThread } from '../comment/CommentThread';
@@ -110,7 +110,7 @@ export function TaskDetailModal({
   });
 
   const updateMutation = useMutation({
-    mutationFn: (data: { title?: string; description?: unknown; assigneeId?: string | null; priority?: TaskPriority; startDate?: string | null; dueDate?: string | null }) =>
+    mutationFn: (data: UpdateTaskRequest) =>
       tasksApi.update(projectId, task!.id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks', projectId] });

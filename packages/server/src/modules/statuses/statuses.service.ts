@@ -1,6 +1,6 @@
 import prisma from '../../config/db.js';
 import { ApiError } from '../../utils/api-error.js';
-import { getIO } from '../../ws/ws.server.js';
+import { emitToProject } from '../../utils/ws-emitter.js';
 import { WS_EVENTS } from '../../ws/ws.events.js';
 
 export class StatusesService {
@@ -72,7 +72,7 @@ export class StatusesService {
         },
       });
 
-      getIO().to(projectId).emit(WS_EVENTS.STATUS_CREATED, { projectId, status });
+      emitToProject(projectId, WS_EVENTS.STATUS_CREATED, { projectId, status });
 
       return status;
     } catch (error) {
@@ -118,7 +118,7 @@ export class StatusesService {
         },
       });
 
-      getIO().to(status.projectId).emit(WS_EVENTS.STATUS_UPDATED, { projectId: status.projectId, statusId, changes: data });
+      emitToProject(status.projectId, WS_EVENTS.STATUS_UPDATED, { projectId: status.projectId, statusId, changes: data });
 
       return updated;
     } catch (error) {
@@ -155,7 +155,7 @@ export class StatusesService {
         where: { id: statusId },
       });
 
-      getIO().to(projectId).emit(WS_EVENTS.STATUS_DELETED, { projectId, statusId });
+      emitToProject(projectId, WS_EVENTS.STATUS_DELETED, { projectId, statusId });
 
       return { message: 'Task status deleted successfully', projectId, name: status.name };
     } catch (error) {

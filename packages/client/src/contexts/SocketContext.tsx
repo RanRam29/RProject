@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useRef, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import { io, type Socket } from 'socket.io-client';
 import { env } from '../config/env';
 import { useAuthStore } from '../stores/auth.store';
@@ -14,24 +14,26 @@ interface SocketContextValue {
 const SocketContext = createContext<SocketContextValue>({ socket: null });
 
 export function SocketProvider({ children }: { children: ReactNode }) {
-  const socketRef = useRef<TypedSocket | null>(null);
+  const [socket, setSocket] = useState<TypedSocket | null>(null);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const setConnected = useWSStore((s) => s.setConnected);
 
   useEffect(() => {
     if (!isAuthenticated) {
-      if (socketRef.current) {
-        socketRef.current.disconnect();
-        socketRef.current = null;
-        setConnected(false);
-      }
+      setSocket((prev) => {
+        if (prev) {
+          prev.disconnect();
+          setConnected(false);
+        }
+        return null;
+      });
       return;
     }
 
     const token = localStorage.getItem('accessToken');
     if (!token) return;
 
-    const socket = io(env.WS_URL, {
+    const s = io(env.WS_URL, {
       path: '/ws',
       auth: { token },
       transports: ['websocket'],
@@ -40,20 +42,20 @@ export function SocketProvider({ children }: { children: ReactNode }) {
       reconnectionAttempts: 10,
     }) as TypedSocket;
 
-    socket.on('connect', () => setConnected(true));
-    socket.on('disconnect', () => setConnected(false));
+    s.on('connect', () => setConnected(true));
+    s.on('disconnect', () => setConnected(false));
 
-    socketRef.current = socket;
+    setSocket(s);
 
     return () => {
-      socket.disconnect();
-      socketRef.current = null;
+      s.disconnect();
+      setSocket(null);
       setConnected(false);
     };
   }, [isAuthenticated, setConnected]);
 
   return (
-    <SocketContext.Provider value={{ socket: socketRef.current }}>
+    <SocketContext.Provider value={{ socket }}>
       {children}
     </SocketContext.Provider>
   );

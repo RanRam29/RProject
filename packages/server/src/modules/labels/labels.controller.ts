@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { labelsService } from './labels.service.js';
 import { sendSuccess } from '../../utils/api-response.js';
+import { fireAndForget } from '../../utils/fire-and-forget.js';
 import { activityService } from '../activity/activity.service.js';
 
 export class LabelsController {
@@ -23,7 +24,7 @@ export class LabelsController {
 
       const label = await labelsService.create(projectId, { name, color });
 
-      activityService.log(projectId, req.user!.id, 'label.created', { name }).catch(() => {});
+      fireAndForget(activityService.log(projectId, req.user!.id, 'label.created', { name }), 'activity.log');
 
       sendSuccess(res, label, 201);
     } catch (error) {
@@ -50,7 +51,7 @@ export class LabelsController {
 
       const result = await labelsService.delete(labelId);
 
-      activityService.log(result.projectId, req.user!.id, 'label.deleted', { name: result.name }).catch(() => {});
+      fireAndForget(activityService.log(result.projectId, req.user!.id, 'label.deleted', { name: result.name }), 'activity.log');
 
       sendSuccess(res, result);
     } catch (error) {
@@ -66,7 +67,7 @@ export class LabelsController {
       const taskLabel = await labelsService.assignToTask(taskId, labelId);
 
       const projectId = req.params.projectId as string;
-      activityService.log(projectId, req.user!.id, 'label.assigned', { taskId, labelId }).catch(() => {});
+      fireAndForget(activityService.log(projectId, req.user!.id, 'label.assigned', { taskId, labelId }), 'activity.log');
 
       sendSuccess(res, taskLabel, 201);
     } catch (error) {
@@ -81,7 +82,7 @@ export class LabelsController {
 
       const result = await labelsService.removeFromTask(taskId, labelId);
 
-      activityService.log(result.projectId, req.user!.id, 'label.unassigned', { taskId, labelId }).catch(() => {});
+      fireAndForget(activityService.log(result.projectId, req.user!.id, 'label.unassigned', { taskId, labelId }), 'activity.log');
 
       sendSuccess(res, result);
     } catch (error) {

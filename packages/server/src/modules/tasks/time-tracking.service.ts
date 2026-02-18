@@ -1,6 +1,7 @@
 import prisma from '../../config/db.js';
 import { ApiError } from '../../utils/api-error.js';
-import { getIO } from '../../ws/ws.server.js';
+import { emitToProject } from '../../utils/ws-emitter.js';
+import { USER_SELECT_STANDARD } from '../../utils/prisma-selects.js';
 import { WS_EVENTS } from '../../ws/ws.events.js';
 import logger from '../../utils/logger.js';
 
@@ -37,18 +38,16 @@ export class TimeTrackingService {
       },
       include: {
         user: {
-          select: { id: true, displayName: true, email: true },
+          select: USER_SELECT_STANDARD,
         },
       },
     });
 
-    try {
-      getIO().to(task.projectId).emit(WS_EVENTS.TASK_UPDATED, {
-        projectId: task.projectId,
-        taskId,
-        changes: { timerStarted: true, userId },
-      });
-    } catch { /* socket may not be initialized */ }
+    emitToProject(task.projectId, WS_EVENTS.TASK_UPDATED, {
+      projectId: task.projectId,
+      taskId,
+      changes: { timerStarted: true, userId },
+    });
 
     logger.info(`Timer started: task=${taskId}, user=${userId}`);
     return entry;
@@ -77,7 +76,7 @@ export class TimeTrackingService {
       },
       include: {
         user: {
-          select: { id: true, displayName: true, email: true },
+          select: USER_SELECT_STANDARD,
         },
       },
     });
@@ -88,13 +87,11 @@ export class TimeTrackingService {
     });
 
     if (task) {
-      try {
-        getIO().to(task.projectId).emit(WS_EVENTS.TASK_UPDATED, {
-          projectId: task.projectId,
-          taskId,
-          changes: { timerStopped: true, userId, durationMs },
-        });
-      } catch { /* socket may not be initialized */ }
+      emitToProject(task.projectId, WS_EVENTS.TASK_UPDATED, {
+        projectId: task.projectId,
+        taskId,
+        changes: { timerStopped: true, userId, durationMs },
+      });
     }
 
     logger.info(`Timer stopped: task=${taskId}, user=${userId}, duration=${durationMs}ms`);
@@ -140,7 +137,7 @@ export class TimeTrackingService {
       },
       include: {
         user: {
-          select: { id: true, displayName: true, email: true },
+          select: USER_SELECT_STANDARD,
         },
       },
     });
@@ -160,7 +157,7 @@ export class TimeTrackingService {
         where: { taskId },
         include: {
           user: {
-            select: { id: true, displayName: true, email: true },
+            select: USER_SELECT_STANDARD,
           },
         },
         orderBy: { startedAt: 'desc' },
@@ -258,7 +255,7 @@ export class TimeTrackingService {
       },
       include: {
         user: {
-          select: { id: true, displayName: true, email: true },
+          select: USER_SELECT_STANDARD,
         },
       },
     });

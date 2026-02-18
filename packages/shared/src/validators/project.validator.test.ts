@@ -54,7 +54,7 @@ describe('Project Validators', () => {
 
   describe('updateProjectStatusSchema', () => {
     it('accepts valid statuses', () => {
-      for (const status of ['ACTIVE', 'ARCHIVED', 'COMPLETED']) {
+      for (const status of ['ACTIVE', 'ARCHIVED']) {
         const result = updateProjectStatusSchema.safeParse({ status });
         expect(result.success).toBe(true);
       }
@@ -62,6 +62,11 @@ describe('Project Validators', () => {
 
     it('rejects invalid status', () => {
       const result = updateProjectStatusSchema.safeParse({ status: 'DELETED' });
+      expect(result.success).toBe(false);
+    });
+
+    it('rejects COMPLETED (not a valid ProjectStatus)', () => {
+      const result = updateProjectStatusSchema.safeParse({ status: 'COMPLETED' });
       expect(result.success).toBe(false);
     });
   });

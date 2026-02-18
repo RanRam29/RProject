@@ -1,11 +1,6 @@
 import { z } from 'zod';
 import { TaskPriority } from '../enums/task-priority.enum.js';
-
-// Accept ISO datetime (2025-01-15T00:00:00.000Z) or date-only (2025-01-15)
-const dateString = z.string().refine(
-  (val) => /^\d{4}-\d{2}-\d{2}/.test(val) && !isNaN(Date.parse(val)),
-  { message: 'Invalid date — use YYYY-MM-DD format' }
-);
+import { dateString } from './common.validator.js';
 
 // Limit task description size (JSON rich text) to 100KB
 const MAX_DESCRIPTION_BYTES = 100_000;

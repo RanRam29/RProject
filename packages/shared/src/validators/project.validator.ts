@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { ProjectStatus, WidgetType } from '../enums/index.js';
 
 export const createProjectSchema = z.object({
   name: z.string().min(1, 'Project name is required').max(200),
@@ -17,11 +18,11 @@ export const updateProjectSchema = z.object({
 });
 
 export const updateProjectStatusSchema = z.object({
-  status: z.enum(['ACTIVE', 'ARCHIVED', 'COMPLETED']),
+  status: z.nativeEnum(ProjectStatus),
 });
 
 export const addWidgetSchema = z.object({
-  type: z.enum(['TASK_LIST', 'KANBAN', 'TIMELINE', 'FILES', 'AI_ASSISTANT', 'DEPENDENCY_GRAPH', 'ACTIVITY_FEED']),
+  type: z.nativeEnum(WidgetType),
   title: z.string().min(1).max(100),
   configJson: z.record(z.unknown()).optional().default({}),
   positionX: z.number().int().min(0).default(0),

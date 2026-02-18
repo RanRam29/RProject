@@ -4,7 +4,8 @@ import fs from 'fs/promises';
 import { existsSync, createReadStream } from 'fs';
 import prisma from '../../config/db.js';
 import { ApiError } from '../../utils/api-error.js';
-import { getIO } from '../../ws/ws.server.js';
+import { emitToProject } from '../../utils/ws-emitter.js';
+import { USER_SELECT_STANDARD } from '../../utils/prisma-selects.js';
 import { WS_EVENTS } from '../../ws/ws.events.js';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
@@ -35,7 +36,7 @@ export class FilesService {
         where: { projectId },
         include: {
           uploadedBy: {
-            select: { id: true, displayName: true, email: true },
+            select: USER_SELECT_STANDARD,
           },
         },
         orderBy: { createdAt: 'desc' },
@@ -95,12 +96,12 @@ export class FilesService {
         },
         include: {
           uploadedBy: {
-            select: { id: true, displayName: true, email: true },
+            select: USER_SELECT_STANDARD,
           },
         },
       });
 
-      getIO().to(projectId).emit(WS_EVENTS.FILE_UPLOADED, { projectId, file });
+      emitToProject(projectId, WS_EVENTS.FILE_UPLOADED, { projectId, file });
 
       return file;
     } catch (error) {
@@ -175,12 +176,12 @@ export class FilesService {
         },
         include: {
           uploadedBy: {
-            select: { id: true, displayName: true, email: true },
+            select: USER_SELECT_STANDARD,
           },
         },
       });
 
-      getIO().to(projectId).emit(WS_EVENTS.FILE_UPLOADED, { projectId, file });
+      emitToProject(projectId, WS_EVENTS.FILE_UPLOADED, { projectId, file });
 
       return file;
     } catch (error) {
@@ -266,7 +267,7 @@ export class FilesService {
         where: { id: fileId },
       });
 
-      getIO().to(projectId).emit(WS_EVENTS.FILE_DELETED, { projectId, fileId });
+      emitToProject(projectId, WS_EVENTS.FILE_DELETED, { projectId, fileId });
 
       return { message: 'File deleted successfully', projectId, fileName: file.originalName };
     } catch (error) {

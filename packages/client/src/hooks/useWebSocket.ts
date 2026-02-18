@@ -3,6 +3,49 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useSocket } from '../contexts/SocketContext';
 import { useWSStore } from '../stores/ws.store';
 
+// ── Event → query key invalidation map ──────────────
+// Each entry maps a socket event to the query keys that should be
+// invalidated when that event fires. Keys are resolved relative to
+// the current projectId. The special token '{taskId}' is replaced
+// with `data.taskId` at runtime (used by comment events).
+
+type QueryKeyTemplate = (string | '{taskId}')[];
+
+const EVENT_INVALIDATION_MAP: Record<string, QueryKeyTemplate[]> = {
+  // Tasks
+  'task:created':       [['tasks']],
+  'task:updated':       [['tasks']],
+  'task:deleted':       [['tasks']],
+  'task:statusChanged': [['tasks']],
+  'task:reordered':     [['tasks']],
+  // Subtasks & dependencies → refresh tasks
+  'subtask:created':    [['tasks']],
+  'subtask:updated':    [['tasks']],
+  'subtask:deleted':    [['tasks']],
+  'dependency:added':   [['tasks']],
+  'dependency:removed': [['tasks']],
+  // Statuses
+  'status:created':     [['statuses']],
+  'status:updated':     [['statuses']],
+  'status:deleted':     [['statuses']],
+  // Widgets
+  'project:widgetAdded':   [['widgets']],
+  'project:widgetRemoved': [['widgets']],
+  // Files
+  'file:uploaded':      [['files']],
+  'file:deleted':       [['files']],
+  // Labels (also refresh tasks since label changes affect task display)
+  'label:created':      [['labels']],
+  'label:updated':      [['labels'], ['tasks']],
+  'label:deleted':      [['labels'], ['tasks']],
+  'label:assigned':     [['tasks']],
+  'label:unassigned':   [['tasks']],
+  // Comments (use taskId for comment-specific invalidation)
+  'comment:created':    [['comments', '{taskId}'], ['tasks']],
+  'comment:updated':    [['comments', '{taskId}']],
+  'comment:deleted':    [['comments', '{taskId}'], ['tasks']],
+};
+
 export function useProjectSocket(projectId: string | null) {
   const { socket } = useSocket();
   const queryClient = useQueryClient();
@@ -13,78 +56,28 @@ export function useProjectSocket(projectId: string | null) {
 
     socket.emit('project:join', projectId);
 
-    const handleTaskCreated = (data: { projectId: string }) => {
-      if (data.projectId === projectId) {
-        queryClient.invalidateQueries({ queryKey: ['tasks', projectId] });
-      }
-    };
+    // ── Generic invalidation handlers ─────────
+    const handlers: [string, (data: Record<string, unknown>) => void][] = [];
 
-    const handleTaskUpdated = (data: { projectId: string }) => {
-      if (data.projectId === projectId) {
-        queryClient.invalidateQueries({ queryKey: ['tasks', projectId] });
-      }
-    };
+    for (const [event, keyTemplates] of Object.entries(EVENT_INVALIDATION_MAP)) {
+      const handler = (data: Record<string, unknown>) => {
+        if (data.projectId !== projectId) return;
+        for (const template of keyTemplates) {
+          const key = template.map((segment) =>
+            segment === '{taskId}' ? (data.taskId as string) : segment,
+          );
+          // comments use [comments, taskId]; all others use [entity, projectId]
+          const queryKey = key[0] === 'comments'
+            ? key
+            : [key[0], projectId];
+          queryClient.invalidateQueries({ queryKey });
+        }
+      };
+      socket.on(event as Parameters<typeof socket.on>[0], handler);
+      handlers.push([event, handler]);
+    }
 
-    const handleTaskDeleted = (data: { projectId: string }) => {
-      if (data.projectId === projectId) {
-        queryClient.invalidateQueries({ queryKey: ['tasks', projectId] });
-      }
-    };
-
-    const handleTaskStatusChanged = (data: { projectId: string }) => {
-      if (data.projectId === projectId) {
-        queryClient.invalidateQueries({ queryKey: ['tasks', projectId] });
-      }
-    };
-
-    const handleTaskReordered = (data: { projectId: string }) => {
-      if (data.projectId === projectId) {
-        queryClient.invalidateQueries({ queryKey: ['tasks', projectId] });
-      }
-    };
-
-    const handleStatusCreated = (data: { projectId: string }) => {
-      if (data.projectId === projectId) {
-        queryClient.invalidateQueries({ queryKey: ['statuses', projectId] });
-      }
-    };
-
-    const handleStatusUpdated = (data: { projectId: string }) => {
-      if (data.projectId === projectId) {
-        queryClient.invalidateQueries({ queryKey: ['statuses', projectId] });
-      }
-    };
-
-    const handleStatusDeleted = (data: { projectId: string }) => {
-      if (data.projectId === projectId) {
-        queryClient.invalidateQueries({ queryKey: ['statuses', projectId] });
-      }
-    };
-
-    const handleWidgetAdded = (data: { projectId: string }) => {
-      if (data.projectId === projectId) {
-        queryClient.invalidateQueries({ queryKey: ['widgets', projectId] });
-      }
-    };
-
-    const handleWidgetRemoved = (data: { projectId: string }) => {
-      if (data.projectId === projectId) {
-        queryClient.invalidateQueries({ queryKey: ['widgets', projectId] });
-      }
-    };
-
-    const handleFileUploaded = (data: { projectId: string }) => {
-      if (data.projectId === projectId) {
-        queryClient.invalidateQueries({ queryKey: ['files', projectId] });
-      }
-    };
-
-    const handleFileDeleted = (data: { projectId: string }) => {
-      if (data.projectId === projectId) {
-        queryClient.invalidateQueries({ queryKey: ['files', projectId] });
-      }
-    };
-
+    // ── Presence handlers (unique logic) ──────
     const handleUserJoined = (data: { projectId: string; user: { id: string; displayName: string; avatarUrl: string | null } }) => {
       if (data.projectId === projectId) addOnlineUser(data.user);
     };
@@ -93,145 +86,16 @@ export function useProjectSocket(projectId: string | null) {
       if (data.projectId === projectId) removeOnlineUser(data.userId);
     };
 
-    const handleSubtaskCreated = (data: { projectId: string }) => {
-      if (data.projectId === projectId) {
-        queryClient.invalidateQueries({ queryKey: ['tasks', projectId] });
-      }
-    };
-
-    const handleSubtaskUpdated = (data: { projectId: string }) => {
-      if (data.projectId === projectId) {
-        queryClient.invalidateQueries({ queryKey: ['tasks', projectId] });
-      }
-    };
-
-    const handleSubtaskDeleted = (data: { projectId: string }) => {
-      if (data.projectId === projectId) {
-        queryClient.invalidateQueries({ queryKey: ['tasks', projectId] });
-      }
-    };
-
-    const handleDependencyAdded = (data: { projectId: string }) => {
-      if (data.projectId === projectId) {
-        queryClient.invalidateQueries({ queryKey: ['tasks', projectId] });
-      }
-    };
-
-    const handleDependencyRemoved = (data: { projectId: string }) => {
-      if (data.projectId === projectId) {
-        queryClient.invalidateQueries({ queryKey: ['tasks', projectId] });
-      }
-    };
-
-    const handleLabelCreated = (data: { projectId: string }) => {
-      if (data.projectId === projectId) {
-        queryClient.invalidateQueries({ queryKey: ['labels', projectId] });
-      }
-    };
-
-    const handleLabelUpdated = (data: { projectId: string }) => {
-      if (data.projectId === projectId) {
-        queryClient.invalidateQueries({ queryKey: ['labels', projectId] });
-        queryClient.invalidateQueries({ queryKey: ['tasks', projectId] });
-      }
-    };
-
-    const handleLabelDeleted = (data: { projectId: string }) => {
-      if (data.projectId === projectId) {
-        queryClient.invalidateQueries({ queryKey: ['labels', projectId] });
-        queryClient.invalidateQueries({ queryKey: ['tasks', projectId] });
-      }
-    };
-
-    const handleLabelAssigned = (data: { projectId: string }) => {
-      if (data.projectId === projectId) {
-        queryClient.invalidateQueries({ queryKey: ['tasks', projectId] });
-      }
-    };
-
-    const handleLabelUnassigned = (data: { projectId: string }) => {
-      if (data.projectId === projectId) {
-        queryClient.invalidateQueries({ queryKey: ['tasks', projectId] });
-      }
-    };
-
-    const handleCommentCreated = (data: { projectId: string; taskId: string }) => {
-      if (data.projectId === projectId) {
-        queryClient.invalidateQueries({ queryKey: ['comments', data.taskId] });
-        queryClient.invalidateQueries({ queryKey: ['tasks', projectId] });
-      }
-    };
-
-    const handleCommentUpdated = (data: { projectId: string; taskId: string }) => {
-      if (data.projectId === projectId) {
-        queryClient.invalidateQueries({ queryKey: ['comments', data.taskId] });
-      }
-    };
-
-    const handleCommentDeleted = (data: { projectId: string; taskId: string }) => {
-      if (data.projectId === projectId) {
-        queryClient.invalidateQueries({ queryKey: ['comments', data.taskId] });
-        queryClient.invalidateQueries({ queryKey: ['tasks', projectId] });
-      }
-    };
-
-    socket.on('task:created', handleTaskCreated);
-    socket.on('task:updated', handleTaskUpdated);
-    socket.on('task:deleted', handleTaskDeleted);
-    socket.on('task:statusChanged', handleTaskStatusChanged);
-    socket.on('task:reordered', handleTaskReordered);
-    socket.on('status:created', handleStatusCreated);
-    socket.on('status:updated', handleStatusUpdated);
-    socket.on('status:deleted', handleStatusDeleted);
-    socket.on('project:widgetAdded', handleWidgetAdded);
-    socket.on('project:widgetRemoved', handleWidgetRemoved);
-    socket.on('file:uploaded', handleFileUploaded);
-    socket.on('file:deleted', handleFileDeleted);
     socket.on('presence:userJoined', handleUserJoined);
     socket.on('presence:userLeft', handleUserLeft);
-    socket.on('subtask:created', handleSubtaskCreated);
-    socket.on('subtask:updated', handleSubtaskUpdated);
-    socket.on('subtask:deleted', handleSubtaskDeleted);
-    socket.on('dependency:added', handleDependencyAdded);
-    socket.on('dependency:removed', handleDependencyRemoved);
-    socket.on('label:created', handleLabelCreated);
-    socket.on('label:updated', handleLabelUpdated);
-    socket.on('label:deleted', handleLabelDeleted);
-    socket.on('label:assigned', handleLabelAssigned);
-    socket.on('label:unassigned', handleLabelUnassigned);
-    socket.on('comment:created', handleCommentCreated);
-    socket.on('comment:updated', handleCommentUpdated);
-    socket.on('comment:deleted', handleCommentDeleted);
 
     return () => {
       socket.emit('project:leave', projectId);
-      socket.off('task:created', handleTaskCreated);
-      socket.off('task:updated', handleTaskUpdated);
-      socket.off('task:deleted', handleTaskDeleted);
-      socket.off('task:statusChanged', handleTaskStatusChanged);
-      socket.off('task:reordered', handleTaskReordered);
-      socket.off('status:created', handleStatusCreated);
-      socket.off('status:updated', handleStatusUpdated);
-      socket.off('status:deleted', handleStatusDeleted);
-      socket.off('project:widgetAdded', handleWidgetAdded);
-      socket.off('project:widgetRemoved', handleWidgetRemoved);
-      socket.off('file:uploaded', handleFileUploaded);
-      socket.off('file:deleted', handleFileDeleted);
+      for (const [event, handler] of handlers) {
+        socket.off(event as Parameters<typeof socket.off>[0], handler);
+      }
       socket.off('presence:userJoined', handleUserJoined);
       socket.off('presence:userLeft', handleUserLeft);
-      socket.off('subtask:created', handleSubtaskCreated);
-      socket.off('subtask:updated', handleSubtaskUpdated);
-      socket.off('subtask:deleted', handleSubtaskDeleted);
-      socket.off('dependency:added', handleDependencyAdded);
-      socket.off('dependency:removed', handleDependencyRemoved);
-      socket.off('label:created', handleLabelCreated);
-      socket.off('label:updated', handleLabelUpdated);
-      socket.off('label:deleted', handleLabelDeleted);
-      socket.off('label:assigned', handleLabelAssigned);
-      socket.off('label:unassigned', handleLabelUnassigned);
-      socket.off('comment:created', handleCommentCreated);
-      socket.off('comment:updated', handleCommentUpdated);
-      socket.off('comment:deleted', handleCommentDeleted);
     };
   }, [socket, projectId, queryClient, addOnlineUser, removeOnlineUser]);
 }

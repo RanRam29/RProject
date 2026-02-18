@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { projectsService } from './projects.service.js';
 import { sendSuccess, sendPaginated } from '../../utils/api-response.js';
+import { fireAndForget } from '../../utils/fire-and-forget.js';
 import { activityService } from '../activity/activity.service.js';
 
 export class ProjectsController {
@@ -38,7 +39,7 @@ export class ProjectsController {
 
       const project = await projectsService.create(userId, name, description);
 
-      activityService.log(project.id, userId, 'project.created', { name: project.name }).catch(() => {});
+      fireAndForget(activityService.log(project.id, userId, 'project.created', { name: project.name }), 'activity.log');
 
       sendSuccess(res, project, 201);
     } catch (error) {
@@ -71,7 +72,7 @@ export class ProjectsController {
 
       const project = await projectsService.update(projectId, { name, description });
 
-      activityService.log(projectId, req.user!.id, 'project.updated', { name: project.name }).catch(() => {});
+      fireAndForget(activityService.log(projectId, req.user!.id, 'project.updated', { name: project.name }), 'activity.log');
 
       sendSuccess(res, project);
     } catch (error) {
@@ -87,9 +88,9 @@ export class ProjectsController {
       const project = await projectsService.updateStatus(projectId, status);
 
       if (status === 'ARCHIVED') {
-        activityService.log(projectId, req.user!.id, 'project.archived', { name: project.name }).catch(() => {});
+        fireAndForget(activityService.log(projectId, req.user!.id, 'project.archived', { name: project.name }), 'activity.log');
       } else {
-        activityService.log(projectId, req.user!.id, 'project.updated', { name: project.name, status }).catch(() => {});
+        fireAndForget(activityService.log(projectId, req.user!.id, 'project.updated', { name: project.name, status }), 'activity.log');
       }
 
       sendSuccess(res, project);

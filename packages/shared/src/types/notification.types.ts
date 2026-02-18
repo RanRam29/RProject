@@ -1,10 +1,6 @@
-export type NotificationType =
-  | 'TASK_ASSIGNED'
-  | 'TASK_UPDATED'
-  | 'TASK_COMMENTED'
-  | 'PROJECT_INVITED'
-  | 'PERMISSION_CHANGED'
-  | 'MENTION';
+import { NotificationType } from '../enums/index.js';
+
+export { NotificationType };
 
 export interface NotificationDTO {
   id: string;

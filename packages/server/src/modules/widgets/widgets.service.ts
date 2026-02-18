@@ -1,7 +1,7 @@
 import prisma from '../../config/db.js';
 import { WidgetType, Prisma } from '@prisma/client';
 import { ApiError } from '../../utils/api-error.js';
-import { getIO } from '../../ws/ws.server.js';
+import { emitToProject } from '../../utils/ws-emitter.js';
 import { WS_EVENTS } from '../../ws/ws.events.js';
 
 export class WidgetsService {
@@ -73,7 +73,7 @@ export class WidgetsService {
         },
       });
 
-      getIO().to(projectId).emit(WS_EVENTS.WIDGET_ADDED, { projectId, widget });
+      emitToProject(projectId, WS_EVENTS.WIDGET_ADDED, { projectId, widget });
 
       return widget;
     } catch (error) {
@@ -157,7 +157,7 @@ export class WidgetsService {
         where: { id: widgetId },
       });
 
-      getIO().to(projectId).emit(WS_EVENTS.WIDGET_REMOVED, { projectId, widgetId });
+      emitToProject(projectId, WS_EVENTS.WIDGET_REMOVED, { projectId, widgetId });
 
       return { message: 'Widget deleted successfully' };
     } catch (error) {

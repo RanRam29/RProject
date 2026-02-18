@@ -4,7 +4,111 @@ import { ApiError } from '../../utils/api-error.js';
 
 const SALT_ROUNDS = 12;
 
+interface MyTasksFilters {
+  priority?: string;
+  overdue?: boolean;
+  dueAfter?: string;
+  dueBefore?: string;
+  limit?: number;
+}
+
 export class UsersService {
+  async getMyTasks(userId: string, filters: MyTasksFilters) {
+    const where: Record<string, unknown> = { assigneeId: userId };
+
+    if (filters.priority) {
+      where.priority = filters.priority;
+    }
+
+    if (filters.overdue) {
+      where.dueDate = { lt: new Date() };
+      where.status = { isFinal: false };
+    } else if (filters.dueAfter || filters.dueBefore) {
+      const dateCond: Record<string, Date> = {};
+
+      if (filters.dueAfter) {
+        const afterDate = new Date(filters.dueAfter);
+        if (isNaN(afterDate.getTime())) {
+          throw ApiError.badRequest('Invalid dueAfter date format');
+        }
+        dateCond.gte = afterDate;
+      }
+
+      if (filters.dueBefore) {
+        const beforeDate = new Date(filters.dueBefore);
+        if (isNaN(beforeDate.getTime())) {
+          throw ApiError.badRequest('Invalid dueBefore date format');
+        }
+        dateCond.lte = beforeDate;
+      }
+
+      where.dueDate = dateCond;
+      where.status = { isFinal: false };
+    }
+
+    return prisma.task.findMany({
+      where,
+      include: {
+        project: { select: { id: true, name: true } },
+        status: true,
+        assignee: { select: { id: true, displayName: true, email: true } },
+      },
+      orderBy: [{ dueDate: 'asc' }, { priority: 'desc' }, { createdAt: 'desc' }],
+      take: filters.limit || 20,
+    });
+  }
+
+  async getMyStats(userId: string) {
+    const now = new Date();
+    const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+    const [totalTasks, overdueTasks, completedThisWeek, projectIds] = await Promise.all([
+      prisma.task.count({
+        where: { assigneeId: userId, status: { isFinal: false } },
+      }),
+      prisma.task.count({
+        where: { assigneeId: userId, dueDate: { lt: now }, status: { isFinal: false } },
+      }),
+      prisma.task.count({
+        where: { assigneeId: userId, status: { isFinal: true }, completedAt: { gte: weekAgo } },
+      }),
+      prisma.projectPermission.findMany({
+        where: { userId },
+        select: { projectId: true },
+      }),
+    ]);
+
+    const teamMembers = projectIds.length > 0
+      ? await prisma.projectPermission.groupBy({
+          by: ['userId'],
+          where: { projectId: { in: projectIds.map((p) => p.projectId) } },
+        }).then((rows) => rows.length)
+      : 0;
+
+    return { totalTasks, overdueTasks, completedThisWeek, teamMembers };
+  }
+
+  async getMyActivity(userId: string, limit: number) {
+    const projectIds = await prisma.projectPermission.findMany({
+      where: { userId },
+      select: { projectId: true },
+    });
+
+    if (projectIds.length === 0) {
+      return [];
+    }
+
+    return prisma.activityLog.findMany({
+      where: { projectId: { in: projectIds.map((p) => p.projectId) } },
+      include: {
+        user: { select: { id: true, displayName: true, avatarUrl: true } },
+        project: { select: { id: true, name: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: limit,
+    });
+  }
+
   async create(data: { email: string; password: string; displayName: string; systemRole?: string }) {
     const existing = await prisma.user.findUnique({ where: { email: data.email } });
     if (existing) {

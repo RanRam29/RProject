@@ -1,6 +1,6 @@
 import prisma from '../../config/db.js';
 import { ApiError } from '../../utils/api-error.js';
-import { getIO } from '../../ws/ws.server.js';
+import { emitToProject } from '../../utils/ws-emitter.js';
 import { WS_EVENTS } from '../../ws/ws.events.js';
 
 export class LabelsService {
@@ -37,7 +37,7 @@ export class LabelsService {
         },
       });
 
-      getIO().to(projectId).emit(WS_EVENTS.LABEL_CREATED, { projectId, label });
+      emitToProject(projectId, WS_EVENTS.LABEL_CREATED, { projectId, label });
 
       return label;
     } catch (error) {
@@ -75,7 +75,7 @@ export class LabelsService {
         },
       });
 
-      getIO().to(label.projectId).emit(WS_EVENTS.LABEL_UPDATED, { projectId: label.projectId, labelId, changes: data });
+      emitToProject(label.projectId, WS_EVENTS.LABEL_UPDATED, { projectId: label.projectId, labelId, changes: data });
 
       return updated;
     } catch (error) {
@@ -100,7 +100,7 @@ export class LabelsService {
         where: { id: labelId },
       });
 
-      getIO().to(projectId).emit(WS_EVENTS.LABEL_DELETED, { projectId, labelId });
+      emitToProject(projectId, WS_EVENTS.LABEL_DELETED, { projectId, labelId });
 
       return { message: 'Label deleted successfully', projectId, name: label.name };
     } catch (error) {
@@ -144,7 +144,7 @@ export class LabelsService {
         },
       });
 
-      getIO().to(task.projectId).emit(WS_EVENTS.LABEL_ASSIGNED, { projectId: task.projectId, taskId, labelId });
+      emitToProject(task.projectId, WS_EVENTS.LABEL_ASSIGNED, { projectId: task.projectId, taskId, labelId });
 
       return taskLabel;
     } catch (error) {
@@ -168,7 +168,7 @@ export class LabelsService {
         where: { id: taskLabel.id },
       });
 
-      getIO().to(taskLabel.task.projectId).emit(WS_EVENTS.LABEL_UNASSIGNED, { projectId: taskLabel.task.projectId, taskId, labelId });
+      emitToProject(taskLabel.task.projectId, WS_EVENTS.LABEL_UNASSIGNED, { projectId: taskLabel.task.projectId, taskId, labelId });
 
       return { message: 'Label removed from task', projectId: taskLabel.task.projectId };
     } catch (error) {

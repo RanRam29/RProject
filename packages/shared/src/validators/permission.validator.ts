@@ -1,13 +1,19 @@
 import { z } from 'zod';
+import { ProjectRole } from '../enums/index.js';
+
+const assignableRole = z.nativeEnum(ProjectRole).refine(
+  (val) => val !== ProjectRole.OWNER,
+  { message: 'Cannot assign OWNER role directly' },
+);
 
 export const inviteUserSchema = z.object({
   userId: z.string().uuid('Invalid user ID'),
-  role: z.enum(['EDITOR', 'VIEWER', 'CUSTOM']),
+  role: assignableRole,
   customRoleId: z.string().uuid().optional(),
 });
 
 export const updatePermissionSchema = z.object({
-  role: z.enum(['EDITOR', 'VIEWER', 'CUSTOM']),
+  role: assignableRole,
   customRoleId: z.string().uuid().optional(),
   capabilities: z.record(z.boolean()).optional(),
 });

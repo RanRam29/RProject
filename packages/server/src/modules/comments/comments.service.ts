@@ -1,19 +1,14 @@
 import prisma from '../../config/db.js';
 import { ApiError } from '../../utils/api-error.js';
-import { getIO } from '../../ws/ws.server.js';
+import { emitToProject } from '../../utils/ws-emitter.js';
+import { fireAndForget } from '../../utils/fire-and-forget.js';
+import { USER_SELECT_WITH_AVATAR } from '../../utils/prisma-selects.js';
 import { WS_EVENTS } from '../../ws/ws.events.js';
 import { activityService } from '../activity/activity.service.js';
 import { notificationsService } from '../notifications/notifications.service.js';
 import { sanitizeText } from '../../utils/sanitize.js';
 
 const MAX_COMMENT_LENGTH = 10_000;
-
-const authorSelect = {
-  id: true,
-  displayName: true,
-  email: true,
-  avatarUrl: true,
-};
 
 export class CommentsService {
   async list(taskId: string) {
@@ -26,7 +21,7 @@ export class CommentsService {
 
       const comments = await prisma.comment.findMany({
         where: { taskId },
-        include: { author: { select: authorSelect } },
+        include: { author: { select: USER_SELECT_WITH_AVATAR } },
         orderBy: { createdAt: 'asc' },
       });
 
@@ -56,15 +51,15 @@ export class CommentsService {
           authorId,
           content: sanitizedContent,
         },
-        include: { author: { select: authorSelect } },
+        include: { author: { select: USER_SELECT_WITH_AVATAR } },
       });
 
-      getIO().to(task.projectId).emit(WS_EVENTS.COMMENT_CREATED, { projectId: task.projectId, taskId, comment });
-      activityService.log(task.projectId, authorId, 'comment.created', { taskId, taskTitle: task.title }).catch(() => {});
+      emitToProject(task.projectId, WS_EVENTS.COMMENT_CREATED, { projectId: task.projectId, taskId, comment });
+      fireAndForget(activityService.log(task.projectId, authorId, 'comment.created', { taskId, taskTitle: task.title }), 'activity.log');
 
       // Notify task assignee about the new comment (if not the author)
       if (task.assigneeId && task.assigneeId !== authorId) {
-        notificationsService.create({
+        fireAndForget(notificationsService.create({
           userId: task.assigneeId,
           type: 'TASK_COMMENTED',
           title: `New comment on "${task.title}"`,
@@ -72,12 +67,12 @@ export class CommentsService {
           projectId: task.projectId,
           taskId,
           actorId: authorId,
-        }).catch(() => {});
+        }), 'notification.task_commented');
       }
 
       // Also notify task creator if different from assignee and author
       if (task.creatorId !== authorId && task.creatorId !== task.assigneeId) {
-        notificationsService.create({
+        fireAndForget(notificationsService.create({
           userId: task.creatorId,
           type: 'TASK_COMMENTED',
           title: `New comment on "${task.title}"`,
@@ -85,7 +80,7 @@ export class CommentsService {
           projectId: task.projectId,
           taskId,
           actorId: authorId,
-        }).catch(() => {});
+        }), 'notification.task_commented');
       }
 
       return comment;
@@ -119,10 +114,10 @@ export class CommentsService {
       const updated = await prisma.comment.update({
         where: { id: commentId },
         data: { content: sanitizedContent },
-        include: { author: { select: authorSelect } },
+        include: { author: { select: USER_SELECT_WITH_AVATAR } },
       });
 
-      getIO().to(comment.task.projectId).emit(WS_EVENTS.COMMENT_UPDATED, { projectId: comment.task.projectId, taskId: comment.taskId, commentId, changes: data });
+      emitToProject(comment.task.projectId, WS_EVENTS.COMMENT_UPDATED, { projectId: comment.task.projectId, taskId: comment.taskId, commentId, changes: data });
 
       return updated;
     } catch (error) {
@@ -151,7 +146,7 @@ export class CommentsService {
         where: { id: commentId },
       });
 
-      getIO().to(comment.task.projectId).emit(WS_EVENTS.COMMENT_DELETED, { projectId: comment.task.projectId, taskId: comment.taskId, commentId });
+      emitToProject(comment.task.projectId, WS_EVENTS.COMMENT_DELETED, { projectId: comment.task.projectId, taskId: comment.taskId, commentId });
 
       return { message: 'Comment deleted successfully' };
     } catch (error) {

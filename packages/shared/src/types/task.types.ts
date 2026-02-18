@@ -2,11 +2,20 @@ import type { TaskLabelDTO } from './label.types.js';
 import type { CommentDTO } from './comment.types.js';
 import type { TaskPriority } from '../enums/task-priority.enum.js';
 
+/** JSON-safe value type for rich-text document content */
+export type JsonValue =
+  | string
+  | number
+  | boolean
+  | null
+  | JsonValue[]
+  | { [key: string]: JsonValue };
+
 export interface TaskDTO {
   id: string;
   projectId: string;
   title: string;
-  description: unknown | null;
+  description: JsonValue | null;
   statusId: string;
   assigneeId: string | null;
   creatorId: string;
@@ -46,7 +55,7 @@ export interface TaskStatusDTO {
 
 export interface CreateTaskRequest {
   title: string;
-  description?: unknown;
+  description?: JsonValue;
   statusId: string;
   assigneeId?: string;
   parentTaskId?: string;
@@ -57,7 +66,7 @@ export interface CreateTaskRequest {
 
 export interface UpdateTaskRequest {
   title?: string;
-  description?: unknown;
+  description?: JsonValue;
   assigneeId?: string | null;
   priority?: TaskPriority;
   startDate?: string | null;

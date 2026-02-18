@@ -1,4 +1,4 @@
-import { ProjectStatus } from '../enums/index.js';
+import { ProjectStatus, WidgetType } from '../enums/index.js';
 import { WidgetConfig } from './template.types.js';
 
 export interface ProjectDTO {
@@ -36,7 +36,7 @@ export interface UpdateProjectRequest {
 export interface ProjectWidgetDTO {
   id: string;
   projectId: string;
-  type: string;
+  type: WidgetType;
   title: string;
   configJson: Record<string, unknown>;
   positionX: number;

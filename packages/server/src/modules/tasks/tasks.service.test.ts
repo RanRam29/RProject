@@ -443,7 +443,7 @@ describe('TasksService', () => {
       mockTaskFindUnique.mockResolvedValue(task);
       mockTaskUpdate.mockResolvedValue(updated);
 
-      const result = await tasksService.update(TASK_ID, { title: 'Updated' });
+      const result = await tasksService.update(TASK_ID, USER_ID, { title: 'Updated' });
 
       expect(result).toEqual(updated);
       expect(mockTaskUpdate).toHaveBeenCalledWith(
@@ -465,7 +465,7 @@ describe('TasksService', () => {
       mockPermFindFirst.mockResolvedValue({ id: 'perm-1' });
       mockTaskUpdate.mockResolvedValue({ ...task, assigneeId: ASSIGNEE_ID });
 
-      await tasksService.update(TASK_ID, { assigneeId: ASSIGNEE_ID });
+      await tasksService.update(TASK_ID, USER_ID, { assigneeId: ASSIGNEE_ID });
 
       expect(mockPermFindFirst).toHaveBeenCalledWith({
         where: { projectId: PROJECT_ID, userId: ASSIGNEE_ID },
@@ -477,7 +477,7 @@ describe('TasksService', () => {
       mockTaskFindUnique.mockResolvedValue(task);
       mockTaskUpdate.mockResolvedValue({ ...task, assigneeId: null });
 
-      await tasksService.update(TASK_ID, { assigneeId: null });
+      await tasksService.update(TASK_ID, USER_ID, { assigneeId: null });
 
       expect(mockPermFindFirst).not.toHaveBeenCalled();
     });
@@ -487,7 +487,7 @@ describe('TasksService', () => {
       mockPermFindFirst.mockResolvedValue(null);
 
       await expect(
-        tasksService.update(TASK_ID, { assigneeId: 'non-member' }),
+        tasksService.update(TASK_ID, USER_ID, { assigneeId: 'non-member' }),
       ).rejects.toMatchObject({
         statusCode: 400,
         message: 'Assignee is not a member of this project',
@@ -498,7 +498,7 @@ describe('TasksService', () => {
       mockTaskFindUnique.mockResolvedValue(null);
 
       await expect(
-        tasksService.update('nonexistent', { title: 'Foo' }),
+        tasksService.update('nonexistent', USER_ID, { title: 'Foo' }),
       ).rejects.toMatchObject({
         statusCode: 404,
         message: 'Task not found',

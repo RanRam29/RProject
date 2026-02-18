@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { permissionsService } from './permissions.service.js';
 import { sendSuccess } from '../../utils/api-response.js';
 import { activityService } from '../activity/activity.service.js';
+import { fireAndForget } from '../../utils/fire-and-forget.js';
 
 export class PermissionsController {
   async list(req: Request, res: Response, next: NextFunction) {
@@ -28,9 +29,7 @@ export class PermissionsController {
         customRoleId,
       );
 
-      activityService.log(projectId, req.user!.id, 'member.invited', { userId: permission.user.id, role }).catch((err) => {
-        console.error('Failed to log activity:', err);
-      });
+      fireAndForget(activityService.log(projectId, req.user!.id, 'member.invited', { userId: permission.user.id, role }), 'activity.log');
 
       sendSuccess(res, permission, 201);
     } catch (error) {
@@ -51,8 +50,8 @@ export class PermissionsController {
       );
 
       const projectId = req.params.projectId as string;
-      const newRole = permission.role || permission.customRoleId || role;
-      activityService.log(projectId, req.user!.id, 'member.role_changed', { userId: permission.user.id, newRole }).catch(() => {});
+      const newRole = permission.role === 'CUSTOM' ? (permission.customRoleId ?? role) : permission.role;
+      fireAndForget(activityService.log(projectId, req.user!.id, 'member.role_changed', { userId: permission.user.id, newRole }), 'activity.log');
 
       sendSuccess(res, permission);
     } catch (error) {
@@ -67,7 +66,7 @@ export class PermissionsController {
       const projectId = req.params.projectId as string;
       const result = await permissionsService.remove(permId);
 
-      activityService.log(projectId, req.user!.id, 'member.removed', {}).catch(() => {});
+      fireAndForget(activityService.log(projectId, req.user!.id, 'member.removed', {}), 'activity.log');
 
       sendSuccess(res, result);
     } catch (error) {

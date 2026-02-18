@@ -3,10 +3,9 @@ import { tasksService } from './tasks.service.js';
 import { taskHistoryService } from './task-history.service.js';
 import { timeTrackingService } from './time-tracking.service.js';
 import { sendSuccess, sendPaginated } from '../../utils/api-response.js';
+import { fireAndForget } from '../../utils/fire-and-forget.js';
 import { activityService } from '../activity/activity.service.js';
-import { notificationsService } from '../notifications/notifications.service.js';
 import prisma from '../../config/db.js';
-import logger from '../../utils/logger.js';
 import { ApiError } from '../../utils/api-error.js';
 
 /** Parse a date string safely — only accepts ISO-like formats (YYYY-MM-DD...) */
@@ -85,7 +84,7 @@ export class TasksController {
       });
 
       // Record creation in history
-      taskHistoryService.recordChange(task.id, userId, 'created', null, task.title).catch(() => {});
+      fireAndForget(taskHistoryService.recordChange(task.id, userId, 'created', null, task.title), 'task-history.record');
 
       sendSuccess(res, task, 201);
     } catch (error) {
@@ -102,7 +101,7 @@ export class TasksController {
       // Fetch old task for change tracking
       const oldTask = await prisma.task.findUnique({ where: { id: taskId } });
 
-      const task = await tasksService.update(taskId, {
+      const task = await tasksService.update(taskId, userId, {
         title,
         description,
         assigneeId,
@@ -121,44 +120,10 @@ export class TasksController {
           oldTask as unknown as Record<string, unknown>,
           { title, assigneeId, priority, startDate, dueDate },
         );
-        taskHistoryService.recordChanges(taskId, userId, changes).catch(() => {});
+        fireAndForget(taskHistoryService.recordChanges(taskId, userId, changes), 'task-history.record');
       }
 
-      activityService.log(task.projectId, userId, 'task.updated', { taskId, title: task.title }).catch(() => {});
-
-      // Notify assignee about task changes
-      const newAssigneeId = task.assigneeId;
-      const oldAssigneeId = oldTask?.assigneeId ?? null;
-
-      if (newAssigneeId && newAssigneeId !== oldAssigneeId && newAssigneeId !== userId) {
-        // Assignment changed to someone else → TASK_ASSIGNED
-        notificationsService.create({
-          userId: newAssigneeId,
-          type: 'TASK_ASSIGNED',
-          title: `You were assigned to "${task.title}"`,
-          projectId: task.projectId,
-          taskId,
-          actorId: userId,
-        }).catch((err) => {
-          logger.error(`Failed to create TASK_ASSIGNED notification: ${err instanceof Error ? err.message : err}`);
-        });
-      } else if (newAssigneeId && newAssigneeId === oldAssigneeId && newAssigneeId !== userId) {
-        // Assignee didn't change — notify of other field changes
-        const hasFieldChanges = title !== undefined || priority !== undefined
-          || dueDate !== undefined || startDate !== undefined;
-        if (hasFieldChanges) {
-          notificationsService.create({
-            userId: newAssigneeId,
-            type: 'TASK_UPDATED',
-            title: `"${task.title}" was updated`,
-            projectId: task.projectId,
-            taskId,
-            actorId: userId,
-          }).catch((err) => {
-            logger.error(`Failed to create TASK_UPDATED notification: ${err instanceof Error ? err.message : err}`);
-          });
-        }
-      }
+      fireAndForget(activityService.log(task.projectId, userId, 'task.updated', { taskId, title: task.title }), 'activity.log');
 
       sendSuccess(res, task);
     } catch (error) {
@@ -182,20 +147,20 @@ export class TasksController {
 
       // Record status change in history
       if (oldTask) {
-        taskHistoryService.recordChange(
+        fireAndForget(taskHistoryService.recordChange(
           taskId,
           userId,
           'status',
           oldTask.status.name,
           task.status.name,
-        ).catch(() => {});
+        ), 'task-history.record');
 
-        activityService.log(task.projectId, userId, 'task.status_changed', {
+        fireAndForget(activityService.log(task.projectId, userId, 'task.status_changed', {
           taskId,
           title: task.title,
           oldStatus: oldTask.status.name,
           newStatus: task.status.name,
-        }).catch(() => {});
+        }), 'activity.log');
       }
 
       sendSuccess(res, task);
@@ -224,7 +189,7 @@ export class TasksController {
 
       const result = await tasksService.delete(taskId);
 
-      activityService.log(projectId, req.user!.id, 'task.deleted', { taskId }).catch(() => {});
+      fireAndForget(activityService.log(projectId, req.user!.id, 'task.deleted', { taskId }), 'activity.log');
       sendSuccess(res, result);
     } catch (error) {
       next(error);

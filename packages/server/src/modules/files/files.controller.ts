@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { filesService } from './files.service.js';
 import { sendSuccess } from '../../utils/api-response.js';
+import { fireAndForget } from '../../utils/fire-and-forget.js';
 import { activityService } from '../activity/activity.service.js';
 
 export class FilesController {
@@ -34,7 +35,7 @@ export class FilesController {
         buffer: file.buffer,
       });
 
-      activityService.log(projectId, userId, 'file.uploaded', { fileName: file.originalname }).catch(() => {});
+      fireAndForget(activityService.log(projectId, userId, 'file.uploaded', { fileName: file.originalname }), 'activity.log');
 
       sendSuccess(res, result, 201);
     } catch (error) {
@@ -73,7 +74,7 @@ export class FilesController {
         taskId,
       });
 
-      activityService.log(projectId, userId, 'file.uploaded', { fileName: name }).catch(() => {});
+      fireAndForget(activityService.log(projectId, userId, 'file.uploaded', { fileName: name }), 'activity.log');
 
       sendSuccess(res, file, 201);
     } catch (error) {
@@ -118,7 +119,7 @@ export class FilesController {
 
       const result = await filesService.delete(fileId);
 
-      activityService.log(result.projectId, req.user!.id, 'file.deleted', { fileName: result.fileName }).catch(() => {});
+      fireAndForget(activityService.log(result.projectId, req.user!.id, 'file.deleted', { fileName: result.fileName }), 'activity.log');
 
       sendSuccess(res, result);
     } catch (error) {

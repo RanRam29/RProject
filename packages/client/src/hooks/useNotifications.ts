@@ -61,9 +61,11 @@ export function useNotifications() {
     if (!socket) return;
 
     const handleNewNotification = (data: { notification: NotificationDTO }) => {
+      // Optimistic: add to store for instant UI feedback
       addNotification(data.notification);
       addToast({ type: 'info', message: data.notification.title });
-      queryClient.invalidateQueries({ queryKey: ['notifications', 'unread-count'] });
+      // Invalidate BOTH queries so server state replaces the optimistic update
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
     };
 
     socket.on('notification:new', handleNewNotification);

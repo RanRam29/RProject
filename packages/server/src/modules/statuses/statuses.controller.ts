@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { statusesService } from './statuses.service.js';
 import { sendSuccess } from '../../utils/api-response.js';
+import { fireAndForget } from '../../utils/fire-and-forget.js';
 import { activityService } from '../activity/activity.service.js';
 
 export class StatusesController {
@@ -27,7 +28,7 @@ export class StatusesController {
         sortOrder,
       });
 
-      activityService.log(projectId, req.user!.id, 'status.created', { name }).catch(() => {});
+      fireAndForget(activityService.log(projectId, req.user!.id, 'status.created', { name }), 'activity.log');
 
       sendSuccess(res, status, 201);
     } catch (error) {
@@ -46,7 +47,7 @@ export class StatusesController {
         sortOrder,
       });
 
-      activityService.log(status.projectId, req.user!.id, 'status.updated', { name: status.name }).catch(() => {});
+      fireAndForget(activityService.log(status.projectId, req.user!.id, 'status.updated', { name: status.name }), 'activity.log');
 
       sendSuccess(res, status);
     } catch (error) {
@@ -60,7 +61,7 @@ export class StatusesController {
 
       const result = await statusesService.delete(statusId);
 
-      activityService.log(result.projectId, req.user!.id, 'status.deleted', { name: result.name }).catch(() => {});
+      fireAndForget(activityService.log(result.projectId, req.user!.id, 'status.deleted', { name: result.name }), 'activity.log');
 
       sendSuccess(res, result);
     } catch (error) {

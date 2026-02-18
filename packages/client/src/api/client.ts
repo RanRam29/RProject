@@ -48,19 +48,32 @@ apiClient.interceptors.response.use(
       // If another request is already refreshing, queue this one
       if (isRefreshing) {
         return new Promise((resolve, reject) => {
-          subscribeTokenRefresh((newToken: string) => {
-            originalRequest.headers.Authorization = `Bearer ${newToken}`;
-            resolve(apiClient(originalRequest));
-          });
-          // If refresh fails while we're queued, reject
+          let settled = false;
           const checkInterval = setInterval(() => {
             if (!isRefreshing && !localStorage.getItem('accessToken')) {
               clearInterval(checkInterval);
-              reject(error);
+              if (!settled) {
+                settled = true;
+                reject(error);
+              }
             }
           }, 100);
-          // Clean up after 10 seconds max
-          setTimeout(() => clearInterval(checkInterval), 10000);
+          const timeoutId = setTimeout(() => {
+            clearInterval(checkInterval);
+            if (!settled) {
+              settled = true;
+              reject(error);
+            }
+          }, 10000);
+          subscribeTokenRefresh((newToken: string) => {
+            clearInterval(checkInterval);
+            clearTimeout(timeoutId);
+            if (!settled) {
+              settled = true;
+              originalRequest.headers.Authorization = `Bearer ${newToken}`;
+              resolve(apiClient(originalRequest));
+            }
+          });
         });
       }
 

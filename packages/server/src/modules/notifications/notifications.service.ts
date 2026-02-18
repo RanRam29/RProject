@@ -1,6 +1,7 @@
 import prisma from '../../config/db.js';
 import { ApiError } from '../../utils/api-error.js';
-import { getIO } from '../../ws/ws.server.js';
+import { emitToUser } from '../../utils/ws-emitter.js';
+import { fireAndForget } from '../../utils/fire-and-forget.js';
 import { WS_EVENTS } from '../../ws/ws.events.js';
 import { emailService } from '../emails/email.service.js';
 import logger from '../../utils/logger.js';
@@ -59,16 +60,10 @@ export class NotificationsService {
     });
 
     // Send real-time notification to the target user via their personal room
-    try {
-      getIO().to(`user:${input.userId}`).emit(WS_EVENTS.NOTIFICATION_NEW, { notification });
-    } catch {
-      // Socket may not be initialized in tests
-    }
+    emitToUser(input.userId, WS_EVENTS.NOTIFICATION_NEW, { notification });
 
     // Send email notification (fire-and-forget)
-    this.sendEmailForNotification(input).catch((err) => {
-      logger.error(`Failed to send email notification: ${err instanceof Error ? err.message : err}`);
-    });
+    fireAndForget(this.sendEmailForNotification(input), 'notification.email');
 
     return notification;
   }

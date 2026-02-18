@@ -27,6 +27,7 @@ export const ROLE_CAPABILITIES: Record<string, Record<string, boolean>> = {
   ),
   EDITOR: {
     [CAPABILITIES.TASK_CREATE]: true,
+    [CAPABILITIES.TASK_EDIT_OWN]: true,
     [CAPABILITIES.TASK_EDIT_ANY]: true,
     [CAPABILITIES.TASK_DELETE]: true,
     [CAPABILITIES.TASK_CHANGE_STATUS]: true,

@@ -1,7 +1,9 @@
 import prisma from '../../config/db.js';
 import { TaskPriority, Prisma } from '@prisma/client';
 import { ApiError } from '../../utils/api-error.js';
-import { getIO } from '../../ws/ws.server.js';
+import { emitToProject } from '../../utils/ws-emitter.js';
+import { fireAndForget } from '../../utils/fire-and-forget.js';
+import { USER_SELECT_STANDARD, USER_SELECT_WITH_AVATAR } from '../../utils/prisma-selects.js';
 import { WS_EVENTS } from '../../ws/ws.events.js';
 import { activityService } from '../activity/activity.service.js';
 import { notificationsService } from '../notifications/notifications.service.js';
@@ -55,13 +57,13 @@ export class TasksService {
           include: {
             status: true,
             assignee: {
-              select: { id: true, displayName: true, email: true },
+              select: USER_SELECT_STANDARD,
             },
             subtasks: {
               include: {
                 status: true,
                 assignee: {
-                  select: { id: true, displayName: true, email: true },
+                  select: USER_SELECT_STANDARD,
                 },
               },
               orderBy: { sortOrder: 'asc' },
@@ -114,10 +116,10 @@ export class TasksService {
             select: { id: true, name: true },
           },
           assignee: {
-            select: { id: true, displayName: true, email: true },
+            select: USER_SELECT_STANDARD,
           },
           creator: {
-            select: { id: true, displayName: true, email: true },
+            select: USER_SELECT_STANDARD,
           },
           parentTask: {
             select: { id: true, title: true },
@@ -126,7 +128,7 @@ export class TasksService {
             include: {
               status: true,
               assignee: {
-                select: { id: true, displayName: true, email: true },
+                select: USER_SELECT_STANDARD,
               },
             },
             orderBy: { sortOrder: 'asc' },
@@ -155,7 +157,7 @@ export class TasksService {
           comments: {
             include: {
               author: {
-                select: { id: true, displayName: true, email: true, avatarUrl: true },
+                select: USER_SELECT_WITH_AVATAR,
               },
             },
             orderBy: { createdAt: 'asc' },
@@ -236,28 +238,28 @@ export class TasksService {
         include: {
           status: true,
           assignee: {
-            select: { id: true, displayName: true, email: true },
+            select: USER_SELECT_STANDARD,
           },
           creator: {
-            select: { id: true, displayName: true, email: true },
+            select: USER_SELECT_STANDARD,
           },
         },
       });
 
-      getIO().to(projectId).emit(WS_EVENTS.TASK_CREATED, { projectId, task });
-      activityService.log(projectId, userId, 'task.created', { taskId: task.id, title: task.title }).catch(() => {});
+      emitToProject(projectId, WS_EVENTS.TASK_CREATED, { projectId, task });
+      fireAndForget(activityService.log(projectId, userId, 'task.created', { taskId: task.id, title: task.title }), 'activity.log');
 
       // Notify assignee if task is assigned to someone other than the creator
       if (data.assigneeId && data.assigneeId !== userId) {
         const creator = await prisma.user.findUnique({ where: { id: userId }, select: { displayName: true } });
-        notificationsService.create({
+        fireAndForget(notificationsService.create({
           userId: data.assigneeId,
           type: 'TASK_ASSIGNED',
           title: `${creator?.displayName ?? 'Someone'} assigned you to "${task.title}"`,
           projectId,
           taskId: task.id,
           actorId: userId,
-        }).catch(() => {});
+        }), 'notification.task_assigned');
       }
 
       return task;
@@ -269,6 +271,7 @@ export class TasksService {
 
   async update(
     taskId: string,
+    userId: string,
     data: {
       title?: string;
       description?: string;
@@ -286,6 +289,8 @@ export class TasksService {
       if (!task) {
         throw ApiError.notFound('Task not found');
       }
+
+      const oldAssigneeId = task.assigneeId;
 
       // Validate assignee if changing
       if (data.assigneeId !== undefined && data.assigneeId !== null) {
@@ -311,12 +316,41 @@ export class TasksService {
         include: {
           status: true,
           assignee: {
-            select: { id: true, displayName: true, email: true },
+            select: USER_SELECT_STANDARD,
           },
         },
       });
 
-      getIO().to(task.projectId).emit(WS_EVENTS.TASK_UPDATED, { projectId: task.projectId, taskId, changes: data });
+      emitToProject(task.projectId, WS_EVENTS.TASK_UPDATED, { projectId: task.projectId, taskId, changes: data });
+
+      // Notify assignee about task changes
+      const newAssigneeId = updated.assigneeId;
+
+      if (newAssigneeId && newAssigneeId !== oldAssigneeId && newAssigneeId !== userId) {
+        // Assignment changed to someone else → TASK_ASSIGNED
+        fireAndForget(notificationsService.create({
+          userId: newAssigneeId,
+          type: 'TASK_ASSIGNED',
+          title: `You were assigned to "${updated.title}"`,
+          projectId: updated.projectId,
+          taskId,
+          actorId: userId,
+        }), 'notification.task_assigned');
+      } else if (newAssigneeId && newAssigneeId === oldAssigneeId && newAssigneeId !== userId) {
+        // Assignee didn't change — notify of other field changes
+        const hasFieldChanges = data.title !== undefined || data.priority !== undefined
+          || data.dueDate !== undefined || data.startDate !== undefined;
+        if (hasFieldChanges) {
+          fireAndForget(notificationsService.create({
+            userId: newAssigneeId,
+            type: 'TASK_UPDATED',
+            title: `"${updated.title}" was updated`,
+            projectId: updated.projectId,
+            taskId,
+            actorId: userId,
+          }), 'notification.task_updated');
+        }
+      }
 
       return updated;
     } catch (error) {
@@ -368,12 +402,12 @@ export class TasksService {
         include: {
           status: true,
           assignee: {
-            select: { id: true, displayName: true, email: true },
+            select: USER_SELECT_STANDARD,
           },
         },
       });
 
-      getIO().to(task.projectId).emit(WS_EVENTS.TASK_STATUS_CHANGED, { projectId: task.projectId, taskId, oldStatusId, newStatusId: statusId });
+      emitToProject(task.projectId, WS_EVENTS.TASK_STATUS_CHANGED, { projectId: task.projectId, taskId, oldStatusId, newStatusId: statusId });
 
       return updated;
     } catch (error) {
@@ -397,7 +431,7 @@ export class TasksService {
         data: { sortOrder },
       });
 
-      getIO().to(task.projectId).emit(WS_EVENTS.TASK_REORDERED, { projectId: task.projectId, statusId: task.statusId, taskIds: [taskId] });
+      emitToProject(task.projectId, WS_EVENTS.TASK_REORDERED, { projectId: task.projectId, statusId: task.statusId, taskIds: [taskId] });
 
       return updated;
     } catch (error) {
@@ -422,7 +456,7 @@ export class TasksService {
         where: { id: taskId },
       });
 
-      getIO().to(projectId).emit(WS_EVENTS.TASK_DELETED, { projectId, taskId });
+      emitToProject(projectId, WS_EVENTS.TASK_DELETED, { projectId, taskId });
 
       return { message: 'Task deleted successfully' };
     } catch (error) {
@@ -496,10 +530,10 @@ export class TasksService {
         include: {
           status: true,
           assignee: {
-            select: { id: true, displayName: true, email: true },
+            select: USER_SELECT_STANDARD,
           },
           creator: {
-            select: { id: true, displayName: true, email: true },
+            select: USER_SELECT_STANDARD,
           },
           parentTask: {
             select: { id: true, title: true },
@@ -507,7 +541,7 @@ export class TasksService {
         },
       });
 
-      getIO().to(parentTask.projectId).emit(WS_EVENTS.SUBTASK_CREATED, { projectId: parentTask.projectId, taskId: parentTaskId, subtask });
+      emitToProject(parentTask.projectId, WS_EVENTS.SUBTASK_CREATED, { projectId: parentTask.projectId, taskId: parentTaskId, subtask });
 
       return subtask;
     } catch (error) {
@@ -580,7 +614,7 @@ export class TasksService {
         },
       });
 
-      getIO().to(blockedTask.projectId).emit(WS_EVENTS.DEPENDENCY_ADDED, { projectId: blockedTask.projectId, taskId: blockedTaskId, dependencyTaskId: blockingTaskId, type: 'blockedBy' });
+      emitToProject(blockedTask.projectId, WS_EVENTS.DEPENDENCY_ADDED, { projectId: blockedTask.projectId, taskId: blockedTaskId, dependencyTaskId: blockingTaskId, type: 'blockedBy' });
 
       return dependency;
     } catch (error) {
@@ -604,7 +638,7 @@ export class TasksService {
         where: { id: depId },
       });
 
-      getIO().to(dependency.blockedTask.projectId).emit(WS_EVENTS.DEPENDENCY_REMOVED, { projectId: dependency.blockedTask.projectId, taskId: dependency.blockedTaskId, dependencyTaskId: dependency.blockingTaskId });
+      emitToProject(dependency.blockedTask.projectId, WS_EVENTS.DEPENDENCY_REMOVED, { projectId: dependency.blockedTask.projectId, taskId: dependency.blockedTaskId, dependencyTaskId: dependency.blockingTaskId });
 
       return { message: 'Dependency removed successfully' };
     } catch (error) {
@@ -673,7 +707,7 @@ export class TasksService {
             where: { id: { in: data.taskIds }, projectId },
           });
           data.taskIds.forEach((taskId) => {
-            getIO().to(projectId).emit(WS_EVENTS.TASK_DELETED, { projectId, taskId });
+            emitToProject(projectId, WS_EVENTS.TASK_DELETED, { projectId, taskId });
           });
           break;
         }
@@ -684,14 +718,14 @@ export class TasksService {
       if (data.operation !== 'delete') {
         // Emit a general update for all affected tasks
         data.taskIds.forEach((taskId) => {
-          getIO().to(projectId).emit(WS_EVENTS.TASK_UPDATED, { projectId, taskId, changes: {} });
+          emitToProject(projectId, WS_EVENTS.TASK_UPDATED, { projectId, taskId, changes: {} });
         });
       }
 
-      activityService.log(projectId, userId, `task.bulk.${data.operation}`, {
+      fireAndForget(activityService.log(projectId, userId, `task.bulk.${data.operation}`, {
         taskIds: data.taskIds,
         count: result.count,
-      }).catch(() => {});
+      }), 'activity.log');
 
       return { count: result.count, operation: data.operation };
     } catch (error) {

@@ -1,6 +1,8 @@
 import prisma from '../../config/db.js';
 import { ProjectRole } from '@prisma/client';
 import { ApiError } from '../../utils/api-error.js';
+import { fireAndForget } from '../../utils/fire-and-forget.js';
+import { USER_SELECT_STANDARD, USER_SELECT_WITH_ROLE } from '../../utils/prisma-selects.js';
 import { notificationsService } from '../notifications/notifications.service.js';
 import { evictUserFromProject } from '../../ws/ws.server.js';
 
@@ -11,7 +13,7 @@ export class PermissionsService {
         where: { projectId },
         include: {
           user: {
-            select: { id: true, displayName: true, email: true, systemRole: true },
+            select: USER_SELECT_WITH_ROLE,
           },
           customRole: true,
         },
@@ -67,19 +69,19 @@ export class PermissionsService {
         },
         include: {
           user: {
-            select: { id: true, displayName: true, email: true },
+            select: USER_SELECT_STANDARD,
           },
           customRole: true,
         },
       });
 
       // Notify the invited user
-      notificationsService.create({
+      fireAndForget(notificationsService.create({
         userId,
         type: 'PROJECT_INVITED',
         title: `You were invited to "${project.name}" as ${role}`,
         projectId,
-      }).catch(() => {});
+      }), 'notification.project_invited');
 
       return permission;
     } catch (error) {
@@ -139,7 +141,7 @@ export class PermissionsService {
         },
         include: {
           user: {
-            select: { id: true, displayName: true, email: true },
+            select: USER_SELECT_STANDARD,
           },
           customRole: true,
         },
@@ -147,12 +149,12 @@ export class PermissionsService {
 
       // Notify user of role change
       if (permission.role !== role) {
-        notificationsService.create({
+        fireAndForget(notificationsService.create({
           userId: permission.userId,
           type: 'PERMISSION_CHANGED',
           title: `Your role was changed to ${role}`,
           projectId: permission.projectId,
-        }).catch(() => {});
+        }), 'notification.permission_changed');
       }
 
       return updated;

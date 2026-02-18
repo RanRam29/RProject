@@ -1,9 +1,5 @@
 import { z } from 'zod';
-
-const dateString = z.string().refine(
-  (val) => !isNaN(Date.parse(val)),
-  { message: 'Invalid date string' },
-);
+import { dateString } from './common.validator.js';
 
 /** POST /tasks/:taskId/time/start */
 export const startTimerSchema = z.object({
