@@ -137,10 +137,10 @@ describe('LoginForm', () => {
     fireEvent.click(submitButton);
 
     await waitFor(() => {
-      expect(mockLogin).toHaveBeenCalledWith({
-        email: 'user@example.com',
-        password: 'password123',
-      });
+      expect(mockLogin).toHaveBeenCalledWith(
+        { email: 'user@example.com', password: 'password123' },
+        true, // rememberMe defaults to checked
+      );
     });
   });
 
@@ -205,6 +205,38 @@ describe('LoginForm', () => {
     });
 
     expect(mockNavigate).not.toHaveBeenCalled();
+  });
+
+  it('renders remember me checkbox (checked by default)', () => {
+    renderLoginForm();
+
+    const checkbox = screen.getByRole('checkbox');
+    expect(checkbox).toBeInTheDocument();
+    expect(checkbox).toBeChecked();
+    expect(screen.getByText('Remember me')).toBeInTheDocument();
+  });
+
+  it('passes rememberMe=false when checkbox is unchecked', async () => {
+    mockLogin.mockResolvedValue(undefined);
+    renderLoginForm();
+
+    const emailInput = getInputByLabel('Email');
+    const passwordInput = getInputByLabel('Password');
+    const checkbox = screen.getByRole('checkbox');
+
+    await userEvent.type(emailInput, 'user@example.com');
+    await userEvent.type(passwordInput, 'password123');
+    await userEvent.click(checkbox); // uncheck
+
+    const submitButton = screen.getByRole('button', { name: /sign in/i });
+    fireEvent.click(submitButton);
+
+    await waitFor(() => {
+      expect(mockLogin).toHaveBeenCalledWith(
+        { email: 'user@example.com', password: 'password123' },
+        false,
+      );
+    });
   });
 
   it('shows admin contact message instead of register link', () => {

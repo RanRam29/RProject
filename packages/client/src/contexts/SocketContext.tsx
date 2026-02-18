@@ -3,6 +3,7 @@ import { io, type Socket } from 'socket.io-client';
 import { env } from '../config/env';
 import { useAuthStore } from '../stores/auth.store';
 import { useWSStore } from '../stores/ws.store';
+import { getAccessToken } from '../utils/token-storage';
 import type { ServerToClientEvents, ClientToServerEvents } from '@pm/shared';
 
 type TypedSocket = Socket<ServerToClientEvents, ClientToServerEvents>;
@@ -30,7 +31,7 @@ export function SocketProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    const token = localStorage.getItem('accessToken');
+    const token = getAccessToken();
     if (!token) return;
 
     const s = io(env.WS_URL, {

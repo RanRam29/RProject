@@ -10,6 +10,7 @@ export const LoginForm: React.FC = () => {
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(true);
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -25,7 +26,7 @@ export const LoginForm: React.FC = () => {
     setIsSubmitting(true);
 
     try {
-      await login({ email: email.trim(), password });
+      await login({ email: email.trim(), password }, rememberMe);
       navigate('/', { replace: true });
     } catch (err: unknown) {
       if (err instanceof Error) {
@@ -54,6 +55,27 @@ export const LoginForm: React.FC = () => {
     fontSize: '13px',
     fontWeight: 500,
     animation: 'shake 0.5s ease',
+  };
+
+  const rememberRowStyle: React.CSSProperties = {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    marginTop: '-8px',
+  };
+
+  const checkboxStyle: React.CSSProperties = {
+    width: '16px',
+    height: '16px',
+    accentColor: 'var(--color-accent)',
+    cursor: 'pointer',
+  };
+
+  const rememberLabelStyle: React.CSSProperties = {
+    fontSize: '13px',
+    color: 'var(--color-text-secondary)',
+    cursor: 'pointer',
+    userSelect: 'none',
   };
 
   const footerStyle: React.CSSProperties = {
@@ -87,6 +109,16 @@ export const LoginForm: React.FC = () => {
         fullWidth
         autoComplete="new-password"
       />
+
+      <label style={rememberRowStyle}>
+        <input
+          type="checkbox"
+          checked={rememberMe}
+          onChange={(e) => setRememberMe(e.target.checked)}
+          style={checkboxStyle}
+        />
+        <span style={rememberLabelStyle}>Remember me</span>
+      </label>
 
       <Button type="submit" variant="primary" fullWidth loading={isSubmitting}>
         Sign in

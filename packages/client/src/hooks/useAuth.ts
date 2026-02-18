@@ -27,9 +27,9 @@ export function useAuth() {
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps -- run once on mount
 
-  const login = async (data: LoginRequest) => {
+  const login = async (data: LoginRequest, rememberMe = true) => {
     const result = await authApi.login(data);
-    storeLogin(result.user, result.tokens.accessToken, result.tokens.refreshToken);
+    storeLogin(result.user, result.tokens.accessToken, result.tokens.refreshToken, rememberMe);
     return result.user;
   };
 

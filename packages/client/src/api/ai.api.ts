@@ -1,5 +1,6 @@
 import apiClient from './client';
 import { env } from '../config/env';
+import { getAccessToken } from '../utils/token-storage';
 import type {
   AIChatRequest,
   AIChatResponse,
@@ -12,7 +13,7 @@ import type {
  * Ensure a valid access token is available by triggering
  * a lightweight request through apiClient (which handles
  * 401 → refresh automatically via interceptors).
- * Returns the current access token from localStorage.
+ * Returns the current access token.
  */
 async function getFreshToken(): Promise<string | null> {
   try {
@@ -22,7 +23,7 @@ async function getFreshToken(): Promise<string | null> {
   } catch {
     // If refresh also fails, there's no valid token.
   }
-  return localStorage.getItem('accessToken');
+  return getAccessToken();
 }
 
 export const aiApi = {
@@ -64,7 +65,7 @@ export const aiApi = {
         body,
       });
 
-    let token = localStorage.getItem('accessToken');
+    let token = getAccessToken();
     let response = await doFetch(token);
 
     // If 401, attempt token refresh and retry once

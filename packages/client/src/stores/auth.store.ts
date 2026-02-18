@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import type { UserDTO } from '@pm/shared';
+import { setTokens, clearTokens, hasToken } from '../utils/token-storage';
 
 interface AuthState {
   user: UserDTO | null;
@@ -8,15 +9,15 @@ interface AuthState {
   hasHydrated: boolean;
   setUser: (user: UserDTO | null) => void;
   setLoading: (loading: boolean) => void;
-  login: (user: UserDTO, accessToken: string, refreshToken: string) => void;
+  login: (user: UserDTO, accessToken: string, refreshToken: string, rememberMe?: boolean) => void;
   logout: () => void;
   setHydrated: () => void;
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
   user: null,
-  isAuthenticated: !!localStorage.getItem('accessToken'),
-  isLoading: !!localStorage.getItem('accessToken'), // Only loading if we need to verify a token
+  isAuthenticated: hasToken(),
+  isLoading: hasToken(), // Only loading if we need to verify a token
   hasHydrated: false,
 
   setUser: (user) =>
@@ -24,15 +25,13 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   setLoading: (isLoading) => set({ isLoading }),
 
-  login: (user, accessToken, refreshToken) => {
-    localStorage.setItem('accessToken', accessToken);
-    localStorage.setItem('refreshToken', refreshToken);
+  login: (user, accessToken, refreshToken, rememberMe) => {
+    setTokens(accessToken, refreshToken, rememberMe);
     set({ user, isAuthenticated: true, isLoading: false, hasHydrated: true });
   },
 
   logout: () => {
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('refreshToken');
+    clearTokens();
     set({ user: null, isAuthenticated: false, isLoading: false, hasHydrated: true });
   },
 

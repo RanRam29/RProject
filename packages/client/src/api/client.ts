@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { env } from '../config/env';
 import { useAuthStore } from '../stores/auth.store';
+import { getAccessToken, getRefreshToken, setTokens } from '../utils/token-storage';
 
 const apiClient = axios.create({
   baseURL: env.API_URL,
@@ -10,7 +11,7 @@ const apiClient = axios.create({
 });
 
 apiClient.interceptors.request.use((config) => {
-  const token = localStorage.getItem('accessToken');
+  const token = getAccessToken();
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -50,7 +51,7 @@ apiClient.interceptors.response.use(
         return new Promise((resolve, reject) => {
           let settled = false;
           const checkInterval = setInterval(() => {
-            if (!isRefreshing && !localStorage.getItem('accessToken')) {
+            if (!isRefreshing && !getAccessToken()) {
               clearInterval(checkInterval);
               if (!settled) {
                 settled = true;
@@ -80,7 +81,7 @@ apiClient.interceptors.response.use(
       isRefreshing = true;
 
       try {
-        const refreshToken = localStorage.getItem('refreshToken');
+        const refreshToken = getRefreshToken();
         if (!refreshToken) throw new Error('No refresh token');
 
         const { data } = await axios.post(`${env.API_URL}/auth/refresh`, {
@@ -88,8 +89,7 @@ apiClient.interceptors.response.use(
         });
 
         const { accessToken, refreshToken: newRefreshToken } = data.data;
-        localStorage.setItem('accessToken', accessToken);
-        localStorage.setItem('refreshToken', newRefreshToken);
+        setTokens(accessToken, newRefreshToken);
 
         // Notify all queued requests with the new token
         onTokenRefreshed(accessToken);
