@@ -66,7 +66,6 @@ interface GanttTimelineProps {
 const ROW_HEIGHT = 44;
 const LABEL_WIDTH = 200;
 const MIN_BAR_WIDTH_PX = 12;
-const DAY_PX = 32; // pixels per day at default zoom
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -176,11 +175,12 @@ const DependencyArrow: FC<{
 const GanttBar: FC<{
   ganttTask: GanttTask;
   totalWidthPx: number;
+  totalDays: number;
   isFocused: boolean;
   isFocusMode: boolean;
   onDragEnd: (taskId: string, deltaDays: number) => void;
   onClick: () => void;
-}> = ({ ganttTask, totalWidthPx, isFocused, isFocusMode, onDragEnd, onClick }) => {
+}> = ({ ganttTask, totalWidthPx, totalDays, isFocused, isFocusMode, onDragEnd, onClick }) => {
   const { task, status, leftPct, widthPct } = ganttTask;
   const isDone = status?.isFinal ?? false;
   const isStuck =
@@ -193,6 +193,9 @@ const GanttBar: FC<{
     : isStuck
     ? 'var(--rp-accent-coral)'
     : status?.color ?? 'var(--rp-accent-blue)';
+
+  // Actual pixels per day based on the real container width and total timeline days
+  const pixelsPerDay = totalWidthPx / totalDays;
 
   const leftPx = (leftPct / 100) * totalWidthPx;
   const widthPx = Math.max((widthPct / 100) * totalWidthPx, MIN_BAR_WIDTH_PX);
@@ -216,7 +219,7 @@ const GanttBar: FC<{
   const handleDragEnd = useCallback(
     (_: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
       const deltaPx = info.offset.x;
-      const deltaDays = Math.round(deltaPx / DAY_PX);
+      const deltaDays = Math.round(deltaPx / pixelsPerDay);
 
       if (deltaDays !== 0) {
         // Fire the callback — parent will update dates and re-render with new leftPx,
@@ -839,6 +842,7 @@ export function GanttTimeline({
                     <GanttBar
                       ganttTask={gt}
                       totalWidthPx={containerWidth}
+                      totalDays={totalDays}
                       isFocused={isFocused}
                       isFocusMode={focusMode}
                       onDragEnd={handleBarDragEnd}
