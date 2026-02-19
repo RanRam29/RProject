@@ -1,13 +1,15 @@
 import axios from 'axios';
 import { env } from '../config/env';
 import { useAuthStore } from '../stores/auth.store';
-import { getAccessToken, getRefreshToken, setTokens } from '../utils/token-storage';
+import { getAccessToken, setAccessToken } from '../utils/token-storage';
 
 const apiClient = axios.create({
   baseURL: env.API_URL,
   headers: {
     'Content-Type': 'application/json',
   },
+  // Send the httpOnly refreshToken cookie on same-origin requests
+  withCredentials: true,
 });
 
 apiClient.interceptors.request.use((config) => {
@@ -49,47 +51,25 @@ apiClient.interceptors.response.use(
       // If another request is already refreshing, queue this one
       if (isRefreshing) {
         return new Promise((resolve, reject) => {
-          let settled = false;
-          const checkInterval = setInterval(() => {
-            if (!isRefreshing && !getAccessToken()) {
-              clearInterval(checkInterval);
-              if (!settled) {
-                settled = true;
-                reject(error);
-              }
-            }
-          }, 100);
-          const timeoutId = setTimeout(() => {
-            clearInterval(checkInterval);
-            if (!settled) {
-              settled = true;
-              reject(error);
-            }
-          }, 10000);
           subscribeTokenRefresh((newToken: string) => {
-            clearInterval(checkInterval);
-            clearTimeout(timeoutId);
-            if (!settled) {
-              settled = true;
-              originalRequest.headers.Authorization = `Bearer ${newToken}`;
-              resolve(apiClient(originalRequest));
-            }
+            originalRequest.headers.Authorization = `Bearer ${newToken}`;
+            resolve(apiClient(originalRequest));
           });
+          // Reject after 10s if refresh never completes
+          setTimeout(() => reject(error), 10000);
         });
       }
 
       isRefreshing = true;
 
       try {
-        const refreshToken = getRefreshToken();
-        if (!refreshToken) throw new Error('No refresh token');
+        // The server reads the refreshToken from the httpOnly cookie
+        // (withCredentials: true ensures the cookie is sent).
+        // No need to send the refresh token in the body.
+        const { data } = await apiClient.post('/auth/refresh');
 
-        const { data } = await axios.post(`${env.API_URL}/auth/refresh`, {
-          refreshToken,
-        });
-
-        const { accessToken, refreshToken: newRefreshToken } = data.data;
-        setTokens(accessToken, newRefreshToken);
+        const { accessToken } = data.data;
+        setAccessToken(accessToken);
 
         // Notify all queued requests with the new token
         onTokenRefreshed(accessToken);
@@ -98,7 +78,7 @@ apiClient.interceptors.response.use(
         return apiClient(originalRequest);
       } catch {
         onRefreshFailed();
-        // Use store logout to cleanly clear state (no hard page reload)
+        // Refresh also failed — clear stale access token and update store
         useAuthStore.getState().logout();
         return Promise.reject(error);
       } finally {

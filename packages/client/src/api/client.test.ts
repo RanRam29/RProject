@@ -29,7 +29,6 @@ describe('apiClient', () => {
     localStorage.clear();
     vi.restoreAllMocks();
     // Replace window.location with a writable mock so we can track href assignments.
-    // jsdom does not implement navigation, so assigning window.location.href is a no-op.
     Object.defineProperty(window, 'location', {
       writable: true,
       value: { ...originalLocation, href: originalLocation.href },
@@ -37,7 +36,6 @@ describe('apiClient', () => {
   });
 
   afterEach(() => {
-    // Restore original window.location
     Object.defineProperty(window, 'location', {
       writable: true,
       value: originalLocation,
@@ -53,6 +51,10 @@ describe('apiClient', () => {
       expect(apiClient.defaults.headers['Content-Type']).toBe(
         'application/json'
       );
+    });
+
+    it('has withCredentials enabled for cookie support', () => {
+      expect(apiClient.defaults.withCredentials).toBe(true);
     });
   });
 
@@ -126,33 +128,17 @@ describe('apiClient', () => {
       await expect(interceptor.rejected(error)).rejects.toBe(error);
     });
 
-    it('clears tokens via store logout when refresh token is missing on 401', async () => {
+    it('clears access token via store logout when refresh request fails', async () => {
       localStorage.setItem('accessToken', 'expired-token');
-      // No refreshToken set in localStorage
 
-      const interceptor = getResponseInterceptor();
-      const error = {
-        config: { headers: {} },
-        response: { status: 401 },
-      };
-
-      await expect(interceptor.rejected(error)).rejects.toBe(error);
-
-      // Store logout clears localStorage tokens
-      expect(localStorage.getItem('accessToken')).toBeNull();
-      expect(localStorage.getItem('refreshToken')).toBeNull();
-    });
-
-    it('clears tokens via store logout when refresh request fails', async () => {
-      localStorage.setItem('accessToken', 'expired-token');
-      localStorage.setItem('refreshToken', 'bad-refresh-token');
-
-      // Mock axios.post to simulate a failed refresh call.
-      // The client.ts file imports axios directly and uses axios.post for the refresh.
-      const axios = await import('axios');
-      vi.spyOn(axios.default, 'post').mockRejectedValueOnce(
-        new Error('Refresh failed')
+      // Mock the adapter to simulate a failed /auth/refresh call
+      const adapterSpy = vi.fn().mockRejectedValueOnce(
+        Object.assign(new Error('Refresh failed'), {
+          response: { status: 401 },
+          config: { url: '/auth/refresh', headers: {}, _retry: true },
+        })
       );
+      apiClient.defaults.adapter = adapterSpy;
 
       const interceptor = getResponseInterceptor();
       const error = {
@@ -162,30 +148,34 @@ describe('apiClient', () => {
 
       await expect(interceptor.rejected(error)).rejects.toBe(error);
 
-      // Store logout clears localStorage tokens
+      // Store logout clears the access token
       expect(localStorage.getItem('accessToken')).toBeNull();
-      expect(localStorage.getItem('refreshToken')).toBeNull();
+
+      delete (apiClient.defaults as any).adapter;
     });
 
-    it('refreshes token and updates localStorage on 401 with valid refresh token', async () => {
+    it('refreshes token via cookie and updates localStorage on 401', async () => {
       localStorage.setItem('accessToken', 'expired-token');
-      localStorage.setItem('refreshToken', 'valid-refresh-token');
 
-      const axios = await import('axios');
-      vi.spyOn(axios.default, 'post').mockResolvedValueOnce({
-        data: {
-          data: {
-            accessToken: 'new-access-token',
-            refreshToken: 'new-refresh-token',
-          },
-        },
-      });
-
-      // Also mock the apiClient call that retries the original request
-      // so it does not actually make a network request.
-      const requestSpy = vi
-        .spyOn(apiClient, 'request')
-        .mockResolvedValueOnce({ data: 'retried-response' });
+      // First adapter call: /auth/refresh → returns new tokens
+      // Second adapter call: retry of original request → succeeds
+      const adapterSpy = vi
+        .fn()
+        .mockResolvedValueOnce({
+          status: 200,
+          data: { data: { accessToken: 'new-access-token', refreshToken: 'new-refresh-token' } },
+          headers: {},
+          config: {},
+          statusText: 'OK',
+        })
+        .mockResolvedValueOnce({
+          status: 200,
+          data: 'retried-response',
+          headers: {},
+          config: {},
+          statusText: 'OK',
+        });
+      apiClient.defaults.adapter = adapterSpy;
 
       const interceptor = getResponseInterceptor();
       const error = {
@@ -193,48 +183,22 @@ describe('apiClient', () => {
         response: { status: 401 },
       };
 
-      // The interceptor calls apiClient(originalRequest) which calls apiClient.request
-      // We need to mock the callable behavior of apiClient
-      // Since apiClient is an AxiosInstance (callable), the retry goes through the adapter.
-      // Let's mock the adapter instead for a cleaner test.
-      requestSpy.mockRestore();
+      await interceptor.rejected(error);
 
-      const adapterSpy = vi.fn().mockResolvedValueOnce({
-        status: 200,
-        data: 'retried-response',
-        headers: {},
-        config: error.config,
-        statusText: 'OK',
-      });
-      apiClient.defaults.adapter = adapterSpy;
-
-      try {
-        await interceptor.rejected(error);
-      } catch {
-        // The retry may still go through interceptors, which is fine
-      }
-
-      // Verify tokens were updated in localStorage
+      // Verify access token was updated in localStorage
       expect(localStorage.getItem('accessToken')).toBe('new-access-token');
-      expect(localStorage.getItem('refreshToken')).toBe('new-refresh-token');
 
-      // Verify the refresh endpoint was called with the correct refresh token
-      expect(axios.default.post).toHaveBeenCalledWith(
-        'http://test-api/auth/refresh',
-        { refreshToken: 'valid-refresh-token' }
-      );
-
-      // Clean up adapter override
       delete (apiClient.defaults as any).adapter;
     });
 
     it('sets _retry flag on originalRequest during 401 handling', async () => {
-      localStorage.setItem('refreshToken', 'some-token');
-
-      const axios = await import('axios');
-      vi.spyOn(axios.default, 'post').mockRejectedValueOnce(
-        new Error('Refresh failed')
+      const adapterSpy = vi.fn().mockRejectedValueOnce(
+        Object.assign(new Error('Refresh failed'), {
+          response: { status: 401 },
+          config: { url: '/auth/refresh', headers: {}, _retry: true },
+        })
       );
+      apiClient.defaults.adapter = adapterSpy;
 
       const interceptor = getResponseInterceptor();
       const originalConfig = { headers: {} } as any;
@@ -247,30 +211,29 @@ describe('apiClient', () => {
 
       // The interceptor should have set _retry = true on the original config
       expect(originalConfig._retry).toBe(true);
+
+      delete (apiClient.defaults as any).adapter;
     });
 
     it('sets new Authorization header on the retried request', async () => {
       localStorage.setItem('accessToken', 'expired-token');
-      localStorage.setItem('refreshToken', 'valid-refresh-token');
 
-      const axios = await import('axios');
-      vi.spyOn(axios.default, 'post').mockResolvedValueOnce({
-        data: {
-          data: {
-            accessToken: 'fresh-token',
-            refreshToken: 'fresh-refresh-token',
-          },
-        },
-      });
-
-      // Mock adapter to capture the retried request config
-      const adapterSpy = vi.fn().mockResolvedValueOnce({
-        status: 200,
-        data: 'ok',
-        headers: {},
-        config: {},
-        statusText: 'OK',
-      });
+      const adapterSpy = vi
+        .fn()
+        .mockResolvedValueOnce({
+          status: 200,
+          data: { data: { accessToken: 'fresh-token', refreshToken: 'fresh-refresh-token' } },
+          headers: {},
+          config: {},
+          statusText: 'OK',
+        })
+        .mockResolvedValueOnce({
+          status: 200,
+          data: 'ok',
+          headers: {},
+          config: {},
+          statusText: 'OK',
+        });
       apiClient.defaults.adapter = adapterSpy;
 
       const interceptor = getResponseInterceptor();
@@ -284,16 +247,11 @@ describe('apiClient', () => {
         response: { status: 401 },
       };
 
-      try {
-        await interceptor.rejected(error);
-      } catch {
-        // May throw if the retry itself triggers interceptors again
-      }
+      await interceptor.rejected(error);
 
       // The original request config should be updated with the fresh token
       expect(originalConfig.headers.Authorization).toBe('Bearer fresh-token');
 
-      // Clean up
       delete (apiClient.defaults as any).adapter;
     });
   });
