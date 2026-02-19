@@ -1,13 +1,13 @@
-// ── Access token storage ──────────────────────────────────────
-// The refresh token lives exclusively in an httpOnly cookie set by the server,
-// so it is never accessible from JavaScript and survives page refreshes
-// automatically. Only the short-lived access token is managed here.
-//
-// "Remember me" controls whether the access token persists across browser
-// sessions (localStorage) or clears on tab/window close (sessionStorage).
+// ── Token storage ─────────────────────────────────────────────
+// Both access and refresh tokens are stored client-side.
+// "Remember me" controls whether they go to localStorage (persistent
+// across sessions) or sessionStorage (cleared on tab/window close).
+// A flag in localStorage records which storage is active so tokens
+// can be found on page reload regardless of which storage was used.
 
 const STORAGE_KEY  = 'tokenStorageType';  // 'local' | 'session'
 const ACCESS_KEY   = 'accessToken';
+const REFRESH_KEY  = 'refreshToken';
 
 function activeStorage(): Storage {
   return localStorage.getItem(STORAGE_KEY) === 'session'
@@ -20,18 +20,36 @@ export function getAccessToken(): string | null {
   return activeStorage().getItem(ACCESS_KEY);
 }
 
-/** Persist the access token. `remember` controls which storage is used. */
-export function setAccessToken(accessToken: string, remember?: boolean): void {
+/** Read the current refresh token. */
+export function getRefreshToken(): string | null {
+  return activeStorage().getItem(REFRESH_KEY);
+}
+
+/** Persist both tokens. `remember` controls which storage is used. */
+export function setTokens(
+  accessToken: string,
+  refreshToken: string,
+  remember?: boolean,
+): void {
   if (remember !== undefined) {
     localStorage.setItem(STORAGE_KEY, remember ? 'local' : 'session');
   }
+  const storage = activeStorage();
+  storage.setItem(ACCESS_KEY, accessToken);
+  storage.setItem(REFRESH_KEY, refreshToken);
+}
+
+/** Convenience: update only the access token (e.g. after silent refresh). */
+export function setAccessToken(accessToken: string): void {
   activeStorage().setItem(ACCESS_KEY, accessToken);
 }
 
-/** Remove the access token from both storages and clear the flag. */
-export function clearAccessToken(): void {
+/** Remove both tokens from both storages and clear the flag. */
+export function clearTokens(): void {
   localStorage.removeItem(ACCESS_KEY);
+  localStorage.removeItem(REFRESH_KEY);
   sessionStorage.removeItem(ACCESS_KEY);
+  sessionStorage.removeItem(REFRESH_KEY);
   localStorage.removeItem(STORAGE_KEY);
 }
 

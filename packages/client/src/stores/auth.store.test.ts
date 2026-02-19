@@ -27,7 +27,7 @@ describe('useAuthStore', () => {
     });
   });
 
-  it('starts with default state', () => {
+  it('starts with isLoading true', () => {
     const state = useAuthStore.getState();
     expect(state.user).toBeNull();
     expect(state.isLoading).toBe(true);
@@ -49,41 +49,45 @@ describe('useAuthStore', () => {
     expect(state.isAuthenticated).toBe(false);
   });
 
-  it('login stores access token and sets user', () => {
-    useAuthStore.getState().login(mockUser, 'access-token');
+  it('login stores tokens and sets user', () => {
+    useAuthStore.getState().login(mockUser, 'access-token', 'refresh-token');
     const state = useAuthStore.getState();
     expect(state.user).toEqual(mockUser);
     expect(state.isAuthenticated).toBe(true);
     expect(state.isLoading).toBe(false);
     expect(localStorage.getItem('accessToken')).toBe('access-token');
+    expect(localStorage.getItem('refreshToken')).toBe('refresh-token');
   });
 
-  it('logout clears access token and user', () => {
-    useAuthStore.getState().login(mockUser, 'access-token');
+  it('logout clears tokens and user', () => {
+    useAuthStore.getState().login(mockUser, 'access-token', 'refresh-token');
     useAuthStore.getState().logout();
     const state = useAuthStore.getState();
     expect(state.user).toBeNull();
     expect(state.isAuthenticated).toBe(false);
     expect(state.isLoading).toBe(false);
     expect(localStorage.getItem('accessToken')).toBeNull();
+    expect(localStorage.getItem('refreshToken')).toBeNull();
   });
 
-  it('login with rememberMe=false stores access token in sessionStorage', () => {
-    useAuthStore.getState().login(mockUser, 'access-token', false);
+  it('login with rememberMe=false stores tokens in sessionStorage', () => {
+    useAuthStore.getState().login(mockUser, 'access-token', 'refresh-token', false);
     expect(sessionStorage.getItem('accessToken')).toBe('access-token');
+    expect(sessionStorage.getItem('refreshToken')).toBe('refresh-token');
     expect(localStorage.getItem('accessToken')).toBeNull();
     expect(localStorage.getItem('tokenStorageType')).toBe('session');
   });
 
-  it('login with rememberMe=true stores access token in localStorage', () => {
-    useAuthStore.getState().login(mockUser, 'access-token', true);
+  it('login with rememberMe=true stores tokens in localStorage', () => {
+    useAuthStore.getState().login(mockUser, 'access-token', 'refresh-token', true);
     expect(localStorage.getItem('accessToken')).toBe('access-token');
+    expect(localStorage.getItem('refreshToken')).toBe('refresh-token');
     expect(sessionStorage.getItem('accessToken')).toBeNull();
     expect(localStorage.getItem('tokenStorageType')).toBe('local');
   });
 
-  it('logout clears access token from both storages', () => {
-    useAuthStore.getState().login(mockUser, 'access-token', false);
+  it('logout clears tokens from both storages', () => {
+    useAuthStore.getState().login(mockUser, 'access-token', 'refresh-token', false);
     useAuthStore.getState().logout();
     expect(sessionStorage.getItem('accessToken')).toBeNull();
     expect(localStorage.getItem('accessToken')).toBeNull();

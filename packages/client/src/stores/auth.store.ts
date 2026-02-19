@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import type { UserDTO } from '@pm/shared';
-import { setAccessToken, clearAccessToken } from '../utils/token-storage';
+import { setTokens, clearTokens } from '../utils/token-storage';
 
 interface AuthState {
   user: UserDTO | null;
@@ -9,7 +9,7 @@ interface AuthState {
   hasHydrated: boolean;
   setUser: (user: UserDTO | null) => void;
   setLoading: (loading: boolean) => void;
-  login: (user: UserDTO, accessToken: string, rememberMe?: boolean) => void;
+  login: (user: UserDTO, accessToken: string, refreshToken: string, rememberMe?: boolean) => void;
   logout: () => void;
   setHydrated: () => void;
 }
@@ -17,8 +17,8 @@ interface AuthState {
 export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   isAuthenticated: false,
-  // Always start loading — App.tsx hydration verifies the session via
-  // the stored access token or the httpOnly refreshToken cookie.
+  // Always start loading — App.tsx hydration will verify the stored tokens
+  // (or redirect to login if none exist) before rendering protected routes.
   isLoading: true,
   hasHydrated: false,
 
@@ -27,13 +27,13 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   setLoading: (isLoading) => set({ isLoading }),
 
-  login: (user, accessToken, rememberMe) => {
-    setAccessToken(accessToken, rememberMe);
+  login: (user, accessToken, refreshToken, rememberMe) => {
+    setTokens(accessToken, refreshToken, rememberMe);
     set({ user, isAuthenticated: true, isLoading: false, hasHydrated: true });
   },
 
   logout: () => {
-    clearAccessToken();
+    clearTokens();
     set({ user: null, isAuthenticated: false, isLoading: false, hasHydrated: true });
   },
 

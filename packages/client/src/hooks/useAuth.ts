@@ -19,13 +19,13 @@ export function useAuth() {
 
   const login = async (data: LoginRequest, rememberMe = true) => {
     const result = await authApi.login(data);
-    storeLogin(result.user, result.tokens.accessToken, rememberMe);
+    storeLogin(result.user, result.tokens.accessToken, result.tokens.refreshToken, rememberMe);
     return result.user;
   };
 
   const register = async (data: RegisterRequest) => {
     const result = await authApi.register(data);
-    storeLogin(result.user, result.tokens.accessToken);
+    storeLogin(result.user, result.tokens.accessToken, result.tokens.refreshToken);
     return result.user;
   };
 
