@@ -197,20 +197,37 @@ const GanttBar: FC<{
   const leftPx = (leftPct / 100) * totalWidthPx;
   const widthPx = Math.max((widthPct / 100) * totalWidthPx, MIN_BAR_WIDTH_PX);
 
-  const motionX = useMotionValue(0);
+  // Drive position entirely from x (no left CSS) so drag + optimistic updates
+  // don't compound. motionX is the bar's absolute x-offset from left:0.
+  const motionX = useMotionValue(leftPx);
 
-  // Snap x back to 0 after drag settles
+  // Keep motionX in sync when leftPx changes (optimistic update from parent)
+  useEffect(() => {
+    animate(motionX, leftPx, { duration: 0.25, ease: [0.4, 0, 0.2, 1] });
+  }, [leftPx]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Track the x value at drag start so we can compute an absolute delta
+  const dragStartXRef = useRef(leftPx);
+
+  const handleDragStart = useCallback(() => {
+    dragStartXRef.current = motionX.get();
+  }, [motionX]);
+
   const handleDragEnd = useCallback(
     (_: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
       const deltaPx = info.offset.x;
       const deltaDays = Math.round(deltaPx / DAY_PX);
-      // Animate bar back to 0 (actual position update comes from parent re-render)
-      animate(motionX, 0, { duration: 0.25, ease: [0.4, 0, 0.2, 1] });
+
       if (deltaDays !== 0) {
+        // Fire the callback — parent will update dates and re-render with new leftPx,
+        // which will animate motionX to the correct new position via the useEffect above.
         onDragEnd(task.id, deltaDays);
+      } else {
+        // No meaningful move — snap back to current leftPx
+        animate(motionX, leftPx, { duration: 0.2, ease: [0.4, 0, 0.2, 1] });
       }
     },
-    [task.id, motionX, onDragEnd]
+    [task.id, motionX, leftPx, onDragEnd]
   );
 
   const dimStyle: React.CSSProperties =
@@ -218,16 +235,20 @@ const GanttBar: FC<{
       ? { opacity: 0.25, filter: 'blur(1.5px)', pointerEvents: 'none' }
       : { opacity: 1, filter: 'none' };
 
+  // Track last x to distinguish click vs drag
+  const lastDragDeltaRef = useRef(0);
+
   return (
     <motion.div
       className="rp-gantt-bar"
       drag="x"
       dragMomentum={false}
       dragElastic={0.05}
+      onDragStart={handleDragStart}
       style={{
         x: motionX,
         position: 'absolute',
-        left: leftPx,
+        left: 0,           // position driven entirely by motionX — no left offset
         width: widthPx,
         top: 8,
         height: ROW_HEIGHT - 16,
@@ -248,13 +269,16 @@ const GanttBar: FC<{
       }}
       whileDrag={{ scale: 1.03, zIndex: 20, boxShadow: 'var(--rp-shadow-float)' }}
       whileHover={{ scale: 1.01 }}
+      onDrag={(_, info) => { lastDragDeltaRef.current = info.offset.x; }}
       onDragEnd={handleDragEnd}
       onClick={(e) => {
-        // Only fire click if not a drag
-        if (Math.abs((motionX.get())) < 4) {
+        // Only fire click if the bar was not meaningfully dragged
+        if (Math.abs(lastDragDeltaRef.current) < 6) {
           e.stopPropagation();
+          lastDragDeltaRef.current = 0;
           onClick();
         }
+        lastDragDeltaRef.current = 0;
       }}
       title={`${task.title}\n${task.startDate ?? '?'} → ${task.dueDate ?? '?'}`}
     >

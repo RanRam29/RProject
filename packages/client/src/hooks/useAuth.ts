@@ -1,31 +1,21 @@
-import { useEffect, useRef } from 'react';
+// Hydration of auth state is handled once in App.tsx — this hook is
+// intentionally free of side-effects so it can be called from multiple
+// components without triggering duplicate /auth/me requests.
+
+import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/auth.store';
 import { authApi } from '../api/auth.api';
 import type { LoginRequest, RegisterRequest } from '@pm/shared';
 
 export function useAuth() {
-  const { user, isAuthenticated, isLoading, hasHydrated, login: storeLogin, logout: storeLogout, setUser, setLoading } = useAuthStore();
-  const hydrating = useRef(false);
-
-  useEffect(() => {
-    // Only attempt to hydrate once, and only if we have a stored token but no user
-    if (isAuthenticated && !user && !hasHydrated && !hydrating.current) {
-      hydrating.current = true;
-      authApi
-        .me()
-        .then((fetchedUser) => {
-          setUser(fetchedUser);
-        })
-        .catch(() => {
-          // Token is truly invalid (refresh also failed) — log out
-          storeLogout();
-        });
-    } else if (!isAuthenticated && !hasHydrated) {
-      setLoading(false);
-      useAuthStore.getState().setHydrated();
-    }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps -- run once on mount
+  const {
+    user,
+    isAuthenticated,
+    isLoading,
+    login: storeLogin,
+    logout: storeLogout,
+  } = useAuthStore();
 
   const login = async (data: LoginRequest, rememberMe = true) => {
     const result = await authApi.login(data);
