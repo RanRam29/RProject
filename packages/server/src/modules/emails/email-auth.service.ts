@@ -4,6 +4,7 @@ import prisma from '../../config/db.js';
 import { env } from '../../config/env.js';
 import { ApiError } from '../../utils/api-error.js';
 import logger from '../../utils/logger.js';
+import { fireAndForget } from '../../utils/fire-and-forget.js';
 import { emailService } from './email.service.js';
 
 const SALT_ROUNDS = 12;
@@ -58,9 +59,10 @@ export const emailAuthService = {
     });
 
     // Send the email (fire-and-forget, don't fail the request if email fails)
-    emailService.sendPasswordReset(user.email, user.displayName, token).catch((err) => {
-      logger.error(`Failed to send password reset email to ${user.email}: ${err}`);
-    });
+    fireAndForget(
+      emailService.sendPasswordReset(user.email, user.displayName, token),
+      'email.passwordReset',
+    );
 
     logger.info(`Password reset token created for user: ${user.email}`);
     return { message: 'If an account with that email exists, a password reset link has been sent.' };
@@ -153,9 +155,10 @@ export const emailAuthService = {
       },
     });
 
-    emailService.sendEmailVerification(user.email, user.displayName, token).catch((err) => {
-      logger.error(`Failed to send verification email to ${user.email}: ${err}`);
-    });
+    fireAndForget(
+      emailService.sendEmailVerification(user.email, user.displayName, token),
+      'email.verification',
+    );
 
     logger.info(`Verification email sent to: ${user.email}`);
   },
@@ -240,9 +243,10 @@ export const emailAuthService = {
       },
     });
 
-    emailService.sendEmailVerification(user.email, user.displayName, token).catch((err) => {
-      logger.error(`Failed to send verification email to ${user.email}: ${err}`);
-    });
+    fireAndForget(
+      emailService.sendEmailVerification(user.email, user.displayName, token),
+      'email.verification',
+    );
 
     return { message: 'If an account with that email exists, a verification link has been sent.' };
   },

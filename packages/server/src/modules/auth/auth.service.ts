@@ -6,6 +6,7 @@ import prisma from '../../config/db.js';
 import { env } from '../../config/env.js';
 import { ApiError } from '../../utils/api-error.js';
 import logger from '../../utils/logger.js';
+import { fireAndForget } from '../../utils/fire-and-forget.js';
 import { checkLockout, recordFailedAttempt, resetLockout, checkIpRateLimit, recordIpFailedAttempt } from '../../middleware/account-lockout.middleware.js';
 import { emailAuthService } from '../emails/email-auth.service.js';
 
@@ -145,9 +146,7 @@ export const authService = {
     logger.info(`User registered: ${user.email}`);
 
     // Send email verification (fire-and-forget)
-    emailAuthService.sendVerificationEmail(user.id).catch((err) => {
-      logger.error(`Failed to send verification email after registration: ${err}`);
-    });
+    fireAndForget(emailAuthService.sendVerificationEmail(user.id), 'email.postRegistrationVerification');
 
     const tokens = await generateTokens({
       id: user.id,

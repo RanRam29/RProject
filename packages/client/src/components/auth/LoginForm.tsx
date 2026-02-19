@@ -107,7 +107,7 @@ export const LoginForm: React.FC = () => {
         value={password}
         onChange={(e) => setPassword(e.target.value)}
         fullWidth
-        autoComplete="new-password"
+        autoComplete="current-password"
       />
 
       <label style={rememberRowStyle}>

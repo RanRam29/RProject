@@ -2,6 +2,7 @@ import prisma from '../../config/db.js';
 import { emailService } from './email.service.js';
 import { notificationsService } from '../notifications/notifications.service.js';
 import logger from '../../utils/logger.js';
+import { fireAndForget } from '../../utils/fire-and-forget.js';
 
 const REMINDER_INTERVAL_MS = 60 * 60 * 1000; // 1 hour
 const REMINDER_WINDOW_HOURS = 24; // Remind for tasks due within 24 hours
@@ -80,17 +81,18 @@ async function checkDueDateReminders(): Promise<void> {
 
       // Send email directly (notification service will also try, but we want the specific due date template)
       if (task.assignee.emailNotifications) {
-        emailService.sendDueDateReminder(
-          task.assignee.email,
-          task.assignee.displayName,
-          task.title,
-          task.project.name,
-          task.project.id,
-          task.id,
-          dueDateStr,
-        ).catch((err) => {
-          logger.error(`Failed to send due date reminder email for task ${task.id}: ${err}`);
-        });
+        fireAndForget(
+          emailService.sendDueDateReminder(
+            task.assignee.email,
+            task.assignee.displayName,
+            task.title,
+            task.project.name,
+            task.project.id,
+            task.id,
+            dueDateStr,
+          ),
+          'email.dueDateReminder',
+        );
       }
     }
 

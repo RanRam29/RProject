@@ -101,9 +101,9 @@ export function CommentThread({ projectId, taskId }: CommentThreadProps) {
       });
     };
 
-    socket.on('presence:userTyping' as any, handleTyping);
+    socket.on('presence:userTyping', handleTyping);
     return () => {
-      socket.off('presence:userTyping' as any, handleTyping);
+      socket.off('presence:userTyping', handleTyping);
     };
   }, [socket, taskId, currentUser?.id]);
 
@@ -113,10 +113,10 @@ export function CommentThread({ projectId, taskId }: CommentThreadProps) {
       if (!socket) return;
       if (isTyping && !isTypingRef.current) {
         isTypingRef.current = true;
-        socket.emit('presence:typingStart' as any, { projectId, taskId });
+        socket.emit('presence:typingStart', { projectId, taskId });
       } else if (!isTyping && isTypingRef.current) {
         isTypingRef.current = false;
-        socket.emit('presence:typingStop' as any, { projectId, taskId });
+        socket.emit('presence:typingStop', { projectId, taskId });
       }
     },
     [socket, projectId, taskId]
