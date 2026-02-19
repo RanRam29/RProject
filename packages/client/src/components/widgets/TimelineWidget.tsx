@@ -1,13 +1,35 @@
-import { useState, useMemo, useCallback } from 'react';
-import { useQuery } from '@tanstack/react-query';
+/**
+ * TimelineWidget — Upgraded to use the new elastic GanttTimeline.
+ *
+ * Changes from original:
+ *  • Delegates all rendering to <GanttTimeline> (Framer Motion bars, cascade, focus mode)
+ *  • Wraps GanttTimeline.onTaskDateChange with optimistic updates + server mutation
+ *  • Task clicks open <LivingTaskModal> instead of the plain TaskDetailModal
+ *  • ZenInput (Shift+Space) for quick natural-language task creation
+ *  • All existing query keys preserved: ['tasks', projectId], ['statuses', projectId]
+ *  • Zero breaking changes to WidgetProps interface
+ */
+
+import { useState, useCallback } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { motion } from 'framer-motion';
 import { tasksApi } from '../../api/tasks.api';
+import { GanttTimeline } from '../gantt/GanttTimeline';
+import { LivingTaskModal } from '../task/LivingTaskModal';
+import { ZenInput, type ZenInputResult } from '../ui/ZenInput';
+import { useUIStore } from '../../stores/ui.store';
+import { useAuthStore } from '../../stores/auth.store';
 import { TaskDetailModal } from '../task/TaskDetailModal';
 import type { WidgetProps } from './widget.types';
-import type { TaskDTO, TaskStatusDTO } from '@pm/shared';
+import type { TaskDTO } from '@pm/shared';
+import { TaskPriority } from '@pm/shared';
 
 export function TimelineWidget({ projectId }: WidgetProps) {
-  const [selectedTask, setSelectedTask] = useState<TaskDTO | null>(null);
-  const [showCreate, setShowCreate] = useState(false);
+  const queryClient = useQueryClient();
+  const addToast = useUIStore((s) => s.addToast);
+  const currentUser = useAuthStore((s) => s.user);
+
+  // ─── Remote state ──────────────────────────────────────────────────────────
 
   const { data: tasks = [] } = useQuery({
     queryKey: ['tasks', projectId],
@@ -19,308 +41,221 @@ export function TimelineWidget({ projectId }: WidgetProps) {
     queryFn: () => tasksApi.getStatuses(projectId),
   });
 
-  const statusMap: Record<string, TaskStatusDTO> = {};
-  statuses.forEach((s) => {
-    statusMap[s.id] = s;
+  // ─── Local modal state ────────────────────────────────────────────────────
+
+  const [selectedTask, setSelectedTask] = useState<TaskDTO | null>(null);
+  const [showCreate, setShowCreate] = useState(false);
+  const [zenOpen, setZenOpen] = useState(false);
+
+  // ─── Keyboard shortcut: Shift+Space → ZenInput ────────────────────────────
+
+  // We attach a listener within this widget (scoped to its container).
+  // AppLayout may also open ZenInput globally; this is widget-local fallback.
+
+  // ─── Mutations ─────────────────────────────────────────────────────────────
+
+  /** Batch-update task dates (fired by Gantt drag + cascade) */
+  const dateMutation = useMutation({
+    mutationFn: async (updates: Array<{
+      taskId: string;
+      newStartDate: string | null;
+      newEndDate: string | null;
+    }>) => {
+      // Fire all updates in parallel; each is a simple PATCH
+      await Promise.all(
+        updates.map(({ taskId, newStartDate, newEndDate }) =>
+          tasksApi.update(projectId, taskId, {
+            startDate: newStartDate ?? undefined,
+            dueDate: newEndDate ?? undefined,
+          })
+        )
+      );
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tasks', projectId] });
+    },
+    onError: () => {
+      // Roll back optimistic update by re-fetching
+      queryClient.invalidateQueries({ queryKey: ['tasks', projectId] });
+      addToast({ type: 'error', message: 'Failed to update task dates' });
+    },
   });
 
-  const tasksWithDates = useMemo(
-    () => tasks.filter((t) => t.startDate || t.dueDate),
-    [tasks]
+  /** Create task from ZenInput natural-language result */
+  const createMutation = useMutation({
+    mutationFn: (result: ZenInputResult) => {
+      if (!statuses[0]) throw new Error('No statuses available');
+      return tasksApi.create(projectId, {
+        title: result.title,
+        statusId: statuses[0].id,
+        dueDate: result.dueDate,
+        priority: result.priority ?? TaskPriority.NONE,
+        creatorId: currentUser?.id,
+      } as Parameters<typeof tasksApi.create>[1]);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tasks', projectId] });
+      addToast({ type: 'success', message: 'Task created' });
+    },
+    onError: () => {
+      addToast({ type: 'error', message: 'Failed to create task' });
+    },
+  });
+
+  // ─── Handlers ─────────────────────────────────────────────────────────────
+
+  const handleTaskDateChange = useCallback(
+    (
+      taskId: string,
+      newStartDate: string | null,
+      newEndDate: string | null,
+      cascadedUpdates: Array<{ taskId: string; newStartDate: string | null; newEndDate: string | null }>
+    ) => {
+      // Optimistic update: reflect new dates immediately in the cache
+      queryClient.setQueryData<TaskDTO[]>(['tasks', projectId], (old) => {
+        if (!old) return old;
+
+        const allUpdates = [
+          { taskId, newStartDate, newEndDate },
+          ...cascadedUpdates,
+        ];
+
+        return old.map((t) => {
+          const upd = allUpdates.find((u) => u.taskId === t.id);
+          if (!upd) return t;
+          return {
+            ...t,
+            startDate: upd.newStartDate ?? t.startDate,
+            dueDate: upd.newEndDate ?? t.dueDate,
+          };
+        });
+      });
+
+      // Persist to server
+      dateMutation.mutate([{ taskId, newStartDate, newEndDate }, ...cascadedUpdates]);
+    },
+    [projectId, queryClient, dateMutation]
   );
 
-  const { minDate, maxDate, totalDays } = useMemo(() => {
-    if (tasksWithDates.length === 0) {
-      const today = new Date();
-      const nextMonth = new Date(today);
-      nextMonth.setDate(today.getDate() + 30);
-      return { minDate: today, maxDate: nextMonth, totalDays: 30 };
-    }
+  const handleZenSubmit = useCallback(
+    (result: ZenInputResult) => {
+      createMutation.mutate(result);
+    },
+    [createMutation]
+  );
 
-    let min = new Date();
-    let max = new Date();
-
-    tasksWithDates.forEach((t) => {
-      const start = t.startDate ? new Date(t.startDate) : null;
-      const end = t.dueDate ? new Date(t.dueDate) : null;
-
-      if (start && start < min) min = start;
-      if (end && end > max) max = end;
-      if (start && start > max) max = start;
-      if (end && end < min) min = end;
-    });
-
-    // Add some padding
-    min.setDate(min.getDate() - 3);
-    max.setDate(max.getDate() + 3);
-
-    const total = Math.ceil((max.getTime() - min.getTime()) / (1000 * 60 * 60 * 24));
-    return { minDate: min, maxDate: max, totalDays: Math.max(total, 7) };
-  }, [tasksWithDates]);
-
-  const getBarPosition = useCallback((task: TaskDTO) => {
-    const start = task.startDate ? new Date(task.startDate) : (task.dueDate ? new Date(task.dueDate) : new Date());
-    const end = task.dueDate ? new Date(task.dueDate) : new Date(start.getTime() + 86400000);
-
-    const startOffset = (start.getTime() - minDate.getTime()) / (1000 * 60 * 60 * 24);
-    const duration = Math.max((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24), 1);
-
-    return {
-      left: `${(startOffset / totalDays) * 100}%`,
-      width: `${(duration / totalDays) * 100}%`,
-    };
-  }, [minDate, totalDays]);
-
-  const containerStyle: React.CSSProperties = {
-    padding: '12px',
-    height: '100%',
-    display: 'flex',
-    flexDirection: 'column',
-    overflow: 'auto',
-  };
-
-  const headerStyle: React.CSSProperties = {
-    display: 'flex',
-    borderBottom: '1px solid var(--color-border)',
-    paddingBottom: '8px',
-    marginBottom: '8px',
-    position: 'relative',
-    height: '30px',
-  };
-
-  const rowStyle: React.CSSProperties = {
-    display: 'flex',
-    alignItems: 'center',
-    height: '36px',
-    position: 'relative',
-    borderBottom: '1px solid var(--color-border)',
-  };
-
-  const labelStyle: React.CSSProperties = {
-    width: '160px',
-    minWidth: '160px',
-    fontSize: '13px',
-    color: 'var(--color-text-primary)',
-    paddingRight: '12px',
-    overflow: 'hidden',
-    textOverflow: 'ellipsis',
-    whiteSpace: 'nowrap' as const,
-    cursor: 'pointer',
-  };
-
-  const barAreaStyle: React.CSSProperties = {
-    flex: 1,
-    position: 'relative',
-    height: '100%',
-  };
-
-  // Generate week markers
-  const months: { label: string; left: string }[] = [];
-  const current = new Date(minDate);
-  while (current <= maxDate) {
-    const offset = (current.getTime() - minDate.getTime()) / (1000 * 60 * 60 * 24);
-    months.push({
-      label: current.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-      left: `${(offset / totalDays) * 100}%`,
-    });
-    current.setDate(current.getDate() + 7);
-  }
-
-  // Today marker position
-  const todayOffset = (new Date().getTime() - minDate.getTime()) / (1000 * 60 * 60 * 24);
-  const showTodayLine = todayOffset >= 0 && todayOffset <= totalDays;
+  // ─── Render ───────────────────────────────────────────────────────────────
 
   return (
-    <div style={containerStyle}>
-      {/* Toolbar */}
+    <div
+      style={{
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        position: 'relative',
+        background: 'var(--rp-bg-cream, var(--color-bg-secondary))',
+      }}
+      onKeyDown={(e) => {
+        if (e.shiftKey && e.code === 'Space') {
+          e.preventDefault();
+          setZenOpen(true);
+        }
+      }}
+      tabIndex={-1}
+    >
+      {/* Quick-create toolbar */}
       <div
         style={{
           display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          marginBottom: '8px',
+          justifyContent: 'flex-end',
+          gap: 8,
+          padding: '8px 12px 0',
+          flexShrink: 0,
         }}
       >
-        <span style={{ fontSize: '12px', color: 'var(--color-text-tertiary)' }}>
-          {tasksWithDates.length} task{tasksWithDates.length !== 1 ? 's' : ''} with dates
-          {tasks.length > tasksWithDates.length && (
-            <> &middot; {tasks.length - tasksWithDates.length} without dates</>
-          )}
-        </span>
-        <button
+        {/* Zen create button */}
+        <motion.button
+          whileHover={{ scale: 1.04 }}
+          whileTap={{ scale: 0.96 }}
+          onClick={() => setZenOpen(true)}
           style={{
-            padding: '4px 10px',
-            fontSize: '12px',
-            backgroundColor: 'var(--color-accent)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+            padding: '5px 12px',
+            fontSize: 12,
+            fontWeight: 700,
+            background: 'var(--rp-accent-lavender-light, #EDE9FE)',
+            color: 'var(--rp-accent-lavender, #A78BFA)',
+            border: '1.5px solid rgba(167,139,250,0.25)',
+            borderRadius: 9999,
+            cursor: 'pointer',
+            letterSpacing: 0.3,
+          }}
+          title="Quick create (Shift+Space)"
+        >
+          <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}>
+            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+          </svg>
+          Zen Create
+        </motion.button>
+
+        {/* Standard add task */}
+        <motion.button
+          whileHover={{ scale: 1.04 }}
+          whileTap={{ scale: 0.96 }}
+          onClick={() => setShowCreate(true)}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 4,
+            padding: '5px 12px',
+            fontSize: 12,
+            fontWeight: 700,
+            background: 'var(--rp-accent-blue, var(--color-accent))',
             color: 'white',
             border: 'none',
-            borderRadius: 'var(--radius-full)',
+            borderRadius: 9999,
             cursor: 'pointer',
+            letterSpacing: 0.3,
           }}
-          onClick={() => setShowCreate(true)}
         >
-          + Add Task
-        </button>
+          + Task
+        </motion.button>
       </div>
 
-      {tasksWithDates.length === 0 ? (
-        <div
-          style={{
-            flex: 1,
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '8px',
-          }}
-        >
-          <p style={{ color: 'var(--color-text-tertiary)', fontSize: '14px', margin: 0 }}>
-            Add start/due dates to tasks to see them on the timeline
-          </p>
-          <button
-            style={{
-              padding: '6px 14px',
-              fontSize: '13px',
-              backgroundColor: 'var(--color-accent)',
-              color: 'white',
-              border: 'none',
-              borderRadius: 'var(--radius-md)',
-              cursor: 'pointer',
-            }}
-            onClick={() => setShowCreate(true)}
-          >
-            Create Task with Dates
-          </button>
-        </div>
-      ) : (
-        <>
-          {/* Timeline header */}
-          <div style={{ display: 'flex', position: 'relative' }}>
-            <div style={{ ...labelStyle, fontWeight: 600, fontSize: '12px', color: 'var(--color-text-tertiary)' }}>
-              Task
-            </div>
-            <div style={{ ...barAreaStyle, ...headerStyle }}>
-              {months.map((m, i) => (
-                <span
-                  key={i}
-                  style={{
-                    position: 'absolute',
-                    left: m.left,
-                    fontSize: '11px',
-                    color: 'var(--color-text-tertiary)',
-                    whiteSpace: 'nowrap' as const,
-                  }}
-                >
-                  {m.label}
-                </span>
-              ))}
-            </div>
-          </div>
+      {/* Gantt chart */}
+      <div style={{ flex: 1, minHeight: 0, paddingTop: 8 }}>
+        <GanttTimeline
+          tasks={tasks}
+          statuses={statuses}
+          onTaskDateChange={handleTaskDateChange}
+          onTaskClick={(task) => setSelectedTask(task)}
+        />
+      </div>
 
-          {/* Task rows */}
-          <div style={{ flex: 1, position: 'relative' }}>
-            {/* Today line */}
-            {showTodayLine && (
-              <div
-                style={{
-                  position: 'absolute',
-                  left: `calc(160px + (100% - 160px) * ${todayOffset / totalDays})`,
-                  top: 0,
-                  bottom: 0,
-                  width: '2px',
-                  backgroundColor: 'var(--color-danger)',
-                  opacity: 0.5,
-                  zIndex: 1,
-                  pointerEvents: 'none',
-                }}
-              />
-            )}
-
-            {tasksWithDates.map((task) => {
-              const status = statusMap[task.statusId];
-              const pos = getBarPosition(task);
-              const isOverdue = task.dueDate && new Date(task.dueDate) < new Date() && !status?.isFinal;
-
-              return (
-                <div
-                  key={task.id}
-                  style={rowStyle}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = 'var(--color-bg-secondary)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = 'transparent';
-                  }}
-                >
-                  <div
-                    style={labelStyle}
-                    onClick={() => setSelectedTask(task)}
-                    title="Click to edit"
-                  >
-                    {status?.isFinal && (
-                      <span style={{ textDecoration: 'line-through', opacity: 0.6 }}>{task.title}</span>
-                    )}
-                    {!status?.isFinal && task.title}
-                  </div>
-                  <div style={barAreaStyle}>
-                    <div
-                      style={{
-                        position: 'absolute',
-                        left: pos.left,
-                        width: pos.width,
-                        top: '6px',
-                        height: '24px',
-                        backgroundColor: isOverdue ? 'var(--color-danger)' : (status?.color || 'var(--color-accent)'),
-                        borderRadius: 'var(--radius-sm)',
-                        opacity: status?.isFinal ? 0.4 : 0.8,
-                        minWidth: '8px',
-                        cursor: 'pointer',
-                        transition: 'opacity var(--transition-fast), transform var(--transition-fast)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        paddingLeft: '6px',
-                        fontSize: '11px',
-                        color: 'white',
-                        fontWeight: 500,
-                        overflow: 'hidden',
-                        whiteSpace: 'nowrap' as const,
-                      }}
-                      onClick={() => setSelectedTask(task)}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.opacity = '1';
-                        e.currentTarget.style.transform = 'scaleY(1.1)';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.opacity = status?.isFinal ? '0.4' : '0.8';
-                        e.currentTarget.style.transform = 'scaleY(1)';
-                      }}
-                      title={`${task.title}\n${task.startDate || '?'} - ${task.dueDate || '?'}${isOverdue ? '\nOverdue!' : ''}`}
-                    >
-                      {status?.name}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </>
-      )}
-
-      {/* Edit Modal */}
-      <TaskDetailModal
+      {/* Living Task Modal (edit) */}
+      <LivingTaskModal
         isOpen={!!selectedTask}
         onClose={() => setSelectedTask(null)}
         projectId={projectId}
         task={selectedTask}
-        mode="edit"
+        statuses={statuses}
       />
 
-      {/* Create Modal */}
+      {/* Standard create modal (fallback for users who prefer form-based creation) */}
       <TaskDetailModal
         isOpen={showCreate}
         onClose={() => setShowCreate(false)}
         projectId={projectId}
         mode="create"
+      />
+
+      {/* ZenInput */}
+      <ZenInput
+        isOpen={zenOpen}
+        onClose={() => setZenOpen(false)}
+        onSubmit={handleZenSubmit}
       />
     </div>
   );

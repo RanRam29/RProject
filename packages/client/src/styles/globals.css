@@ -151,3 +151,101 @@ select {
 ::-webkit-scrollbar-thumb:hover {
   background-color: var(--color-border-hover);
 }
+
+/* ──────────────────────────────────────────────
+   RPROJECTS — SOFT MINIMALISM DESIGN TOKENS
+   ────────────────────────────────────────────── */
+
+:root {
+  /* Soft minimalism palette */
+  --rp-bg-cream: #FBFBFA;
+  --rp-bg-glass: rgba(255, 255, 255, 0.70);
+  --rp-bg-glass-border: rgba(255, 255, 255, 0.20);
+  --rp-text-charcoal: #1C1F23;
+  --rp-text-muted: #6B7280;
+  --rp-text-faint: #9CA3AF;
+
+  /* Accent palette */
+  --rp-accent-blue: #5B8DEF;
+  --rp-accent-blue-light: #EBF2FF;
+  --rp-accent-mint: #34D399;
+  --rp-accent-mint-light: #D1FAE5;
+  --rp-accent-lavender: #A78BFA;
+  --rp-accent-lavender-light: #EDE9FE;
+  --rp-accent-coral: #FB7185;
+  --rp-accent-coral-light: #FFE4E6;
+
+  /* Status colours */
+  --rp-status-todo: #9CA3AF;
+  --rp-status-in-progress: #5B8DEF;
+  --rp-status-stuck: #F87171;
+  --rp-status-done: #34D399;
+
+  /* Surfaces */
+  --rp-shadow-card: 0 2px 12px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.04);
+  --rp-shadow-card-hover: 0 8px 24px rgba(0,0,0,0.10), 0 2px 8px rgba(0,0,0,0.06);
+  --rp-shadow-float: 0 20px 48px rgba(0,0,0,0.14), 0 4px 12px rgba(0,0,0,0.08);
+  --rp-shadow-stuck: 0 0 0 0 rgba(239,68,68,0.4);
+
+  /* Radii */
+  --rp-radius-card: 16px;
+  --rp-radius-pill: 9999px;
+  --rp-radius-modal: 24px;
+
+  /* Motion */
+  --rp-ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --rp-ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+  --rp-duration-fast: 180ms;
+  --rp-duration-normal: 300ms;
+  --rp-duration-slow: 500ms;
+}
+
+/* Gantt bar drag handle cursor */
+.rp-gantt-bar { cursor: grab; }
+.rp-gantt-bar:active { cursor: grabbing; }
+
+/* Stuck task pulse ring */
+@keyframes rp-stuck-pulse {
+  0%   { box-shadow: 0 0 0 0   rgba(239, 68, 68, 0.40); }
+  50%  { box-shadow: 0 0 0 8px rgba(239, 68, 68, 0.00); }
+  100% { box-shadow: 0 0 0 0   rgba(239, 68, 68, 0.40); }
+}
+.rp-stuck-pulse {
+  animation: rp-stuck-pulse 2s ease-in-out infinite;
+}
+
+/* Zen input shimmer */
+@keyframes rp-shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position:  200% 0; }
+}
+
+/* Confetti burst flash */
+@keyframes rp-flash {
+  0%   { opacity: 1; }
+  50%  { opacity: 0.6; }
+  100% { opacity: 1; }
+}
+.rp-flash { animation: rp-flash 0.4s ease; }
+
+/* Focus mode: dim non-connected tasks */
+.rp-focus-dim {
+  opacity: 0.30;
+  filter: blur(1.5px);
+  transition: opacity var(--rp-duration-normal) var(--rp-ease-smooth),
+              filter  var(--rp-duration-normal) var(--rp-ease-smooth);
+}
+.rp-focus-highlight {
+  opacity: 1;
+  filter: none;
+  transition: opacity var(--rp-duration-normal) var(--rp-ease-smooth),
+              filter  var(--rp-duration-normal) var(--rp-ease-smooth);
+}
+
+/* Glassmorphism surface */
+.rp-glass {
+  background: var(--rp-bg-glass);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--rp-bg-glass-border);
+}
