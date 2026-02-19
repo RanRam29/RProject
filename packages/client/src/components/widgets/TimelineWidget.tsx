@@ -10,7 +10,7 @@
  *  • Zero breaking changes to WidgetProps interface
  */
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { tasksApi } from '../../api/tasks.api';
@@ -81,6 +81,10 @@ export function TimelineWidget({ projectId }: WidgetProps) {
     },
   });
 
+  // Stable ref so handleTaskDateChange never closes over a stale mutate fn
+  const dateMutateRef = useRef(dateMutation.mutate);
+  dateMutateRef.current = dateMutation.mutate;
+
   /** Create task from ZenInput natural-language result */
   const createMutation = useMutation({
     mutationFn: (result: ZenInputResult) => {
@@ -132,9 +136,9 @@ export function TimelineWidget({ projectId }: WidgetProps) {
       });
 
       // Persist to server
-      dateMutation.mutate([{ taskId, newStartDate, newEndDate }, ...cascadedUpdates]);
+      dateMutateRef.current([{ taskId, newStartDate, newEndDate }, ...cascadedUpdates]);
     },
-    [projectId, queryClient, dateMutation]
+    [projectId, queryClient]
   );
 
   const handleZenSubmit = useCallback(
