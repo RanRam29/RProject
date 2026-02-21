@@ -22,7 +22,19 @@
 
 ## Active Goal
  Phases 1-5 COMPLETE. Phase 2.3 (Views & Visualization) COMPLETE.
- CURRENT: Phase 6 — Templates & Time Tracking (both Prisma models exist, UI needed).
+ Phase 6 (Templates & Time Tracking) SUPERSEDED.
+ CURRENT: Phase 6.1 — Advanced Gantt Chart Implementation (multi-view, milestones, auto-scheduling, resource overload, PDF export).
+
+## Phase 6.1 Gantt — Key Decisions
+- New Prisma fields on Task: `isMilestone Boolean @default(false)`, `estimatedHours Int @default(0)`
+- `progressPercentage` is COMPUTED by the backend service, never stored
+- Progress formula: if subtasks exist → (completed_subtasks / total_subtasks) * 100; else by status name (TODO=0, IN_PROGRESS=50, IN_REVIEW=90, COMPLETED/final=100)
+- New API route: `PATCH /api/projects/:projectId/tasks/:taskId/timeline` — accepts startDate, endDate, autoSchedule (bool); if autoSchedule=true, runs Prisma transaction to cascade date shift to all downstream dependents
+- Gantt DnD restricted to Day/Week views only
+- Resource overload: sum estimatedHours per assignee per day; if >8 → red ring on avatar
+- Export: 100% client-side via html2canvas + jspdf (no server involvement)
+- New component tree: GanttWidget/ → GanttHeader, GanttGrid, GanttTaskBar, GanttDependencyLines
+- Git: every sub-task on its own branch (e.g. feature/gantt-core), merged only after QA PASS
 
 ## Critical Rules
 - Always use Shared package for Types.

@@ -26,6 +26,10 @@ export interface TaskDTO {
   sortOrder: number;
   createdAt: string;
   updatedAt: string;
+  // Gantt fields
+  isMilestone: boolean;
+  estimatedHours: number;
+  progressPercentage: number;
   assignee?: {
     id: string;
     displayName: string;
@@ -71,6 +75,8 @@ export interface UpdateTaskRequest {
   priority?: TaskPriority;
   startDate?: string | null;
   dueDate?: string | null;
+  isMilestone?: boolean;
+  estimatedHours?: number;
 }
 
 export interface UpdateTaskStatusRequest {

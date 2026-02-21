@@ -122,21 +122,68 @@
 
 ---
 
-## 📋 Phase 6: Templates & Time Tracking
+## 📋 Phase 6.1: Advanced Gantt Chart — `IN PROGRESS`
 
-### 6.1 Task Templates — `PENDING`
-- [ ] Template management UI (create, edit, delete templates)
-- [ ] Apply template when creating a task (pre-fill fields)
-- [ ] Template listing page / section
+### Branch Strategy (Zero Regression Rule)
+- Each sub-task → dedicated branch → merged only after [QA] PASS
+- Branches: `feature/gantt-schema`, `feature/gantt-api`, `feature/gantt-core`, `feature/gantt-resource`, `feature/gantt-export`
 
-### 6.2 Time Tracking UI — `PENDING`
-- [ ] Time logging UI on task detail (start/stop timer, manual entry)
-- [ ] Time summary per task and per project
-- [ ] Dashboard integration (time tracked this week)
+### 6.1.A Schema & Shared Types — `DONE`
+- [x] Prisma: add `isMilestone Boolean @default(false)` to Task model
+- [x] Prisma: add `estimatedHours Int @default(0)` to Task model
+- [ ] Run migration: `pnpm db:migrate` — **[DevOps] gate before deploy**
+- [x] shared/types/task.types.ts: add `isMilestone`, `estimatedHours`, `progressPercentage` to TaskDTO
+- [x] shared/types/gantt.types.ts: UpdateTaskTimelineRequest/Response, DayResourceLoad
+- [x] shared/validators/gantt.validator.ts: updateTimelineSchema (startDate, endDate, autoSchedule)
+- [x] Rebuild shared package: 0 errors (`pnpm --filter @pm/shared build` PASS)
+
+### 6.1.B API Layer — `IN PROGRESS` (branch: feature/gantt-api)
+- [x] tasks.service.ts: add `updateTimeline(taskId, data, actorId)` — Prisma BFS + $transaction cascade
+- [x] tasks.service.ts: extend `update()` to accept `isMilestone` + `estimatedHours`
+- [x] tasks.controller.ts: add `updateTimeline` handler — logs `task.gantt.timeline_updated` + `task.gantt.timeline_cascaded` per downstream task; logs `task.gantt.milestone_toggled` + `task.gantt.estimated_hours_set` on field edits
+- [x] tasks.routes.ts: register `PATCH /:taskId/timeline` (auth + EDITOR RBAC + validate)
+- [x] shared/validators/gantt.validator.ts: `updateTimelineSchema` (startDate, endDate, autoSchedule)
+- [x] shared/validators/index.ts: export gantt.validator
+- [x] Emit WS_EVENTS.TASK_UPDATED after timeline patch (primary + each cascaded task)
+- [x] taskChangeHistory: field-level diff recorded for startDate + dueDate on primary and cascaded tasks
+- [ ] tasks.service.ts: add `computeProgress(task)` helper — subtask ratio or status-name fallback
+- [ ] tasks.service.ts: integrate `progressPercentage` into list() and getById() responses
+
+### 6.1.C Core Gantt Components — `DONE`
+- [x] GanttWidget/index.tsx — root widget, view/year state, autoSchedule, PDF export, mutation
+- [x] GanttWidget/GanttHeader.tsx — Day/Week/Month/Quarter/Year tabs, year select, toggle, export btn
+- [x] GanttWidget/GanttGrid.tsx — swimlane matrix, date columns, today highlight, smart sort, dep lines
+- [x] GanttWidget/GanttTaskBar.tsx — progress fill, milestone diamond (isMilestone), drag-on-day/week only
+- [x] GanttWidget/GanttDependencyLines.tsx — SVG overlay, cubic Bezier arrows with arrowhead marker
+- [x] GanttWidget/GanttTooltip.tsx — hover card: title, status, assignee, progress bar, dates, hours, milestone badge
+- [x] tasks.api.ts: `updateTimeline(projectId, taskId, payload)` added
+- [ ] WidgetRegistry: register TIMELINE → GanttWidget — **[Dev] next step**
+
+### 6.1.D Resource Overload Indicator — `DONE` (integrated in GanttGrid)
+- [x] Per-assignee per-day estimatedHours computed via `useMemo` in GanttGrid
+- [x] If sum > 8h: `ring-2 ring-red-500` on avatar + title tooltip
+- [x] 0 extra API calls — pure client-side derivation from task data
+
+### 6.1.E PDF Export — `DONE` (integrated in GanttWidget/index.tsx)
+- [x] `html2canvas` + `jspdf` installed in client package (`pnpm --filter @pm/client add`)
+- [x] Dynamically imported in handleExportPdf (keeps them out of initial bundle)
+- [x] Filename: `gantt-{projectId}-{date}.pdf`, landscape orientation, 2x scale
+
+### 6.2 Task Templates UI — `DEFERRED`
+### 6.3 Time Tracking UI — `DEFERRED`
 
 ---
 
 ## 🪵 Activity Log (Recent)
+- [2026-02-21] [QA] 6.1 Compile check: 0 errors across shared + server + client. PASS.
+- [2026-02-21] [Dev] 6.1.C GanttWidget tree complete: index, GanttHeader, GanttGrid, GanttTaskBar, GanttDependencyLines, GanttTooltip. html2canvas + jspdf installed.
+- [2026-02-21] [Dev] 6.1.B computeProgress() added to tasks.service.ts — subtask ratio or status-name fallback. Wired into list() and getById().
+- [2026-02-21] [Dev] 6.1.B Activity logging wired: 4 Gantt-specific action types (timeline_updated, timeline_cascaded, milestone_toggled, estimated_hours_set). TaskChangeHistory + WS emit on all cascaded tasks.
+- [2026-02-21] [Dev] 6.1.B updateTimeline() service method: BFS cascade, Prisma $transaction, returns full before/after per task.
+- [2026-02-21] [Dev] 6.1.B PATCH /:taskId/timeline route registered with auth + EDITOR RBAC + Zod validation.
+- [2026-02-21] [Dev] 6.1.B gantt.validator.ts added to shared package (updateTimelineSchema).
+- [2026-02-21] [Lead] Phase 6.1 Advanced Gantt initiated. CONTEXT.md + TODO.md updated. Architect + UX/UI specs delivered. User approved — Dev in progress.
+
 - [2026-02-14] [Lead] Phase 5.2 Dashboard Analytics marked DONE. Stats cards, activity feed, deadlines on dashboard.
 - [2026-02-14] [Lead] Phase 5.3 Notification System marked DONE. Bell icon, dropdown, WebSocket push, 21 activity events.
 - [2026-02-14] [Dev] TASK_UPDATED notification added for assignees. Status change activity logging added.

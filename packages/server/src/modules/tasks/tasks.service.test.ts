@@ -131,7 +131,13 @@ describe('TasksService', () => {
 
       const result = await tasksService.list(PROJECT_ID);
 
-      expect(result).toEqual({ data: tasks, total: 1, page: 1, limit: 50 });
+      // list() now enriches each task with a computed progressPercentage field
+      expect(result).toEqual({
+        data: tasks.map((t) => ({ ...t, progressPercentage: 0 })),
+        total: 1,
+        page: 1,
+        limit: 50,
+      });
       expect(mockTaskFindMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: { projectId: PROJECT_ID },
@@ -262,7 +268,8 @@ describe('TasksService', () => {
 
       const result = await tasksService.getById(TASK_ID);
 
-      expect(result).toEqual(task);
+      // getById() now enriches the task with a computed progressPercentage field
+      expect(result).toEqual({ ...task, progressPercentage: 0 });
       expect(mockTaskFindUnique).toHaveBeenCalledWith(
         expect.objectContaining({
           where: { id: TASK_ID },

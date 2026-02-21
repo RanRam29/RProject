@@ -8,6 +8,8 @@ import type {
   CreateDependencyRequest,
   TaskDependencyDTO,
   ApiResponse,
+  UpdateTaskTimelineRequest,
+  UpdateTaskTimelineResponse,
 } from '@pm/shared';
 
 export const tasksApi = {
@@ -131,6 +133,19 @@ export const tasksApi = {
     const res = await apiClient.post<ApiResponse<{ count: number; operation: string }>>(
       `/projects/${projectId}/tasks/bulk`,
       data
+    );
+    return res.data.data!;
+  },
+
+  // Gantt timeline
+  async updateTimeline(
+    projectId: string,
+    taskId: string,
+    data: UpdateTaskTimelineRequest,
+  ): Promise<UpdateTaskTimelineResponse> {
+    const res = await apiClient.patch<ApiResponse<UpdateTaskTimelineResponse>>(
+      `/projects/${projectId}/tasks/${taskId}/timeline`,
+      data,
     );
     return res.data.data!;
   },

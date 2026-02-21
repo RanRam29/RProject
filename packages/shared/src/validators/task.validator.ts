@@ -30,6 +30,8 @@ export const updateTaskSchema = z.object({
   priority: z.nativeEnum(TaskPriority).optional(),
   startDate: dateString.nullable().optional(),
   dueDate: dateString.nullable().optional(),
+  isMilestone: z.boolean().optional(),
+  estimatedHours: z.number().int().min(0).max(999).optional(),
 });
 
 export const updateTaskStatusSchema = z.object({

@@ -13,6 +13,7 @@ import {
   startTimerSchema,
   manualTimeEntrySchema,
   updateTimeEntrySchema,
+  updateTimelineSchema,
 } from '@pm/shared';
 
 const router = Router({ mergeParams: true });
@@ -58,6 +59,15 @@ router.patch(
   requireProjectRole('OWNER', 'EDITOR'),
   validate(updateTaskSchema),
   tasksController.update.bind(tasksController),
+);
+
+// PATCH /:taskId/timeline - Update task Gantt dates (with optional auto-schedule cascade)
+router.patch(
+  '/:taskId/timeline',
+  authenticate,
+  requireProjectRole('OWNER', 'EDITOR'),
+  validate(updateTimelineSchema),
+  tasksController.updateTimeline.bind(tasksController),
 );
 
 // PATCH /:taskId/status - Update task status (move between columns)

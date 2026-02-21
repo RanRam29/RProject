@@ -99,7 +99,12 @@ export class TasksService {
         prisma.task.count({ where }),
       ]);
 
-      return { data: tasks, total, page, limit };
+      const tasksWithProgress = tasks.map((t) => ({
+        ...t,
+        progressPercentage: this.computeProgress(t),
+      }));
+
+      return { data: tasksWithProgress, total, page, limit };
     } catch (error) {
       if (error instanceof ApiError) throw error;
       throw ApiError.badRequest('Failed to list tasks');
@@ -169,7 +174,7 @@ export class TasksService {
         throw ApiError.notFound('Task not found');
       }
 
-      return task;
+      return { ...task, progressPercentage: this.computeProgress(task) };
     } catch (error) {
       if (error instanceof ApiError) throw error;
       throw ApiError.badRequest('Failed to get task');
@@ -279,6 +284,8 @@ export class TasksService {
       priority?: string;
       startDate?: Date | null;
       dueDate?: Date | null;
+      isMilestone?: boolean;
+      estimatedHours?: number;
     },
   ) {
     try {
@@ -312,6 +319,8 @@ export class TasksService {
           ...(data.priority !== undefined && { priority: data.priority as TaskPriority }),
           ...(data.startDate !== undefined && { startDate: data.startDate }),
           ...(data.dueDate !== undefined && { dueDate: data.dueDate }),
+          ...(data.isMilestone !== undefined && { isMilestone: data.isMilestone }),
+          ...(data.estimatedHours !== undefined && { estimatedHours: data.estimatedHours }),
         },
         include: {
           status: true,
@@ -646,6 +655,153 @@ export class TasksService {
       throw ApiError.badRequest('Failed to remove dependency');
     }
   }
+  /**
+   * Update a task's Gantt timeline dates (startDate + dueDate).
+   * If autoSchedule is true, cascades the date delta to all downstream
+   * dependents inside a single Prisma transaction.
+   *
+   * Returns every task that was modified so the controller can log
+   * each change individually.
+   */
+  async updateTimeline(
+    taskId: string,
+    projectId: string,
+    data: {
+      startDate?: string | null;
+      endDate?: string | null;
+      autoSchedule: boolean;
+    },
+    actorId: string,
+  ): Promise<{
+    primary: { id: string; title: string; oldStart: Date | null; oldEnd: Date | null; newStart: Date | null; newEnd: Date | null };
+    cascaded: Array<{ id: string; title: string; oldStart: Date | null; oldEnd: Date | null; newStart: Date | null; newEnd: Date | null }>;
+  }> {
+    // ── 1. Fetch and validate the primary task ────────────────────────────────
+    const task = await prisma.task.findFirst({
+      where: { id: taskId, projectId },
+      select: { id: true, title: true, startDate: true, dueDate: true },
+    });
+
+    if (!task) {
+      throw ApiError.notFound('Task not found');
+    }
+
+    const newStart = data.startDate !== undefined
+      ? (data.startDate ? new Date(data.startDate) : null)
+      : task.startDate;
+
+    const newEnd = data.endDate !== undefined
+      ? (data.endDate ? new Date(data.endDate) : null)
+      : task.dueDate;
+
+    // ── 2. Compute day delta (used for cascade) ───────────────────────────────
+    const dayDelta = (task.dueDate && newEnd)
+      ? Math.round((newEnd.getTime() - task.dueDate.getTime()) / 86_400_000)
+      : 0;
+
+    // ── 3. Collect downstream task IDs via BFS on dependency graph ────────────
+    let downstreamTasks: Array<{ id: string; title: string; startDate: Date | null; dueDate: Date | null }> = [];
+
+    if (data.autoSchedule && dayDelta !== 0) {
+      const visited = new Set<string>([taskId]);
+      const queue: string[] = [taskId];
+
+      while (queue.length > 0) {
+        const currentId = queue.shift()!;
+        const deps = await prisma.taskDependency.findMany({
+          where: { blockingTaskId: currentId },
+          select: {
+            blockedTask: {
+              select: { id: true, title: true, startDate: true, dueDate: true },
+            },
+          },
+        });
+
+        for (const dep of deps) {
+          const downstream = dep.blockedTask;
+          if (!visited.has(downstream.id)) {
+            visited.add(downstream.id);
+            queue.push(downstream.id);
+            downstreamTasks.push(downstream);
+          }
+        }
+      }
+    }
+
+    // ── 4. Run Prisma transaction ─────────────────────────────────────────────
+    await prisma.$transaction(async (tx) => {
+      // Update primary task
+      await tx.task.update({
+        where: { id: taskId },
+        data: { startDate: newStart, dueDate: newEnd },
+      });
+
+      // Cascade to downstream dependents
+      for (const downstream of downstreamTasks) {
+        const shiftedStart = downstream.startDate
+          ? new Date(downstream.startDate.getTime() + dayDelta * 86_400_000)
+          : null;
+        const shiftedEnd = downstream.dueDate
+          ? new Date(downstream.dueDate.getTime() + dayDelta * 86_400_000)
+          : null;
+
+        await tx.task.update({
+          where: { id: downstream.id },
+          data: { startDate: shiftedStart, dueDate: shiftedEnd },
+        });
+      }
+    });
+
+    // ── 5. Emit WebSocket events for every changed task ───────────────────────
+    emitToProject(projectId, WS_EVENTS.TASK_UPDATED, {
+      projectId,
+      taskId,
+      changes: { startDate: newStart, dueDate: newEnd },
+    });
+
+    for (const downstream of downstreamTasks) {
+      const shiftedStart = downstream.startDate
+        ? new Date(downstream.startDate.getTime() + dayDelta * 86_400_000)
+        : null;
+      const shiftedEnd = downstream.dueDate
+        ? new Date(downstream.dueDate.getTime() + dayDelta * 86_400_000)
+        : null;
+
+      emitToProject(projectId, WS_EVENTS.TASK_UPDATED, {
+        projectId,
+        taskId: downstream.id,
+        changes: { startDate: shiftedStart, dueDate: shiftedEnd },
+      });
+    }
+
+    // ── 6. Activity logs — logged per-task by the caller (controller) ─────────
+    // Return full before/after data so the controller can log each change.
+    const cascadedResult = downstreamTasks.map((t) => ({
+      id: t.id,
+      title: t.title,
+      oldStart: t.startDate,
+      oldEnd: t.dueDate,
+      newStart: t.startDate
+        ? new Date(t.startDate.getTime() + dayDelta * 86_400_000)
+        : null,
+      newEnd: t.dueDate
+        ? new Date(t.dueDate.getTime() + dayDelta * 86_400_000)
+        : null,
+    }));
+
+    return {
+      primary: {
+        id: task.id,
+        title: task.title,
+        oldStart: task.startDate,
+        oldEnd: task.dueDate,
+        newStart,
+        newEnd,
+      },
+      cascaded: cascadedResult,
+    };
+  }
+
   async bulkOperation(
     projectId: string,
     userId: string,
@@ -732,6 +888,39 @@ export class TasksService {
       if (error instanceof ApiError) throw error;
       throw ApiError.badRequest('Failed to perform bulk operation');
     }
+  }
+
+  /**
+   * Compute progress percentage for a task.
+   *
+   * If subtasks exist: (count of subtasks with a final status / total subtasks) * 100
+   * Otherwise derive from the task's own status name (case-insensitive):
+   *   todo / backlog / open   → 0
+   *   in_progress / in progress / doing / started → 50
+   *   in_review / review / testing → 90
+   *   done / completed / closed / isFinal → 100
+   *   default → 0
+   */
+  private computeProgress(task: {
+    status?: { name: string; isFinal: boolean } | null;
+    subtasks?: Array<{ status?: { isFinal: boolean } | null }>;
+  }): number {
+    if (!task.status) return 0;
+
+    const subtasks = task.subtasks ?? [];
+
+    if (subtasks.length > 0) {
+      const completed = subtasks.filter((s) => s.status?.isFinal).length;
+      return Math.round((completed / subtasks.length) * 100);
+    }
+
+    if (task.status.isFinal) return 100;
+
+    const name = task.status.name.toLowerCase().replace(/[\s_-]/g, '');
+    if (['inprogress', 'doing', 'started', 'active'].includes(name)) return 50;
+    if (['inreview', 'review', 'testing', 'qa'].includes(name))       return 90;
+    if (['done', 'completed', 'closed', 'finished'].includes(name))   return 100;
+    return 0;
   }
 }
 

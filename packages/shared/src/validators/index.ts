@@ -11,3 +11,4 @@ export * from './notification.validator.js';
 export * from './email.validator.js';
 export * from './time-tracking.validator.js';
 export * from './ai.validator.js';
+export * from './gantt.validator.js';

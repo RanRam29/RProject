@@ -253,7 +253,9 @@ model Task {
   startDate    DateTime?  @map("start_date")
   dueDate      DateTime?  @map("due_date")
   completedAt  DateTime?  @map("completed_at")
-  sortOrder    Int        @default(0) @map("sort_order")
+  sortOrder      Int      @default(0) @map("sort_order")
+  isMilestone    Boolean  @default(false) @map("is_milestone")
+  estimatedHours Int      @default(0)     @map("estimated_hours")
   createdAt    DateTime   @default(now()) @map("created_at")
   updatedAt    DateTime   @updatedAt @map("updated_at")
 

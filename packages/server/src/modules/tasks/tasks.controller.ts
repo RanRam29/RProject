@@ -96,7 +96,7 @@ export class TasksController {
     try {
       const taskId = req.params.taskId as string;
       const userId = req.user!.id;
-      const { title, description, assigneeId, priority, startDate, dueDate } = req.body;
+      const { title, description, assigneeId, priority, startDate, dueDate, isMilestone, estimatedHours } = req.body;
 
       // Fetch old task for change tracking
       const oldTask = await prisma.task.findUnique({ where: { id: taskId } });
@@ -112,20 +112,121 @@ export class TasksController {
         dueDate: dueDate !== undefined
           ? (dueDate ? safeParseDate(dueDate) : null)
           : undefined,
+        isMilestone,
+        estimatedHours,
       });
 
-      // Record field-level changes
+      // Record field-level changes (includes isMilestone + estimatedHours)
       if (oldTask) {
         const changes = taskHistoryService.diffTaskFields(
           oldTask as unknown as Record<string, unknown>,
-          { title, assigneeId, priority, startDate, dueDate },
+          { title, assigneeId, priority, startDate, dueDate, isMilestone, estimatedHours },
         );
         fireAndForget(taskHistoryService.recordChanges(taskId, userId, changes), 'task-history.record');
       }
 
-      fireAndForget(activityService.log(task.projectId, userId, 'task.updated', { taskId, title: task.title }), 'activity.log');
+      // Activity log — emit a specific action for Gantt field changes
+      if (isMilestone !== undefined) {
+        fireAndForget(activityService.log(task.projectId, userId, 'task.gantt.milestone_toggled', {
+          taskId,
+          title: task.title,
+          isMilestone,
+        }), 'activity.log');
+      } else if (estimatedHours !== undefined) {
+        fireAndForget(activityService.log(task.projectId, userId, 'task.gantt.estimated_hours_set', {
+          taskId,
+          title: task.title,
+          oldEstimatedHours: (oldTask as unknown as Record<string, unknown>)?.estimatedHours ?? 0,
+          newEstimatedHours: estimatedHours,
+        }), 'activity.log');
+      } else {
+        fireAndForget(activityService.log(task.projectId, userId, 'task.updated', { taskId, title: task.title }), 'activity.log');
+      }
 
       sendSuccess(res, task);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async updateTimeline(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { projectId, taskId } = req.params as { projectId: string; taskId: string };
+      const actorId = req.user!.id;
+      const { startDate, endDate, autoSchedule } = req.body;
+
+      const result = await tasksService.updateTimeline(
+        taskId,
+        projectId,
+        { startDate, endDate, autoSchedule: autoSchedule ?? false },
+        actorId,
+      );
+
+      const { primary, cascaded } = result;
+
+      // ── Activity log: primary task drag ──────────────────────────────────────
+      fireAndForget(
+        activityService.log(projectId, actorId, 'task.gantt.timeline_updated', {
+          taskId: primary.id,
+          title: primary.title,
+          oldStartDate: primary.oldStart?.toISOString().slice(0, 10) ?? null,
+          oldEndDate:   primary.oldEnd?.toISOString().slice(0, 10)   ?? null,
+          newStartDate: primary.newStart?.toISOString().slice(0, 10) ?? null,
+          newEndDate:   primary.newEnd?.toISOString().slice(0, 10)   ?? null,
+          autoSchedule: autoSchedule ?? false,
+        }),
+        'activity.log',
+      );
+
+      // ── Task history: primary task field diff ────────────────────────────────
+      fireAndForget(
+        taskHistoryService.recordChanges(primary.id, actorId, [
+          ...(primary.oldStart?.toISOString() !== primary.newStart?.toISOString()
+            ? [{ field: 'startDate', oldValue: primary.oldStart?.toISOString().slice(0, 10) ?? null, newValue: primary.newStart?.toISOString().slice(0, 10) ?? null }]
+            : []),
+          ...(primary.oldEnd?.toISOString() !== primary.newEnd?.toISOString()
+            ? [{ field: 'dueDate', oldValue: primary.oldEnd?.toISOString().slice(0, 10) ?? null, newValue: primary.newEnd?.toISOString().slice(0, 10) ?? null }]
+            : []),
+        ]),
+        'task-history.record',
+      );
+
+      // ── Activity log + history: each cascaded task ───────────────────────────
+      for (const c of cascaded) {
+        fireAndForget(
+          activityService.log(projectId, actorId, 'task.gantt.timeline_cascaded', {
+            taskId: c.id,
+            title: c.title,
+            triggeredByTaskId: primary.id,
+            triggeredByTitle: primary.title,
+            oldStartDate: c.oldStart?.toISOString().slice(0, 10) ?? null,
+            oldEndDate:   c.oldEnd?.toISOString().slice(0, 10)   ?? null,
+            newStartDate: c.newStart?.toISOString().slice(0, 10) ?? null,
+            newEndDate:   c.newEnd?.toISOString().slice(0, 10)   ?? null,
+          }),
+          'activity.log',
+        );
+
+        fireAndForget(
+          taskHistoryService.recordChanges(c.id, actorId, [
+            ...(c.oldStart?.toISOString() !== c.newStart?.toISOString()
+              ? [{ field: 'startDate', oldValue: c.oldStart?.toISOString().slice(0, 10) ?? null, newValue: c.newStart?.toISOString().slice(0, 10) ?? null }]
+              : []),
+            ...(c.oldEnd?.toISOString() !== c.newEnd?.toISOString()
+              ? [{ field: 'dueDate', oldValue: c.oldEnd?.toISOString().slice(0, 10) ?? null, newValue: c.newEnd?.toISOString().slice(0, 10) ?? null }]
+              : []),
+          ]),
+          'task-history.record',
+        );
+      }
+
+      sendSuccess(res, {
+        updated: [
+          { taskId: primary.id, newStartDate: primary.newStart, newEndDate: primary.newEnd },
+          ...cascaded.map((c) => ({ taskId: c.id, newStartDate: c.newStart, newEndDate: c.newEnd })),
+        ],
+        cascadeCount: cascaded.length,
+      });
     } catch (error) {
       next(error);
     }
