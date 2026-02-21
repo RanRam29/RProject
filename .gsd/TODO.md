@@ -146,8 +146,8 @@
 - [x] shared/validators/index.ts: export gantt.validator
 - [x] Emit WS_EVENTS.TASK_UPDATED after timeline patch (primary + each cascaded task)
 - [x] taskChangeHistory: field-level diff recorded for startDate + dueDate on primary and cascaded tasks
-- [ ] tasks.service.ts: add `computeProgress(task)` helper — subtask ratio or status-name fallback
-- [ ] tasks.service.ts: integrate `progressPercentage` into list() and getById() responses
+- [x] tasks.service.ts: add `computeProgress(task)` helper — subtask ratio or status-name fallback
+- [x] tasks.service.ts: integrate `progressPercentage` into list() and getById() responses
 
 ### 6.1.C Core Gantt Components — `DONE`
 - [x] GanttWidget/index.tsx — root widget, view/year state, autoSchedule, PDF export, mutation
@@ -157,7 +157,7 @@
 - [x] GanttWidget/GanttDependencyLines.tsx — SVG overlay, cubic Bezier arrows with arrowhead marker
 - [x] GanttWidget/GanttTooltip.tsx — hover card: title, status, assignee, progress bar, dates, hours, milestone badge
 - [x] tasks.api.ts: `updateTimeline(projectId, taskId, payload)` added
-- [ ] WidgetRegistry: register TIMELINE → GanttWidget — **[Dev] next step**
+- [x] WidgetRegistry: register TIMELINE → GanttWidget (catalog title/description/defaultSize updated)
 
 ### 6.1.D Resource Overload Indicator — `DONE` (integrated in GanttGrid)
 - [x] Per-assignee per-day estimatedHours computed via `useMemo` in GanttGrid
@@ -175,6 +175,7 @@
 ---
 
 ## 🪵 Activity Log (Recent)
+- [2026-02-21] [Dev] 6.1.C WidgetRegistry: TIMELINE → GanttWidget. Catalog updated (title, description, defaultSize 1100x500). 0 compile errors. PHASE 6.1 COMPLETE.
 - [2026-02-21] [QA] 6.1 Compile check: 0 errors across shared + server + client. PASS.
 - [2026-02-21] [Dev] 6.1.C GanttWidget tree complete: index, GanttHeader, GanttGrid, GanttTaskBar, GanttDependencyLines, GanttTooltip. html2canvas + jspdf installed.
 - [2026-02-21] [Dev] 6.1.B computeProgress() added to tasks.service.ts — subtask ratio or status-name fallback. Wired into list() and getById().

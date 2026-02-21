@@ -2,7 +2,7 @@ import type { ComponentType } from 'react';
 import type { WidgetProps } from './widget.types';
 import { TaskListWidget } from './TaskListWidget';
 import { KanbanWidget } from './KanbanWidget';
-import { TimelineWidget } from './TimelineWidget';
+import { GanttWidget } from './GanttWidget';
 import { FilesWidget } from './FilesWidget';
 import { AIAssistantWidget } from './AIAssistantWidget';
 import { DependencyGraphWidget } from './DependencyGraphWidget';
@@ -13,7 +13,7 @@ import { CalendarWidget } from './CalendarWidget';
 export const WidgetRegistry: Record<string, ComponentType<WidgetProps>> = {
   TASK_LIST: TaskListWidget,
   KANBAN: KanbanWidget,
-  TIMELINE: TimelineWidget,
+  TIMELINE: GanttWidget,
   FILES: FilesWidget,
   AI_ASSISTANT: AIAssistantWidget,
   DEPENDENCY_GRAPH: DependencyGraphWidget,
@@ -39,10 +39,10 @@ export const WIDGET_CATALOG = [
   },
   {
     type: 'TIMELINE',
-    title: 'Timeline',
-    description: 'Gantt-style timeline view with today line',
+    title: 'Gantt Chart',
+    description: 'Advanced Gantt with swimlanes, milestones, dependencies, auto-schedule, and PDF export',
     icon: '\u2192',
-    defaultSize: { width: 900, height: 400 },
+    defaultSize: { width: 1100, height: 500 },
   },
   {
     type: 'FILES',
