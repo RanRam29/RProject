@@ -163,8 +163,8 @@ export const AppLayout: React.FC = () => {
   const contentStyle: React.CSSProperties = {
     flex: 1,
     overflow: 'auto',
-    padding: isMobile ? '12px' : '24px',
-    backgroundColor: 'var(--color-bg-secondary)',
+    padding: isMobile ? '16px' : '28px 32px',
+    backgroundColor: 'var(--color-bg-primary)',
   };
 
   return (

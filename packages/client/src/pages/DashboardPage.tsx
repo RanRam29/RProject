@@ -4,8 +4,6 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { projectsApi } from '../api/projects.api';
 import { usersApi, type MyTaskDTO } from '../api/users.api';
 import { activityApi, type ActivityLogDTO } from '../api/activity.api';
-import { BreadcrumbNav } from '../components/layout/BreadcrumbNav';
-import { Button } from '../components/ui/Button';
 import { useUIStore } from '../stores/ui.store';
 import { useAuthStore } from '../stores/auth.store';
 import { PRIORITY_CONFIG } from '@pm/shared';
@@ -13,38 +11,64 @@ import type { ProjectDTO } from '@pm/shared';
 import { formatAction, timeAgo } from '../utils/activity.utils';
 
 /* ------------------------------------------------------------------ */
-/*  Global Styles                                                      */
+/*  Responsive styles injected once                                    */
 /* ------------------------------------------------------------------ */
 
-const dashboardStyles = `
-  @media (max-width: 768px) {
-    .dashboard-grid {
-      grid-template-columns: 1fr !important;
-    }
+const injectCSS = `
+  @media (max-width: 900px) {
+    .db-main-grid { grid-template-columns: 1fr !important; }
   }
+  @media (max-width: 640px) {
+    .db-stats-grid { grid-template-columns: repeat(2, 1fr) !important; }
+    .db-projects-grid { grid-template-columns: 1fr !important; }
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
 `;
 
 /* ------------------------------------------------------------------ */
-/*  Inline icons                                                       */
+/*  Shared design tokens (mirrors CSS vars for inline use)             */
 /* ------------------------------------------------------------------ */
 
-const PlusIcon: React.FC<{ size?: number }> = ({ size = 16 }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <line x1="12" y1="5" x2="12" y2="19" />
-    <line x1="5" y1="12" x2="19" y2="12" />
+const card: React.CSSProperties = {
+  backgroundColor: 'var(--color-bg-elevated)',
+  borderRadius: '14px',
+  boxShadow: 'var(--shadow-card)',
+  overflow: 'hidden',
+};
+
+const cardHover = {
+  onEnter: (e: React.MouseEvent<HTMLDivElement>) => {
+    e.currentTarget.style.boxShadow = 'var(--shadow-card-hover)';
+    e.currentTarget.style.transform = 'translateY(-2px)';
+  },
+  onLeave: (e: React.MouseEvent<HTMLDivElement>) => {
+    e.currentTarget.style.boxShadow = 'var(--shadow-card)';
+    e.currentTarget.style.transform = 'translateY(0)';
+  },
+};
+
+/* ------------------------------------------------------------------ */
+/*  Icons                                                              */
+/* ------------------------------------------------------------------ */
+
+const PlusIcon = () => (
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
   </svg>
 );
-
-const FolderIcon: React.FC<{ size?: number }> = ({ size = 40 }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="var(--color-text-tertiary)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+const SearchIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
   </svg>
 );
-
-const SearchIcon: React.FC<{ size?: number }> = ({ size = 14 }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="11" cy="11" r="8" />
-    <line x1="21" y1="21" x2="16.65" y2="16.65" />
+const FolderIcon = () => (
+  <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="var(--color-text-tertiary)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+  </svg>
+);
+const ClockIcon = () => (
+  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
   </svg>
 );
 
@@ -52,139 +76,86 @@ const SearchIcon: React.FC<{ size?: number }> = ({ size = 14 }) => (
 /*  New Project Modal                                                  */
 /* ------------------------------------------------------------------ */
 
-interface NewProjectModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-}
+interface NewProjectModalProps { isOpen: boolean; onClose: () => void; }
 
 const NewProjectModal: React.FC<NewProjectModalProps> = ({ isOpen, onClose }) => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const addToast = useUIStore((s) => s.addToast);
+  const addToast = useUIStore(s => s.addToast);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
 
   const createMutation = useMutation({
-    mutationFn: (data: { name: string; description?: string }) =>
-      projectsApi.create(data),
+    mutationFn: (data: { name: string; description?: string }) => projectsApi.create(data),
     onSuccess: (project) => {
       queryClient.invalidateQueries({ queryKey: ['projects'] });
       addToast({ type: 'success', message: 'Project created!' });
-      setName('');
-      setDescription('');
-      onClose();
+      setName(''); setDescription(''); onClose();
       navigate(`/projects/${project.id}`);
     },
-    onError: () => {
-      addToast({ type: 'error', message: 'Failed to create project' });
-    },
+    onError: () => addToast({ type: 'error', message: 'Failed to create project' }),
   });
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!name.trim()) return;
-    createMutation.mutate({
-      name: name.trim(),
-      description: description.trim() || undefined,
-    });
-  };
-
-  const handleClose = () => {
-    setName('');
-    setDescription('');
-    onClose();
-  };
 
   if (!isOpen) return null;
 
-  const overlayStyle: React.CSSProperties = {
-    position: 'fixed',
-    inset: 0,
-    backgroundColor: 'var(--color-bg-overlay)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 9000,
-    padding: '24px',
-    animation: 'fadeIn var(--transition-fast) ease',
-  };
-
-  const modalStyle: React.CSSProperties = {
-    backgroundColor: 'var(--color-bg-elevated)',
-    border: '1px solid var(--color-border)',
-    borderRadius: 'var(--radius-lg)',
-    boxShadow: 'var(--shadow-lg)',
-    padding: '24px',
-    width: '100%',
-    maxWidth: '480px',
-    animation: 'scaleIn var(--transition-fast) ease',
-  };
-
-  const inputStyle: React.CSSProperties = {
-    width: '100%',
-    padding: '10px 12px',
-    border: '1px solid var(--color-border)',
-    borderRadius: 'var(--radius-md)',
-    fontSize: '14px',
+  const inp: React.CSSProperties = {
+    width: '100%', padding: '10px 13px',
+    border: '1.5px solid var(--color-border)',
+    borderRadius: '9px', fontSize: '14px',
     backgroundColor: 'var(--color-bg-primary)',
     color: 'var(--color-text-primary)',
+    outline: 'none', transition: 'border-color var(--transition-fast), box-shadow var(--transition-fast)',
     boxSizing: 'border-box',
-    outline: 'none',
-    transition: 'border-color var(--transition-fast)',
-  };
-
-  const labelStyle: React.CSSProperties = {
-    display: 'block',
-    fontSize: '13px',
-    fontWeight: 500,
-    color: 'var(--color-text-secondary)',
-    marginBottom: '6px',
   };
 
   return (
-    <div style={overlayStyle} onClick={handleClose}>
-      <div style={modalStyle} onClick={(e) => e.stopPropagation()}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
-          <h2 style={{ fontSize: '18px', fontWeight: 600, color: 'var(--color-text-primary)', margin: 0 }}>New Project</h2>
-          <button
-            style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              width: '32px', height: '32px', border: 'none', borderRadius: 'var(--radius-md)',
-              backgroundColor: 'transparent', color: 'var(--color-text-tertiary)',
-              cursor: 'pointer', fontSize: '18px', transition: 'all var(--transition-fast)',
-            }}
-            onClick={handleClose}
-            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
-          >
-            &times;
-          </button>
+    <div
+      style={{ position: 'fixed', inset: 0, backgroundColor: 'var(--color-bg-overlay)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9000, padding: '24px', animation: 'fadeIn var(--transition-fast) ease', backdropFilter: 'blur(4px)' }}
+      onClick={onClose}
+    >
+      <div
+        style={{ ...card, padding: '28px', width: '100%', maxWidth: '460px', animation: 'scaleIn var(--transition-fast) ease', boxShadow: 'var(--shadow-xl)' }}
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '22px' }}>
+          <div>
+            <h2 style={{ fontSize: '18px', fontWeight: 700, color: 'var(--color-text-primary)', margin: 0, letterSpacing: '-0.3px' }}>New Project</h2>
+            <p style={{ fontSize: '13px', color: 'var(--color-text-secondary)', margin: '3px 0 0' }}>Set up your workspace</p>
+          </div>
+          <button onClick={onClose} style={{ width: '30px', height: '30px', border: 'none', borderRadius: '8px', backgroundColor: 'transparent', cursor: 'pointer', color: 'var(--color-text-tertiary)', fontSize: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            onMouseEnter={e => { e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)'; }}
+            onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+          >&times;</button>
         </div>
-        <form onSubmit={handleSubmit}>
-          <div style={{ marginBottom: '16px' }}>
-            <label style={labelStyle}>Project Name *</label>
-            <input
-              style={inputStyle} value={name} onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. Website Redesign" autoFocus
-              onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--color-accent)'; }}
-              onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--color-border)'; }}
+
+        <form onSubmit={e => { e.preventDefault(); if (!name.trim()) return; createMutation.mutate({ name: name.trim(), description: description.trim() || undefined }); }}>
+          <div style={{ marginBottom: '14px' }}>
+            <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, color: 'var(--color-text-secondary)', marginBottom: '6px', letterSpacing: '0.2px' }}>
+              Project Name <span style={{ color: 'var(--color-danger)' }}>*</span>
+            </label>
+            <input style={inp} value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Website Redesign" autoFocus
+              onFocus={e => { e.currentTarget.style.borderColor = 'var(--color-accent)'; e.currentTarget.style.boxShadow = '0 0 0 3px var(--color-accent-light)'; }}
+              onBlur={e => { e.currentTarget.style.borderColor = 'var(--color-border)'; e.currentTarget.style.boxShadow = 'none'; }}
             />
           </div>
-          <div style={{ marginBottom: '24px' }}>
-            <label style={labelStyle}>Description</label>
-            <textarea
-              style={{ ...inputStyle, minHeight: '80px', resize: 'vertical' }}
-              value={description} onChange={(e) => setDescription(e.target.value)}
-              placeholder="Optional project description..."
-              onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--color-accent)'; }}
-              onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--color-border)'; }}
+          <div style={{ marginBottom: '22px' }}>
+            <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, color: 'var(--color-text-secondary)', marginBottom: '6px', letterSpacing: '0.2px' }}>Description</label>
+            <textarea style={{ ...inp, minHeight: '76px', resize: 'vertical' }} value={description} onChange={e => setDescription(e.target.value)} placeholder="What is this project about?"
+              onFocus={e => { e.currentTarget.style.borderColor = 'var(--color-accent)'; e.currentTarget.style.boxShadow = '0 0 0 3px var(--color-accent-light)'; }}
+              onBlur={e => { e.currentTarget.style.borderColor = 'var(--color-border)'; e.currentTarget.style.boxShadow = 'none'; }}
             />
           </div>
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
-            <Button variant="secondary" type="button" onClick={handleClose}>Cancel</Button>
-            <Button variant="primary" type="submit" disabled={!name.trim() || createMutation.isPending}>
-              {createMutation.isPending ? 'Creating...' : 'Create'}
-            </Button>
+            <button type="button" onClick={onClose} style={{ padding: '9px 16px', border: '1.5px solid var(--color-border)', borderRadius: '9px', backgroundColor: 'transparent', color: 'var(--color-text-secondary)', fontSize: '13.5px', fontWeight: 500, cursor: 'pointer', transition: 'all var(--transition-fast)' }}
+              onMouseEnter={e => { e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)'; }}
+              onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+            >Cancel</button>
+            <button type="submit" disabled={!name.trim() || createMutation.isPending}
+              style={{ padding: '9px 20px', border: 'none', borderRadius: '9px', background: 'linear-gradient(135deg, #5B8DEF, #4A7ADE)', color: '#fff', fontSize: '13.5px', fontWeight: 600, cursor: 'pointer', transition: 'all var(--transition-fast)', opacity: !name.trim() || createMutation.isPending ? 0.6 : 1, boxShadow: '0 2px 8px rgba(91,141,239,0.3)' }}
+            >
+              {createMutation.isPending ? 'Creating...' : 'Create Project'}
+            </button>
           </div>
         </form>
       </div>
@@ -193,8 +164,15 @@ const NewProjectModal: React.FC<NewProjectModalProps> = ({ isOpen, onClose }) =>
 };
 
 /* ------------------------------------------------------------------ */
-/*  Stats Cards Section                                                */
+/*  Stats Cards                                                        */
 /* ------------------------------------------------------------------ */
+
+const STAT_CONFIGS = [
+  { key: 'totalTasks',        label: 'Active Tasks',        color: '#5B8DEF', bg: '#EBF2FF', icon: '📋' },
+  { key: 'overdueTasks',      label: 'Overdue',             color: '#F87171', bg: '#FEE2E2', icon: '⚠️' },
+  { key: 'completedThisWeek', label: 'Done This Week',      color: '#34D399', bg: '#D1FAE5', icon: '✅' },
+  { key: 'teamMembers',       label: 'Team Members',        color: '#A78BFA', bg: '#EDE9FE', icon: '👥' },
+] as const;
 
 const StatsCardsSection: React.FC = () => {
   const { data: stats } = useQuery({
@@ -203,362 +181,287 @@ const StatsCardsSection: React.FC = () => {
     staleTime: 60_000,
   });
 
-  const cards = [
-    { label: 'Active Tasks', value: stats?.totalTasks ?? '-', color: 'var(--color-accent)' },
-    { label: 'Overdue', value: stats?.overdueTasks ?? '-', color: 'var(--color-danger)' },
-    { label: 'Completed This Week', value: stats?.completedThisWeek ?? '-', color: 'var(--color-success)' },
-    { label: 'Team Members', value: stats?.teamMembers ?? '-', color: 'var(--color-text-secondary)' },
-  ];
-
   return (
-    <div style={{ 
-      display: 'grid', 
-      gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', 
-      gap: '12px', 
-      marginBottom: '28px' 
-    }}>
-      {cards.map((card) => (
-        <div key={card.label} style={{
-          padding: '16px 20px',
-          borderRadius: 'var(--radius-lg)',
-          border: '1px solid var(--color-border)',
-          backgroundColor: 'var(--color-bg-elevated)',
-          animation: 'fadeIn var(--transition-normal) ease',
-        }}>
-          <div style={{ fontSize: '28px', fontWeight: 700, color: card.color }}>{card.value}</div>
-          <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)', marginTop: '2px' }}>{card.label}</div>
-        </div>
-      ))}
+    <div className="db-stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '14px', marginBottom: '24px' }}>
+      {STAT_CONFIGS.map(cfg => {
+        const value = stats?.[cfg.key] ?? '—';
+        return (
+          <div key={cfg.key} style={{ ...card, padding: '18px 20px', transition: 'all var(--transition-fast)', cursor: 'default' }}
+            onMouseEnter={cardHover.onEnter} onMouseLeave={cardHover.onLeave}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+              <div style={{ width: '36px', height: '36px', borderRadius: '10px', backgroundColor: cfg.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '17px' }}>
+                {cfg.icon}
+              </div>
+            </div>
+            <div style={{ fontSize: '26px', fontWeight: 800, color: 'var(--color-text-primary)', lineHeight: 1, letterSpacing: '-1px' }}>{value}</div>
+            <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)', marginTop: '5px', fontWeight: 500 }}>{cfg.label}</div>
+          </div>
+        );
+      })}
     </div>
   );
 };
 
 /* ------------------------------------------------------------------ */
-/*  Recent Activity Section                                            */
+/*  Recent Activity Panel                                              */
 /* ------------------------------------------------------------------ */
 
-const RecentActivitySection: React.FC = () => {
+const RecentActivityPanel: React.FC = () => {
   const navigate = useNavigate();
   const { data: logs = [], isLoading } = useQuery({
     queryKey: ['my-activity'],
-    queryFn: () => activityApi.listUserActivity(10),
+    queryFn: () => activityApi.listUserActivity(12),
     staleTime: 30_000,
   });
 
-  if (isLoading) {
-    return (
-      <div style={{ padding: '16px', color: 'var(--color-text-tertiary)', fontSize: '13px' }}>
-        Loading activity...
-      </div>
-    );
-  }
-
-  if (logs.length === 0) {
-    return (
-      <div style={{ padding: '24px', color: 'var(--color-text-tertiary)', fontSize: '13px', textAlign: 'center' }}>
-        No recent activity across your projects.
-      </div>
-    );
-  }
-
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-      {logs.map((log: ActivityLogDTO) => {
-        const { verb, icon, detail } = formatAction(log.action, log.metadata as Record<string, unknown>);
-        const initial = log.user?.displayName?.charAt(0).toUpperCase() || '?';
-        const handleNavigate = () => navigate(`/projects/${log.projectId}`);
-        const handleKeyDown = (e: React.KeyboardEvent) => {
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault();
-            handleNavigate();
-          }
-        };
-        const ariaLabel = `${log.user?.displayName || 'Unknown'} ${verb}${detail ? ` - ${detail}` : ''}${log.project ? ` in ${log.project.name}` : ''}`;
+    <div style={{ ...card, display: 'flex', flexDirection: 'column', height: '100%' }}>
+      {/* Header */}
+      <div style={{ padding: '18px 20px 14px', borderBottom: '1px solid var(--color-border)', flexShrink: 0 }}>
+        <h3 style={{ fontSize: '14px', fontWeight: 700, color: 'var(--color-text-primary)', margin: 0, letterSpacing: '-0.2px' }}>Recent Activity</h3>
+      </div>
 
-        return (
-          <div
-            key={log.id}
-            role="button"
-            tabIndex={0}
-            style={{
-              display: 'flex', alignItems: 'center', gap: '10px',
-              padding: '8px 12px', borderRadius: 'var(--radius-md)',
-              cursor: 'pointer', transition: 'background var(--transition-fast)',
-              outline: 'none',
-            }}
-            onClick={handleNavigate}
-            onKeyDown={handleKeyDown}
-            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
-            onFocus={(e) => { e.currentTarget.style.outline = '2px solid var(--color-accent)'; e.currentTarget.style.outlineOffset = '-2px'; }}
-            onBlur={(e) => { e.currentTarget.style.outline = 'none'; }}
-            aria-label={ariaLabel}
-          >
-            <div style={{
-              width: 28, height: 28, borderRadius: '50%',
-              backgroundColor: 'var(--color-accent)', display: 'flex',
-              alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-              overflow: 'hidden',
-            }}>
-              {log.user?.avatarUrl ? (
-                <img src={log.user.avatarUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              ) : (
-                <span style={{ fontSize: '12px', fontWeight: 600, color: 'white' }}>{initial}</span>
-              )}
-            </div>
-            <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '1px' }}>
-              <div style={{ display: 'flex', gap: '4px', alignItems: 'baseline', fontSize: '13px' }}>
-                <span style={{ fontWeight: 600, color: 'var(--color-text-primary)', whiteSpace: 'nowrap' }}>
-                  {log.user?.displayName || 'Unknown'}
-                </span>
-                <span style={{ color: 'var(--color-text-secondary)' }}>{verb}</span>
+      {/* List */}
+      <div style={{ flex: 1, overflowY: 'auto', padding: '8px 0' }}>
+        {isLoading ? (
+          <div style={{ padding: '24px 20px', color: 'var(--color-text-tertiary)', fontSize: '13px' }}>Loading…</div>
+        ) : logs.length === 0 ? (
+          <div style={{ padding: '32px 20px', textAlign: 'center', color: 'var(--color-text-tertiary)', fontSize: '13px' }}>
+            No recent activity yet.
+          </div>
+        ) : logs.map((log: ActivityLogDTO) => {
+          const { verb } = formatAction(log.action, log.metadata as Record<string, unknown>);
+          const initial = log.user?.displayName?.charAt(0).toUpperCase() || '?';
+          return (
+            <div
+              key={log.id}
+              onClick={() => navigate(`/projects/${log.projectId}`)}
+              style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', padding: '10px 18px', cursor: 'pointer', transition: 'background var(--transition-fast)' }}
+              onMouseEnter={e => { e.currentTarget.style.backgroundColor = 'var(--color-bg-primary)'; }}
+              onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+            >
+              {/* Avatar */}
+              <div style={{ width: '30px', height: '30px', borderRadius: '50%', background: 'linear-gradient(135deg, #5B8DEF, #A78BFA)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, overflow: 'hidden' }}>
+                {log.user?.avatarUrl
+                  ? <img src={log.user.avatarUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  : <span style={{ fontSize: '11px', fontWeight: 700, color: '#fff' }}>{initial}</span>
+                }
               </div>
-              {detail && (
-                <span style={{ fontSize: '12px', color: 'var(--color-text-tertiary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {detail}
-                </span>
-              )}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: '13px', color: 'var(--color-text-primary)', lineHeight: 1.4 }}>
+                  <span style={{ fontWeight: 600 }}>{log.user?.displayName || 'Someone'}</span>
+                  {' '}<span style={{ color: 'var(--color-text-secondary)' }}>{verb}</span>
+                  {log.project && (
+                    <> {' '}
+                      <span style={{ fontWeight: 500, color: 'var(--color-accent)' }}>{log.project.name}</span>
+                    </>
+                  )}
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '3px', color: 'var(--color-text-tertiary)', fontSize: '11.5px' }}>
+                  <ClockIcon />
+                  {timeAgo(log.createdAt)}
+                </div>
+              </div>
             </div>
-            {log.project && (
-              <span style={{
-                fontSize: '10px', color: 'var(--color-text-tertiary)',
-                padding: '1px 6px', backgroundColor: 'var(--color-bg-tertiary)',
-                borderRadius: 'var(--radius-sm)', whiteSpace: 'nowrap',
-              }}>
-                {log.project.name}
-              </span>
-            )}
-            <span style={{
-              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-              width: 20, height: 20, borderRadius: 'var(--radius-sm)',
-              backgroundColor: 'var(--color-bg-tertiary)', fontSize: '11px',
-              fontWeight: 700, color: 'var(--color-text-tertiary)', flexShrink: 0,
-            }}>
-              {icon}
-            </span>
-            <span style={{ fontSize: '11px', color: 'var(--color-text-tertiary)', whiteSpace: 'nowrap', flexShrink: 0 }}>
-              {timeAgo(log.createdAt)}
-            </span>
-          </div>
-        );
-      })}
+          );
+        })}
+      </div>
     </div>
   );
 };
 
 /* ------------------------------------------------------------------ */
-/*  Upcoming Deadlines Section                                         */
+/*  My Tasks Panel                                                     */
 /* ------------------------------------------------------------------ */
 
-const UpcomingDeadlinesSection: React.FC = () => {
-  const navigate = useNavigate();
-  const now = new Date();
-  const weekFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
-
-  const { data: tasks = [], isLoading } = useQuery({
-    queryKey: ['upcoming-deadlines'],
-    queryFn: () => usersApi.getMyTasks(10, {
-      dueAfter: now.toISOString(),
-      dueBefore: weekFromNow.toISOString(),
-    }),
-    staleTime: 60_000,
-  });
-
-  if (isLoading) {
-    return (
-      <div style={{ padding: '16px', color: 'var(--color-text-tertiary)', fontSize: '13px' }}>
-        Loading deadlines...
-      </div>
-    );
-  }
-
-  if (tasks.length === 0) {
-    return (
-      <div style={{ padding: '24px', color: 'var(--color-text-tertiary)', fontSize: '13px', textAlign: 'center' }}>
-        No upcoming deadlines in the next 7 days.
-      </div>
-    );
-  }
-
-  const getDueDateColor = (dateStr: string) => {
-    const due = new Date(dateStr);
-    const diffMs = due.getTime() - now.getTime();
-    const diffDays = diffMs / (1000 * 60 * 60 * 24);
-    if (diffDays < 1) return 'var(--color-danger)';
-    if (diffDays < 2) return 'var(--color-warning)';
-    return 'var(--color-text-secondary)';
-  };
-
-  const getDueLabel = (dateStr: string) => {
-    const due = new Date(dateStr);
-    const diffMs = due.getTime() - now.getTime();
-    const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
-    if (diffDays <= 0) return 'Today';
-    if (diffDays === 1) return 'Tomorrow';
-    return due.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-  };
-
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-      {tasks.map((task: MyTaskDTO) => {
-        const priorityCfg = PRIORITY_CONFIG[task.priority as keyof typeof PRIORITY_CONFIG];
-        const handleNavigate = () => navigate(`/projects/${task.projectId}`);
-        const handleKeyDown = (e: React.KeyboardEvent) => {
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault();
-            handleNavigate();
-          }
-        };
-        return (
-          <div
-            key={task.id}
-            role="button"
-            tabIndex={0}
-            style={{
-              display: 'flex', alignItems: 'center', gap: '10px',
-              padding: '8px 12px', borderRadius: 'var(--radius-md)',
-              cursor: 'pointer', transition: 'background var(--transition-fast)',
-            }}
-            onClick={handleNavigate}
-            onKeyDown={handleKeyDown}
-            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
-          >
-            {priorityCfg && task.priority !== 'NONE' && (
-              <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: priorityCfg.color, flexShrink: 0 }} />
-            )}
-            <span style={{
-              flex: 1, fontSize: '13px', fontWeight: 500,
-              color: 'var(--color-text-primary)',
-              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-            }}>
-              {task.title}
-            </span>
-            <span style={{
-              fontSize: '11px', color: 'var(--color-text-tertiary)',
-              padding: '1px 6px', backgroundColor: 'var(--color-bg-tertiary)',
-              borderRadius: 'var(--radius-sm)', whiteSpace: 'nowrap',
-            }}>
-              {task.project?.name || 'Unknown'}
-            </span>
-            {task.dueDate && (
-              <span style={{
-                fontSize: '12px', fontWeight: 600, whiteSpace: 'nowrap',
-                color: getDueDateColor(task.dueDate),
-              }}>
-                {getDueLabel(task.dueDate)}
-              </span>
-            )}
-          </div>
-        );
-      })}
-    </div>
-  );
-};
-
-/* ------------------------------------------------------------------ */
-/*  My Tasks Section                                                   */
-/* ------------------------------------------------------------------ */
-
-const MyTasksSection: React.FC = () => {
+const MyTasksPanel: React.FC = () => {
   const navigate = useNavigate();
   const { data: myTasks = [], isLoading } = useQuery({
     queryKey: ['my-tasks'],
-    queryFn: () => usersApi.getMyTasks(10),
+    queryFn: () => usersApi.getMyTasks(8),
     staleTime: 30_000,
   });
 
-  if (isLoading) {
-    return (
-      <div style={{ padding: '16px', color: 'var(--color-text-tertiary)', fontSize: '13px' }}>
-        Loading your tasks...
-      </div>
-    );
-  }
-
-  if (myTasks.length === 0) {
-    return (
-      <div style={{ padding: '16px', color: 'var(--color-text-tertiary)', fontSize: '13px', textAlign: 'center' }}>
-        No tasks assigned to you.
-      </div>
-    );
-  }
+  const priorityBadge = (priority: string): React.CSSProperties => {
+    const map: Record<string, { bg: string; color: string }> = {
+      URGENT: { bg: '#FEE2E2', color: '#991B1B' },
+      HIGH:   { bg: '#FFE4E6', color: '#9F1239' },
+      MEDIUM: { bg: '#FEF3C7', color: '#92400E' },
+      LOW:    { bg: '#D1FAE5', color: '#065F46' },
+    };
+    const c = map[priority] ?? { bg: 'var(--color-bg-tertiary)', color: 'var(--color-text-tertiary)' };
+    return { ...c, padding: '2px 8px', borderRadius: '999px', fontSize: '10.5px', fontWeight: 600, whiteSpace: 'nowrap' };
+  };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-      {myTasks.map((task: MyTaskDTO) => {
-        const isOverdue = task.dueDate && new Date(task.dueDate) < new Date() && !task.status?.isFinal;
-        const priorityCfg = PRIORITY_CONFIG[task.priority as keyof typeof PRIORITY_CONFIG];
+    <div style={{ ...card, display: 'flex', flexDirection: 'column' }}>
+      <div style={{ padding: '18px 20px 14px', borderBottom: '1px solid var(--color-border)', flexShrink: 0 }}>
+        <h3 style={{ fontSize: '14px', fontWeight: 700, color: 'var(--color-text-primary)', margin: 0, letterSpacing: '-0.2px' }}>My Tasks</h3>
+      </div>
+      <div style={{ padding: '6px 0' }}>
+        {isLoading ? (
+          <div style={{ padding: '20px', color: 'var(--color-text-tertiary)', fontSize: '13px' }}>Loading…</div>
+        ) : myTasks.length === 0 ? (
+          <div style={{ padding: '28px', textAlign: 'center', color: 'var(--color-text-tertiary)', fontSize: '13px' }}>No tasks assigned.</div>
+        ) : myTasks.map((task: MyTaskDTO) => {
+          const isOverdue = task.dueDate && new Date(task.dueDate) < new Date() && !task.status?.isFinal;
+          return (
+            <div
+              key={task.id}
+              onClick={() => navigate(`/projects/${task.projectId}`)}
+              style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '9px 18px', cursor: 'pointer', transition: 'background var(--transition-fast)', borderBottom: '1px solid transparent' }}
+              onMouseEnter={e => { e.currentTarget.style.backgroundColor = 'var(--color-bg-primary)'; }}
+              onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+            >
+              {/* Priority dot */}
+              {task.priority !== 'NONE' && (() => {
+                const cfg = PRIORITY_CONFIG[task.priority as keyof typeof PRIORITY_CONFIG];
+                return cfg ? <span style={{ width: '7px', height: '7px', borderRadius: '50%', backgroundColor: cfg.color, flexShrink: 0 }} /> : null;
+              })()}
 
-        return (
-          <div
-            key={task.id}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '10px',
-              padding: '8px 12px',
-              borderRadius: 'var(--radius-md)',
-              cursor: 'pointer',
-              transition: 'background var(--transition-fast)',
-            }}
-            onClick={() => navigate(`/projects/${task.projectId}`)}
-            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
-          >
-            {priorityCfg && task.priority !== 'NONE' && (
-              <span style={{
-                width: '8px', height: '8px', borderRadius: '50%',
-                backgroundColor: priorityCfg.color, flexShrink: 0,
-              }} />
-            )}
-            <span style={{
-              flex: 1, fontSize: '13px', fontWeight: 500,
-              color: task.status?.isFinal ? 'var(--color-text-tertiary)' : 'var(--color-text-primary)',
-              textDecoration: task.status?.isFinal ? 'line-through' : 'none',
-              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-            }}>
-              {task.title}
-            </span>
-            <span style={{
-              fontSize: '11px', color: 'var(--color-text-tertiary)',
-              padding: '1px 6px', backgroundColor: 'var(--color-bg-tertiary)',
-              borderRadius: 'var(--radius-sm)', whiteSpace: 'nowrap',
-            }}>
-              {task.project?.name || 'Unknown'}
-            </span>
-            {task.status && (
-              <span style={{
-                fontSize: '10px', padding: '2px 6px',
-                borderRadius: 'var(--radius-full)',
-                backgroundColor: task.status.color + '20',
-                color: task.status.color, fontWeight: 500, whiteSpace: 'nowrap',
-              }}>
-                {task.status.name}
+              {/* Title */}
+              <span style={{ flex: 1, fontSize: '13px', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: task.status?.isFinal ? 'var(--color-text-tertiary)' : 'var(--color-text-primary)', textDecoration: task.status?.isFinal ? 'line-through' : 'none' }}>
+                {task.title}
               </span>
-            )}
-            {task.dueDate && (
-              <span style={{
-                fontSize: '11px', whiteSpace: 'nowrap',
-                color: isOverdue ? 'var(--color-danger)' : 'var(--color-text-tertiary)',
-              }}>
-                {new Date(task.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+
+              {/* Priority badge */}
+              {task.priority && task.priority !== 'NONE' && (
+                <span style={priorityBadge(task.priority)}>{task.priority.charAt(0) + task.priority.slice(1).toLowerCase()}</span>
+              )}
+
+              {/* Project name */}
+              <span style={{ fontSize: '11px', color: 'var(--color-text-tertiary)', padding: '2px 6px', backgroundColor: 'var(--color-bg-tertiary)', borderRadius: '6px', whiteSpace: 'nowrap' }}>
+                {task.project?.name}
               </span>
-            )}
-          </div>
-        );
-      })}
+
+              {/* Due date */}
+              {task.dueDate && (
+                <span style={{ fontSize: '11.5px', fontWeight: 500, color: isOverdue ? 'var(--color-danger)' : 'var(--color-text-tertiary)', whiteSpace: 'nowrap' }}>
+                  {new Date(task.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                </span>
+              )}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 };
 
 /* ------------------------------------------------------------------ */
-/*  DashboardPage component                                            */
+/*  Upcoming Deadlines Panel                                           */
+/* ------------------------------------------------------------------ */
+
+const UpcomingPanel: React.FC = () => {
+  const navigate = useNavigate();
+  const now = new Date();
+  const week = new Date(now.getTime() + 7 * 86400_000);
+
+  const { data: tasks = [] } = useQuery({
+    queryKey: ['upcoming-deadlines'],
+    queryFn: () => usersApi.getMyTasks(8, { dueAfter: now.toISOString(), dueBefore: week.toISOString() }),
+    staleTime: 60_000,
+  });
+
+  const dueLabel = (dateStr: string) => {
+    const d = new Date(dateStr);
+    const diff = Math.ceil((d.getTime() - now.getTime()) / 86400_000);
+    if (diff <= 0) return { label: 'Today', color: 'var(--color-danger)' };
+    if (diff === 1) return { label: 'Tomorrow', color: 'var(--color-warning)' };
+    return { label: d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }), color: 'var(--color-text-secondary)' };
+  };
+
+  return (
+    <div style={{ ...card, display: 'flex', flexDirection: 'column' }}>
+      <div style={{ padding: '18px 20px 14px', borderBottom: '1px solid var(--color-border)' }}>
+        <h3 style={{ fontSize: '14px', fontWeight: 700, color: 'var(--color-text-primary)', margin: 0, letterSpacing: '-0.2px' }}>Upcoming Deadlines</h3>
+        <p style={{ fontSize: '11.5px', color: 'var(--color-text-tertiary)', margin: '2px 0 0' }}>Next 7 days</p>
+      </div>
+      <div style={{ padding: '6px 0' }}>
+        {tasks.length === 0 ? (
+          <div style={{ padding: '28px', textAlign: 'center', color: 'var(--color-text-tertiary)', fontSize: '13px' }}>
+            🎉 No upcoming deadlines!
+          </div>
+        ) : tasks.map((task: MyTaskDTO) => {
+          const cfg = task.dueDate ? dueLabel(task.dueDate) : null;
+          return (
+            <div
+              key={task.id}
+              onClick={() => navigate(`/projects/${task.projectId}`)}
+              style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '9px 18px', cursor: 'pointer', transition: 'background var(--transition-fast)' }}
+              onMouseEnter={e => { e.currentTarget.style.backgroundColor = 'var(--color-bg-primary)'; }}
+              onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+            >
+              <span style={{ flex: 1, fontSize: '13px', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--color-text-primary)' }}>{task.title}</span>
+              <span style={{ fontSize: '11px', padding: '2px 6px', backgroundColor: 'var(--color-bg-tertiary)', borderRadius: '6px', color: 'var(--color-text-tertiary)', whiteSpace: 'nowrap' }}>{task.project?.name}</span>
+              {cfg && (
+                <span style={{ fontSize: '12px', fontWeight: 600, color: cfg.color, whiteSpace: 'nowrap' }}>{cfg.label}</span>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
+/* ------------------------------------------------------------------ */
+/*  Project Card                                                       */
+/* ------------------------------------------------------------------ */
+
+const PROJECT_GRADIENTS = [
+  ['#5B8DEF', '#A78BFA'], ['#34D399', '#5B8DEF'], ['#FB7185', '#FBBF24'],
+  ['#A78BFA', '#FB7185'], ['#38BDF8', '#34D399'], ['#FBBF24', '#FB7185'],
+];
+
+interface ProjectCardProps { project: ProjectDTO; index: number; onClick: () => void; }
+const ProjectCard: React.FC<ProjectCardProps> = ({ project, index, onClick }) => {
+  const [g1, g2] = PROJECT_GRADIENTS[index % PROJECT_GRADIENTS.length];
+  return (
+    <div
+      onClick={onClick}
+      style={{ ...card, padding: '18px 20px', cursor: 'pointer', transition: 'all var(--transition-fast)', display: 'flex', flexDirection: 'column', gap: '10px' }}
+      onMouseEnter={cardHover.onEnter} onMouseLeave={cardHover.onLeave}
+    >
+      {/* Color bar */}
+      <div style={{ height: '3px', borderRadius: '999px', background: `linear-gradient(90deg, ${g1}, ${g2})`, marginBottom: '4px' }} />
+
+      <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--color-text-primary)', letterSpacing: '-0.2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        {project.name}
+      </div>
+
+      {project.description && (
+        <div style={{ fontSize: '12.5px', color: 'var(--color-text-secondary)', lineHeight: 1.5, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+          {project.description}
+        </div>
+      )}
+
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto' }}>
+        <span style={{
+          display: 'inline-flex', alignItems: 'center', gap: '5px',
+          padding: '3px 9px', borderRadius: '999px', fontSize: '11px', fontWeight: 600,
+          backgroundColor: project.status === 'ACTIVE' ? '#D1FAE5' : 'var(--color-bg-tertiary)',
+          color: project.status === 'ACTIVE' ? '#065F46' : 'var(--color-text-secondary)',
+        }}>
+          <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: project.status === 'ACTIVE' ? '#34D399' : 'var(--color-text-secondary)' }} />
+          {project.status}
+        </span>
+        <span style={{ fontSize: '11px', color: 'var(--color-text-tertiary)' }}>
+          {new Date(project.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+        </span>
+      </div>
+    </div>
+  );
+};
+
+/* ------------------------------------------------------------------ */
+/*  DashboardPage                                                      */
 /* ------------------------------------------------------------------ */
 
 const DashboardPage: React.FC = () => {
   const navigate = useNavigate();
-  const user = useAuthStore((s) => s.user);
+  const user = useAuthStore(s => s.user);
   const [modalOpen, setModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -566,320 +469,115 @@ const DashboardPage: React.FC = () => {
     queryKey: ['projects', 'ACTIVE'],
     queryFn: () => projectsApi.list(1, 100, 'ACTIVE'),
   });
-
   const projects: ProjectDTO[] = projectsResponse?.data ?? [];
-
-  const recentProjects = useMemo(() => {
-    return [...projects]
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-      .slice(0, 5);
-  }, [projects]);
 
   const filteredProjects = useMemo(() => {
     if (!searchQuery.trim()) return projects;
     const q = searchQuery.toLowerCase();
-    return projects.filter(
-      (p) =>
-        p.name.toLowerCase().includes(q) ||
-        p.description?.toLowerCase().includes(q)
-    );
+    return projects.filter(p => p.name.toLowerCase().includes(q) || p.description?.toLowerCase().includes(q));
   }, [projects, searchQuery]);
-
-  const sectionHeaderStyle: React.CSSProperties = {
-    fontSize: '16px',
-    fontWeight: 600,
-    color: 'var(--color-text-primary)',
-    marginBottom: '12px',
-    display: 'flex',
-    alignItems: 'center',
-    gap: '8px',
-  };
-
-  const sectionStyle: React.CSSProperties = {
-    marginBottom: '32px',
-  };
-
-  const cardStyle: React.CSSProperties = {
-    backgroundColor: 'var(--color-bg-elevated)',
-    border: '1px solid var(--color-border)',
-    borderRadius: 'var(--radius-lg)',
-    padding: '20px',
-    cursor: 'pointer',
-    transition: 'all var(--transition-fast)',
-    animation: 'fadeIn var(--transition-normal) ease',
-  };
-
-  const cardNameStyle: React.CSSProperties = {
-    fontSize: '16px',
-    fontWeight: 600,
-    color: 'var(--color-text-primary)',
-    marginBottom: '8px',
-  };
-
-  const cardMetaStyle: React.CSSProperties = {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    fontSize: '13px',
-    color: 'var(--color-text-secondary)',
-  };
-
-  const statusBadgeStyle = (status: string): React.CSSProperties => ({
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: '6px',
-    padding: '3px 10px',
-    borderRadius: 'var(--radius-full)',
-    backgroundColor: status === 'ACTIVE' ? 'var(--color-success-light)' : 'var(--color-bg-tertiary)',
-    color: status === 'ACTIVE' ? 'var(--color-success)' : 'var(--color-text-secondary)',
-    fontSize: '12px',
-    fontWeight: 500,
-  });
-
-  const emptyCardStyle: React.CSSProperties = {
-    ...cardStyle,
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: '12px',
-    padding: '40px 20px',
-    borderStyle: 'dashed',
-    cursor: 'pointer',
-  };
-
-  const panelStyle: React.CSSProperties = {
-    backgroundColor: 'var(--color-bg-elevated)',
-    border: '1px solid var(--color-border)',
-    borderRadius: 'var(--radius-lg)',
-    overflow: 'hidden',
-    maxHeight: '320px',
-    overflowY: 'auto',
-  };
 
   return (
     <>
-      <style>{dashboardStyles}</style>
-      <BreadcrumbNav items={[{ label: 'Dashboard' }]} />
+      <style>{injectCSS}</style>
 
-      <div style={{ marginTop: '16px' }}>
-        {/* Header with greeting and search */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
-          <h1 style={{ fontSize: '24px', fontWeight: 700, color: 'var(--color-text-primary)', letterSpacing: '-0.3px', margin: 0 }}>
-            {user?.displayName ? `Welcome, ${user.displayName.split(' ')[0]}` : 'Dashboard'}
+      {/* ── Page header ── */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
+        <div>
+          <h1 style={{ fontSize: '22px', fontWeight: 800, color: 'var(--color-text-primary)', margin: 0, letterSpacing: '-0.5px' }}>
+            {user?.displayName ? `Welcome back, ${user.displayName.split(' ')[0]} 👋` : 'Dashboard'}
           </h1>
-          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-            <div style={{ position: 'relative' }}>
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search projects..."
-                style={{
-                  padding: '6px 12px 6px 32px',
-                  fontSize: '13px',
-                  border: '1px solid var(--color-border)',
-                  borderRadius: 'var(--radius-md)',
-                  backgroundColor: 'var(--color-bg-primary)',
-                  color: 'var(--color-text-primary)',
-                  outline: 'none',
-                  width: '200px',
-                  transition: 'border-color var(--transition-fast)',
-                }}
-                onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--color-accent)'; }}
-                onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--color-border)'; }}
-              />
-              <span style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-tertiary)', pointerEvents: 'none' }}>
-                <SearchIcon />
-              </span>
-            </div>
-            <Button variant="primary" size="sm" onClick={() => setModalOpen(true)}>
-              <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <PlusIcon size={14} />
-                New Project
-              </span>
-            </Button>
+          <p style={{ fontSize: '13px', color: 'var(--color-text-secondary)', margin: '3px 0 0' }}>
+            Here's what's happening across your projects.
+          </p>
+        </div>
+
+        {/* New project CTA */}
+        <button
+          onClick={() => setModalOpen(true)}
+          style={{
+            display: 'flex', alignItems: 'center', gap: '7px',
+            padding: '9px 18px', border: 'none', borderRadius: '10px',
+            background: 'linear-gradient(135deg, #5B8DEF, #4A7ADE)',
+            color: '#fff', fontSize: '13.5px', fontWeight: 600,
+            cursor: 'pointer', boxShadow: '0 3px 12px rgba(91,141,239,0.35)',
+            transition: 'all var(--transition-fast)',
+          }}
+          onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 6px 20px rgba(91,141,239,0.45)'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+          onMouseLeave={e => { e.currentTarget.style.boxShadow = '0 3px 12px rgba(91,141,239,0.35)'; e.currentTarget.style.transform = 'translateY(0)'; }}
+        >
+          <PlusIcon />
+          New Task
+        </button>
+      </div>
+
+      {/* ── Stats ── */}
+      <StatsCardsSection />
+
+      {/* ── Main two-column layout (tasks+deadlines LEFT | activity RIGHT) ── */}
+      <div className="db-main-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: '18px', marginBottom: '24px' }}>
+
+        {/* Left column */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+          <MyTasksPanel />
+          <UpcomingPanel />
+        </div>
+
+        {/* Right column: Recent Activity */}
+        <RecentActivityPanel />
+      </div>
+
+      {/* ── Projects section ── */}
+      <div>
+        {/* Section header */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px', flexWrap: 'wrap', gap: '10px' }}>
+          <h2 style={{ fontSize: '16px', fontWeight: 700, color: 'var(--color-text-primary)', margin: 0, letterSpacing: '-0.3px' }}>
+            {searchQuery ? `Results for "${searchQuery}"` : 'Project Overview'}
+          </h2>
+
+          {/* Search */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '0 11px', height: '34px', backgroundColor: 'var(--color-bg-elevated)', border: '1.5px solid var(--color-border)', borderRadius: '9px', color: 'var(--color-text-tertiary)', minWidth: '200px' }}>
+            <SearchIcon />
+            <input
+              type="text"
+              placeholder="Search projects..."
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              style={{ border: 'none', outline: 'none', background: 'transparent', fontSize: '13px', color: 'var(--color-text-primary)', flex: 1, minWidth: 0 }}
+            />
           </div>
         </div>
 
-        {/* Stats Cards */}
-        <StatsCardsSection />
+        {isLoading ? (
+          <div style={{ display: 'flex', justifyContent: 'center', padding: '60px' }}>
+            <div style={{ width: '28px', height: '28px', border: '3px solid var(--color-border)', borderTopColor: 'var(--color-accent)', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+          </div>
+        ) : (
+          <div className="db-projects-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '14px' }}>
+            {filteredProjects.map((project, i) => (
+              <ProjectCard key={project.id} project={project} index={i} onClick={() => navigate(`/projects/${project.id}`)} />
+            ))}
 
-        {/* Two-column grid: My Tasks + Upcoming Deadlines */}
-        <div className="dashboard-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '32px' }}>
-          <div>
-            <div style={sectionHeaderStyle}>
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                <path d="M2.5 0a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2h-11zm5.854 10.854a.5.5 0 0 1-.708 0l-3-3a.5.5 0 1 1 .708-.708L8 9.793l5.146-5.147a.5.5 0 0 1 .708.708l-5.5 5.5z" />
-              </svg>
-              My Tasks
-            </div>
-            <div style={panelStyle}>
-              <MyTasksSection />
-            </div>
-          </div>
-          <div>
-            <div style={sectionHeaderStyle}>
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                <path d="M11 6.5a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5v-1zm-3 0a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5v-1zm-5 3a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5v-1zm3 0a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5v-1z" />
-                <path d="M3.5 0a.5.5 0 0 1 .5.5V1h8V.5a.5.5 0 0 1 1 0V1h1a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V3a2 2 0 0 1 2-2h1V.5a.5.5 0 0 1 .5-.5zM1 4v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V4H1z" />
-              </svg>
-              Upcoming Deadlines
-            </div>
-            <div style={panelStyle}>
-              <UpcomingDeadlinesSection />
-            </div>
-          </div>
-        </div>
+            {/* Create new card */}
+            {!searchQuery && (
+              <div
+                onClick={() => setModalOpen(true)}
+                style={{ ...card, padding: '28px 20px', cursor: 'pointer', border: '2px dashed var(--color-border)', boxShadow: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '10px', transition: 'all var(--transition-fast)', backgroundColor: 'transparent', minHeight: '130px' }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--color-accent)'; e.currentTarget.style.backgroundColor = 'var(--color-accent-light)'; }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--color-border)'; e.currentTarget.style.backgroundColor = 'transparent'; }}
+              >
+                <FolderIcon />
+                <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-text-tertiary)' }}>Create new project</span>
+              </div>
+            )}
 
-        {/* Recent Activity */}
-        <div style={sectionStyle}>
-          <div style={sectionHeaderStyle}>
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-              <path fillRule="evenodd" d="M1 8a7 7 0 1 0 14 0A7 7 0 0 0 1 8zm15 0A8 8 0 1 1 0 8a8 8 0 0 1 16 0zM8 3.5a.5.5 0 0 0-1 0V9a.5.5 0 0 0 .252.434l3.5 2a.5.5 0 0 0 .496-.868L8 8.71V3.5z" />
-            </svg>
-            Recent Activity
-          </div>
-          <div style={panelStyle}>
-            <RecentActivitySection />
-          </div>
-        </div>
-
-        {/* Recent Projects */}
-        {!searchQuery && recentProjects.length > 0 && (
-          <div style={sectionStyle}>
-            <div style={sectionHeaderStyle}>
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                <path d="M8 3.5a.5.5 0 0 0-1 0V9a.5.5 0 0 0 .252.434l3.5 2a.5.5 0 0 0 .496-.868L8 8.71V3.5z" />
-                <path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16zm7-8A7 7 0 1 1 1 8a7 7 0 0 1 14 0z" />
-              </svg>
-              Recent Projects
-            </div>
-            <div style={{ display: 'flex', gap: '12px', overflowX: 'auto', paddingBottom: '4px' }}>
-              {recentProjects.map((project) => (
-                <div
-                  key={project.id}
-                  style={{
-                    minWidth: '200px',
-                    maxWidth: '240px',
-                    backgroundColor: 'var(--color-bg-elevated)',
-                    border: '1px solid var(--color-border)',
-                    borderRadius: 'var(--radius-lg)',
-                    padding: '14px',
-                    cursor: 'pointer',
-                    transition: 'all var(--transition-fast)',
-                    flexShrink: 0,
-                  }}
-                  onClick={() => navigate(`/projects/${project.id}`)}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.borderColor = 'var(--color-accent)';
-                    e.currentTarget.style.boxShadow = 'var(--shadow-md)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.borderColor = 'var(--color-border)';
-                    e.currentTarget.style.boxShadow = 'none';
-                  }}
-                >
-                  <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--color-text-primary)', marginBottom: '4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {project.name}
-                  </div>
-                  <div style={{ fontSize: '11px', color: 'var(--color-text-tertiary)' }}>
-                    {new Date(project.createdAt).toLocaleDateString()}
-                  </div>
-                </div>
-              ))}
-            </div>
+            {searchQuery && filteredProjects.length === 0 && (
+              <div style={{ gridColumn: '1/-1', textAlign: 'center', padding: '50px 20px', color: 'var(--color-text-tertiary)', fontSize: '14px' }}>
+                No projects match your search.
+              </div>
+            )}
           </div>
         )}
-
-        {/* All Projects */}
-        <div style={sectionStyle}>
-          <div style={sectionHeaderStyle}>
-            {searchQuery ? `Search results for "${searchQuery}"` : 'All Projects'}
-          </div>
-
-          {isLoading ? (
-            <div style={{ display: 'flex', justifyContent: 'center', padding: '60px' }}>
-              <div style={{
-                width: '32px', height: '32px',
-                border: '3px solid var(--color-border)',
-                borderTopColor: 'var(--color-accent)',
-                borderRadius: '50%',
-                animation: 'spin 0.8s linear infinite',
-              }} />
-            </div>
-          ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px' }}>
-              {filteredProjects.map((project) => (
-                <div
-                  key={project.id}
-                  style={cardStyle}
-                  onClick={() => navigate(`/projects/${project.id}`)}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.borderColor = 'var(--color-accent)';
-                    e.currentTarget.style.boxShadow = 'var(--shadow-md)';
-                    e.currentTarget.style.transform = 'translateY(-1px)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.borderColor = 'var(--color-border)';
-                    e.currentTarget.style.boxShadow = 'none';
-                    e.currentTarget.style.transform = 'translateY(0)';
-                  }}
-                >
-                  <div style={cardNameStyle}>{project.name}</div>
-                  {project.description && (
-                    <div style={{
-                      fontSize: '13px', color: 'var(--color-text-secondary)',
-                      marginBottom: '12px', lineHeight: 1.4, overflow: 'hidden',
-                      textOverflow: 'ellipsis', display: '-webkit-box',
-                      WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
-                    }}>
-                      {project.description}
-                    </div>
-                  )}
-                  <div style={cardMetaStyle}>
-                    <span style={statusBadgeStyle(project.status)}>
-                      <span style={{
-                        width: '6px', height: '6px', borderRadius: '50%',
-                        backgroundColor: project.status === 'ACTIVE' ? 'var(--color-success)' : 'var(--color-text-secondary)',
-                      }} />
-                      {project.status}
-                    </span>
-                    <span style={{ fontSize: '12px', color: 'var(--color-text-tertiary)' }}>
-                      {new Date(project.createdAt).toLocaleDateString()}
-                    </span>
-                  </div>
-                </div>
-              ))}
-
-              {!searchQuery && (
-                <div
-                  style={emptyCardStyle}
-                  onClick={() => setModalOpen(true)}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.borderColor = 'var(--color-accent)';
-                    e.currentTarget.style.backgroundColor = 'var(--color-accent-light)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.borderColor = 'var(--color-border)';
-                    e.currentTarget.style.backgroundColor = 'var(--color-bg-elevated)';
-                  }}
-                >
-                  <FolderIcon />
-                  <span style={{ fontSize: '14px', fontWeight: 500, color: 'var(--color-text-tertiary)' }}>
-                    Create a new project
-                  </span>
-                </div>
-              )}
-
-              {searchQuery && filteredProjects.length === 0 && (
-                <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '40px', color: 'var(--color-text-tertiary)' }}>
-                  No projects match your search.
-                </div>
-              )}
-            </div>
-          )}
-        </div>
       </div>
 
       <NewProjectModal isOpen={modalOpen} onClose={() => setModalOpen(false)} />

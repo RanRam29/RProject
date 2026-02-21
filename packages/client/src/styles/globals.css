@@ -6,82 +6,139 @@
   box-sizing: border-box;
 }
 
+/* ═══════════════════════════════════════════════════════════════════
+   RPROJECTS 2.0 — DESIGN SYSTEM
+   Aesthetic: Dark sleek sidebar + Cream/off-white workspace
+   Flat Design 2.0: soft diffused shadows, no harsh borders on cards
+   ═══════════════════════════════════════════════════════════════════ */
+
 :root {
-  /* Light mode tokens */
-  --color-bg-primary: #ffffff;
-  --color-bg-secondary: #f9fafb;
-  --color-bg-tertiary: #f3f4f6;
-  --color-bg-elevated: #ffffff;
-  --color-bg-overlay: rgba(0, 0, 0, 0.5);
+  /* ── Workspace (main content area) ── */
+  --color-bg-primary: #F5F6FA;       /* cream off-white workspace */
+  --color-bg-secondary: #EEEEF2;     /* subtle section backgrounds */
+  --color-bg-tertiary: #E4E5EC;      /* hover states, dividers */
+  --color-bg-elevated: #FFFFFF;      /* cards, modals, topbar */
+  --color-bg-overlay: rgba(15, 17, 26, 0.55);
 
-  --color-text-primary: #111827;
-  --color-text-secondary: #6b7280;
-  --color-text-tertiary: #9ca3af;
-  --color-text-inverse: #ffffff;
+  /* ── Sidebar (LIGHT mode: clean white/gray) ── */
+  --sidebar-bg: #FFFFFF;
+  --sidebar-bg-hover: #F0F1F7;
+  --sidebar-bg-active: #E8EDFF;
+  --sidebar-border: rgba(0,0,0,0.07);
+  --sidebar-text: #6B7280;
+  --sidebar-text-hover: #1A1D2E;
+  --sidebar-text-active: #3B61D4;
+  --sidebar-accent: #5B8DEF;
+  --sidebar-accent-bg: #EBF2FF;
+  --sidebar-section-label: #9CA3AF;
 
-  --color-border: #e5e7eb;
-  --color-border-hover: #d1d5db;
+  /* ── Typography ── */
+  --color-text-primary: #0F1117;
+  --color-text-secondary: #5A5F72;
+  --color-text-tertiary: #9CA3AF;
+  --color-text-inverse: #FFFFFF;
 
-  --color-accent: #3b82f6;
-  --color-accent-hover: #2563eb;
-  --color-accent-light: #dbeafe;
-  --color-accent-text: #1d4ed8;
+  /* ── Borders (used sparingly — prefer shadows) ── */
+  --color-border: rgba(0, 0, 0, 0.07);
+  --color-border-hover: rgba(0, 0, 0, 0.13);
 
-  --color-success: #10b981;
-  --color-success-light: #d1fae5;
-  --color-warning: #f59e0b;
-  --color-warning-light: #fef3c7;
-  --color-danger: #ef4444;
-  --color-danger-light: #fee2e2;
+  /* ── Brand accent ── */
+  --color-accent: #5B8DEF;
+  --color-accent-hover: #4A7ADE;
+  --color-accent-light: #EBF2FF;
+  --color-accent-text: #2E5FBF;
 
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
-  --shadow-drag: 0 12px 24px rgba(0, 0, 0, 0.15);
+  /* ── Semantic status colors (pastel / muted) ── */
+  --color-success: #34D399;
+  --color-success-light: #D1FAE5;
+  --color-success-text: #065F46;
+  --color-warning: #FBBF24;
+  --color-warning-light: #FEF3C7;
+  --color-warning-text: #92400E;
+  --color-danger: #F87171;
+  --color-danger-light: #FEE2E2;
+  --color-danger-text: #991B1B;
 
-  --radius-sm: 4px;
-  --radius-md: 8px;
-  --radius-lg: 12px;
-  --radius-xl: 16px;
+  /* ── Flat Design 2.0 shadows (soft diffused, no harsh lines) ── */
+  --shadow-xs:  0 1px 3px rgba(0,0,0,0.04);
+  --shadow-sm:  0 2px 8px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-md:  0 4px 16px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.04);
+  --shadow-lg:  0 8px 32px rgba(0,0,0,0.10), 0 2px 8px rgba(0,0,0,0.06);
+  --shadow-xl:  0 16px 48px rgba(0,0,0,0.12), 0 4px 12px rgba(0,0,0,0.06);
+  --shadow-drag: 0 20px 48px rgba(0,0,0,0.16), 0 4px 12px rgba(0,0,0,0.08);
+  --shadow-topbar: 0 1px 0 rgba(0,0,0,0.06), 0 2px 8px rgba(0,0,0,0.04);
+  --shadow-card:  0 2px 12px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.04);
+  --shadow-card-hover: 0 8px 28px rgba(0,0,0,0.10), 0 2px 8px rgba(0,0,0,0.05);
+
+  /* ── Geometry ── */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 18px;
+  --radius-2xl: 24px;
   --radius-full: 9999px;
 
+  /* ── Motion ── */
   --transition-fast: 150ms ease;
   --transition-normal: 250ms ease;
   --transition-slow: 350ms ease;
 
+  /* ── Typography ── */
   --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
 
-  --sidebar-width: 260px;
-  --topbar-height: 56px;
+  /* ── Layout ── */
+  --sidebar-width: 252px;
+  --topbar-height: 60px;
 }
 
+/* ── Dark mode overrides ── */
 [data-theme='dark'] {
-  --color-bg-primary: #111827;
-  --color-bg-secondary: #1f2937;
-  --color-bg-tertiary: #374151;
-  --color-bg-elevated: #1f2937;
-  --color-bg-overlay: rgba(0, 0, 0, 0.7);
+  --color-bg-primary: #0F1117;
+  --color-bg-secondary: #161922;
+  --color-bg-tertiary: #1E2130;
+  --color-bg-elevated: #1A1E2A;
+  --color-bg-overlay: rgba(0, 0, 0, 0.72);
 
-  --color-text-primary: #f9fafb;
-  --color-text-secondary: #9ca3af;
-  --color-text-tertiary: #6b7280;
-  --color-text-inverse: #111827;
+  /* Sidebar — dark mode: deep navy */
+  --sidebar-bg: #0D0F18;
+  --sidebar-bg-hover: rgba(255,255,255,0.06);
+  --sidebar-bg-active: rgba(91,141,239,0.18);
+  --sidebar-border: rgba(255,255,255,0.06);
+  --sidebar-text: rgba(255,255,255,0.50);
+  --sidebar-text-hover: rgba(255,255,255,0.90);
+  --sidebar-text-active: #FFFFFF;
+  --sidebar-accent: #5B8DEF;
+  --sidebar-accent-bg: rgba(91,141,239,0.20);
+  --sidebar-section-label: rgba(255,255,255,0.26);
 
-  --color-border: #374151;
-  --color-border-hover: #4b5563;
+  --color-text-primary: #F0F1F5;
+  --color-text-secondary: #8B90A0;
+  --color-text-tertiary: #555C6E;
+  --color-text-inverse: #0F1117;
 
-  --color-accent-light: #1e3a5f;
-  --color-accent-text: #93c5fd;
+  --color-border: rgba(255, 255, 255, 0.07);
+  --color-border-hover: rgba(255, 255, 255, 0.13);
 
-  --color-success-light: #064e3b;
-  --color-warning-light: #78350f;
-  --color-danger-light: #7f1d1d;
+  --color-accent-light: #1C2D4F;
+  --color-accent-text: #93C5FD;
 
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.2);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
-  --shadow-drag: 0 12px 24px rgba(0, 0, 0, 0.4);
+  --color-success-light: #052E1E;
+  --color-success-text: #6EE7B7;
+  --color-warning-light: #3B2407;
+  --color-warning-text: #FCD34D;
+  --color-danger-light: #3B0B0B;
+  --color-danger-text: #FCA5A5;
+
+  --shadow-xs:  0 1px 3px rgba(0,0,0,0.20);
+  --shadow-sm:  0 2px 8px rgba(0,0,0,0.30), 0 1px 2px rgba(0,0,0,0.20);
+  --shadow-md:  0 4px 16px rgba(0,0,0,0.35), 0 2px 4px rgba(0,0,0,0.20);
+  --shadow-lg:  0 8px 32px rgba(0,0,0,0.40), 0 2px 8px rgba(0,0,0,0.25);
+  --shadow-xl:  0 16px 48px rgba(0,0,0,0.45), 0 4px 12px rgba(0,0,0,0.25);
+  --shadow-drag: 0 20px 48px rgba(0,0,0,0.55);
+  --shadow-topbar: 0 1px 0 rgba(255,255,255,0.04), 0 2px 8px rgba(0,0,0,0.25);
+  --shadow-card: 0 2px 12px rgba(0,0,0,0.30), 0 1px 3px rgba(0,0,0,0.20);
+  --shadow-card-hover: 0 8px 28px rgba(0,0,0,0.40), 0 2px 8px rgba(0,0,0,0.25);
 }
 
 html {
@@ -153,19 +210,15 @@ select {
 }
 
 /* ──────────────────────────────────────────────
-   RPROJECTS — SOFT MINIMALISM DESIGN TOKENS
+   RPROJECTS — EXTENDED DESIGN TOKENS
    ────────────────────────────────────────────── */
 
 :root {
-  /* Soft minimalism palette */
-  --rp-bg-cream: #FBFBFA;
-  --rp-bg-glass: rgba(255, 255, 255, 0.70);
-  --rp-bg-glass-border: rgba(255, 255, 255, 0.20);
-  --rp-text-charcoal: #1C1F23;
-  --rp-text-muted: #6B7280;
-  --rp-text-faint: #9CA3AF;
+  /* Glass surfaces */
+  --rp-bg-glass: rgba(255, 255, 255, 0.72);
+  --rp-bg-glass-border: rgba(255, 255, 255, 0.22);
 
-  /* Accent palette */
+  /* Accent palette (pastel/muted) */
   --rp-accent-blue: #5B8DEF;
   --rp-accent-blue-light: #EBF2FF;
   --rp-accent-mint: #34D399;
@@ -174,30 +227,43 @@ select {
   --rp-accent-lavender-light: #EDE9FE;
   --rp-accent-coral: #FB7185;
   --rp-accent-coral-light: #FFE4E6;
+  --rp-accent-amber: #FBBF24;
+  --rp-accent-amber-light: #FEF3C7;
 
-  /* Status colours */
-  --rp-status-todo: #9CA3AF;
-  --rp-status-in-progress: #5B8DEF;
-  --rp-status-stuck: #F87171;
-  --rp-status-done: #34D399;
+  /* Muted task status badges */
+  --rp-status-todo-bg: #F3F4F6;
+  --rp-status-todo-text: #6B7280;
+  --rp-status-progress-bg: #EBF2FF;
+  --rp-status-progress-text: #2E5FBF;
+  --rp-status-stuck-bg: #FEE2E2;
+  --rp-status-stuck-text: #991B1B;
+  --rp-status-done-bg: #D1FAE5;
+  --rp-status-done-text: #065F46;
 
-  /* Surfaces */
-  --rp-shadow-card: 0 2px 12px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.04);
-  --rp-shadow-card-hover: 0 8px 24px rgba(0,0,0,0.10), 0 2px 8px rgba(0,0,0,0.06);
-  --rp-shadow-float: 0 20px 48px rgba(0,0,0,0.14), 0 4px 12px rgba(0,0,0,0.08);
-  --rp-shadow-stuck: 0 0 0 0 rgba(239,68,68,0.4);
+  /* Priority badges */
+  --rp-priority-urgent-bg: #FEE2E2;
+  --rp-priority-urgent-text: #991B1B;
+  --rp-priority-high-bg: #FFE4E6;
+  --rp-priority-high-text: #9F1239;
+  --rp-priority-medium-bg: #FEF3C7;
+  --rp-priority-medium-text: #92400E;
+  --rp-priority-low-bg: #D1FAE5;
+  --rp-priority-low-text: #065F46;
+  --rp-priority-none-bg: #F3F4F6;
+  --rp-priority-none-text: #6B7280;
 
   /* Radii */
-  --rp-radius-card: 16px;
+  --rp-radius-card: 14px;
   --rp-radius-pill: 9999px;
-  --rp-radius-modal: 24px;
+  --rp-radius-modal: 20px;
+  --rp-radius-badge: 6px;
 
   /* Motion */
   --rp-ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
   --rp-ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
-  --rp-duration-fast: 180ms;
-  --rp-duration-normal: 300ms;
-  --rp-duration-slow: 500ms;
+  --rp-duration-fast: 160ms;
+  --rp-duration-normal: 280ms;
+  --rp-duration-slow: 480ms;
 }
 
 /* Gantt bar drag handle cursor */
