@@ -6,13 +6,9 @@ import { GanttTooltip } from './GanttTooltip';
 interface GanttTaskBarProps {
   task: TaskDTO;
   status: TaskStatusDTO | undefined;
-  /** Left offset as percentage of the grid width */
   leftPct: number;
-  /** Width as percentage of the grid width */
   widthPct: number;
-  /** Pixel width of the grid area (for drag → day conversion) */
   gridWidthPx: number;
-  /** Total days in the visible range */
   totalDays: number;
   isDragEnabled: boolean;
   isOverdue: boolean;
@@ -33,70 +29,104 @@ export const GanttTaskBar: FC<GanttTaskBarProps> = ({
   onDragEnd,
 }) => {
   const pxPerDay = gridWidthPx / Math.max(totalDays, 1);
-  // Track accumulated drag offset in px (info.offset.x is the total pan from start)
   const lastOffsetX = useRef(0);
 
-  // ── Milestone: render as a diamond ────────────────────────────────────────
+  // Milestone: diamond
   if (task.isMilestone) {
     return (
       <GanttTooltip task={task} status={status}>
         <div
-          className="absolute top-1.5 flex items-center justify-center cursor-pointer"
-          style={{ left: `${leftPct}%`, width: 28, height: 28, marginLeft: -14 }}
+          style={{
+            position: 'absolute',
+            top: 6,
+            left: `${leftPct}%`,
+            marginLeft: -10,
+            width: 20,
+            height: 20,
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
           onClick={onClick}
         >
-          <div className="w-5 h-5 bg-amber-500 dark:bg-amber-400 rotate-45 shadow-md hover:scale-110 transition-transform" />
+          <div style={{
+            width: 14,
+            height: 14,
+            background: 'var(--color-warning)',
+            transform: 'rotate(45deg)',
+            boxShadow: 'var(--shadow-sm)',
+            transition: 'transform 0.15s',
+          }} />
         </div>
       </GanttTooltip>
     );
   }
 
-  // ── Normal task bar ────────────────────────────────────────────────────────
+  const barColor = status?.color ?? 'var(--color-accent)';
+
   return (
     <GanttTooltip task={task} status={status}>
       <motion.div
-        className={[
-          'absolute top-2 h-6 rounded-md overflow-hidden shadow-sm select-none',
-          isDragEnabled ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer',
-          isOverdue ? 'ring-1 ring-red-400' : '',
-        ].join(' ')}
         style={{
+          position: 'absolute',
+          top: 8,
+          height: 24,
           left: `${leftPct}%`,
           width: `${widthPct}%`,
           minWidth: 12,
+          borderRadius: 4,
+          overflow: 'hidden',
+          boxShadow: 'var(--shadow-xs)',
+          cursor: isDragEnabled ? 'grab' : 'pointer',
+          outline: isOverdue ? '1px solid var(--color-danger)' : 'none',
+          userSelect: 'none',
         }}
         drag={isDragEnabled ? 'x' : false}
         dragConstraints={{ left: -gridWidthPx, right: gridWidthPx }}
         dragElastic={0}
         dragMomentum={false}
-        onDragStart={() => {
-          lastOffsetX.current = 0;
-        }}
-        onDrag={(_e, info: PanInfo) => {
-          lastOffsetX.current = info.offset.x;
-        }}
+        onDragStart={() => { lastOffsetX.current = 0; }}
+        onDrag={(_e, info: PanInfo) => { lastOffsetX.current = info.offset.x; }}
         onDragEnd={(_e, info: PanInfo) => {
-          // Use info.offset.x — total displacement from drag start (already accounts for full delta)
-          const deltaX = info.offset.x;
-          const deltaDays = Math.round(deltaX / pxPerDay);
-          if (deltaDays !== 0) {
-            onDragEnd(task, deltaDays);
-          }
+          const deltaDays = Math.round(info.offset.x / pxPerDay);
+          if (deltaDays !== 0) onDragEnd(task, deltaDays);
         }}
         onClick={onClick}
-        whileHover={{ boxShadow: '0 2px 8px rgba(0,0,0,0.15)' }}
+        whileDrag={{ cursor: 'grabbing', boxShadow: 'var(--shadow-drag)' }}
       >
-        {/* Progress fill track */}
-        <div className="absolute inset-0 bg-indigo-100 dark:bg-indigo-900/40" />
-
-        {/* Filled portion */}
-        <div
-          className="absolute inset-y-0 left-0 bg-indigo-500 dark:bg-indigo-400 transition-all duration-300"
-          style={{ width: `${task.progressPercentage ?? 0}%` }}
-        />
-
+        {/* Background track */}
+        <div style={{
+          position: 'absolute',
+          inset: 0,
+          background: barColor,
+          opacity: 0.2,
+        }} />
+        {/* Progress fill */}
+        <div style={{
+          position: 'absolute',
+          top: 0, bottom: 0, left: 0,
+          width: `${task.progressPercentage ?? 0}%`,
+          background: barColor,
+          opacity: 0.9,
+          transition: 'width 0.3s',
+        }} />
         {/* Label */}
-        <span className="absolute inset-0 flex items-center px-2 text-xs font-medium text-white dark:text-white z-10 truncate">
+        <span style={{
+          position: 'absolute',
+          inset: 0,
+          display: 'flex',
+          alignItems: 'center',
+          padding: '0 6px',
+          fontSize: 11,
+          fontWeight: 500,
+          color: '#fff',
+          overflow: 'hidden',
+          whiteSpace: 'nowrap',
+          textOverflow: 'ellipsis',
+          zIndex: 1,
+          textShadow: '0 1px 2px rgba(0,0,0,0.4)',
+        }}>
           {task.title}
         </span>
       </motion.div>

@@ -12,71 +12,113 @@ export const GanttTooltip: FC<GanttTooltipProps> = ({ task, status, children }) 
 
   return (
     <div
-      className="relative"
+      style={{ position: 'relative' }}
       onMouseEnter={() => setVisible(true)}
       onMouseLeave={() => setVisible(false)}
     >
       {children}
 
       {visible && (
-        <div className="absolute bottom-full left-0 mb-2 z-50 w-72 rounded-lg bg-white dark:bg-slate-800 p-4 shadow-xl border border-slate-200 dark:border-slate-700 pointer-events-none">
-          <div className="space-y-2 text-sm">
+        <div style={{
+          position: 'absolute',
+          bottom: '100%',
+          left: 0,
+          marginBottom: 8,
+          zIndex: 100,
+          width: 260,
+          borderRadius: 'var(--radius-md)',
+          background: 'var(--color-bg-elevated)',
+          padding: 12,
+          boxShadow: 'var(--shadow-lg)',
+          border: '1px solid var(--color-border)',
+          pointerEvents: 'none',
+        }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 12 }}>
             {/* Title */}
-            <p className="font-semibold text-slate-900 dark:text-white leading-snug">{task.title}</p>
+            <p style={{ fontWeight: 600, color: 'var(--color-text-primary)', lineHeight: 1.3, margin: 0 }}>
+              {task.title}
+            </p>
 
-            {/* Status badge */}
+            {/* Status */}
             {status && (
-              <div className="flex items-center gap-2">
-                <span className="text-slate-500 dark:text-slate-400 text-xs">Status</span>
-                <span
-                  className="px-2 py-0.5 rounded-full text-xs font-medium text-white"
-                  style={{ backgroundColor: status.color }}
-                >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ color: 'var(--color-text-tertiary)' }}>Status</span>
+                <span style={{
+                  padding: '1px 7px',
+                  borderRadius: 'var(--radius-full)',
+                  fontSize: 11,
+                  fontWeight: 500,
+                  color: '#fff',
+                  background: status.color,
+                }}>
                   {status.name}
                 </span>
               </div>
             )}
 
             {/* Assignee */}
-            <div className="flex items-center gap-2">
-              <span className="text-slate-500 dark:text-slate-400 text-xs">Assignee</span>
-              <span className="text-slate-700 dark:text-slate-300 text-xs">
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ color: 'var(--color-text-tertiary)' }}>Assignee</span>
+              <span style={{ color: 'var(--color-text-secondary)' }}>
                 {task.assignee?.displayName ?? 'Unassigned'}
               </span>
             </div>
 
             {/* Dates */}
-            <div className="flex gap-4 text-xs text-slate-500 dark:text-slate-400">
+            <div style={{ display: 'flex', gap: 12, color: 'var(--color-text-tertiary)' }}>
               <span>Start: {task.startDate?.slice(0, 10) ?? '—'}</span>
               <span>Due: {task.dueDate?.slice(0, 10) ?? '—'}</span>
             </div>
 
             {/* Progress */}
-            <div className="space-y-1">
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-slate-500 dark:text-slate-400">Progress</span>
-                <span className="font-medium text-slate-700 dark:text-slate-300">
-                  {task.progressPercentage}%
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: 'var(--color-text-tertiary)' }}>Progress</span>
+                <span style={{ fontWeight: 600, color: 'var(--color-text-primary)' }}>
+                  {task.progressPercentage ?? 0}%
                 </span>
               </div>
-              <div className="w-full bg-slate-100 dark:bg-slate-700 rounded-full h-1.5">
-                <div
-                  className="bg-indigo-500 h-1.5 rounded-full transition-all"
-                  style={{ width: `${task.progressPercentage}%` }}
-                />
+              <div style={{
+                width: '100%',
+                height: 4,
+                borderRadius: 2,
+                background: 'var(--color-bg-tertiary)',
+                overflow: 'hidden',
+              }}>
+                <div style={{
+                  height: '100%',
+                  borderRadius: 2,
+                  width: `${task.progressPercentage ?? 0}%`,
+                  background: 'var(--color-accent)',
+                  transition: 'width 0.3s',
+                }} />
               </div>
             </div>
 
             {/* Estimated hours */}
-            {task.estimatedHours > 0 && (
-              <div className="text-xs text-slate-500 dark:text-slate-400">
-                Estimated: <span className="font-medium text-slate-700 dark:text-slate-300">{task.estimatedHours}h</span>
+            {(task.estimatedHours ?? 0) > 0 && (
+              <div style={{ color: 'var(--color-text-tertiary)' }}>
+                Estimated:{' '}
+                <span style={{ fontWeight: 600, color: 'var(--color-text-secondary)' }}>
+                  {task.estimatedHours}h
+                </span>
               </div>
             )}
 
             {/* Milestone badge */}
             {task.isMilestone && (
-              <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/30 px-2 py-0.5 rounded-full">
+              <span style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 4,
+                fontSize: 11,
+                fontWeight: 500,
+                color: 'var(--color-warning-text)',
+                background: 'var(--color-warning-light)',
+                padding: '2px 8px',
+                borderRadius: 'var(--radius-full)',
+                alignSelf: 'flex-start',
+              }}>
                 ◆ Milestone
               </span>
             )}

@@ -131,7 +131,13 @@ export const GanttWidget: FC<WidgetProps> = ({ projectId }) => {
   const isDragEnabled = view === 'day' || view === 'week';
 
   return (
-    <div className="flex flex-col h-full bg-white dark:bg-slate-900 overflow-hidden">
+    <div style={{
+      display: 'flex',
+      flexDirection: 'column',
+      height: '100%',
+      background: 'var(--color-bg-elevated)',
+      overflow: 'hidden',
+    }}>
       <GanttHeader
         view={view}
         onViewChange={setView}
@@ -143,8 +149,7 @@ export const GanttWidget: FC<WidgetProps> = ({ projectId }) => {
         isExporting={isExporting}
       />
 
-      {/* Capture ref here so it wraps only the grid (not the header) */}
-      <div ref={ganttRef} className="flex-1 min-h-0 overflow-hidden">
+      <div ref={ganttRef} style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
         <GanttGrid
           tasks={tasks}
           statuses={statuses}
