@@ -43,14 +43,20 @@ function safeDate(s: string | null | undefined): Date | null {
 
 function getRangeForView(view: GanttView, year: number): { start: Date; end: Date } {
   const base = new Date(year, 0, 1);
+  const now = new Date();
   switch (view) {
     case 'day':
+      // 2-week window centered on today
       return {
-        start: startOfWeek(new Date(), { weekStartsOn: 1 }),
-        end: endOfWeek(new Date(), { weekStartsOn: 1 }),
+        start: startOfWeek(addDays(now, -7), { weekStartsOn: 1 }),
+        end: endOfWeek(addDays(now, 7), { weekStartsOn: 1 }),
       };
     case 'week':
-      return { start: startOfMonth(new Date()), end: endOfMonth(new Date()) };
+      // 3-month window: prev month + current + next month
+      return {
+        start: startOfMonth(addDays(now, -30)),
+        end: endOfMonth(addDays(now, 60)),
+      };
     case 'month':
       return { start: startOfYear(base), end: endOfYear(base) };
     case 'quarter':
@@ -138,8 +144,8 @@ export const GanttGrid: FC<GanttGridProps> = ({
   // ─── Smart sort: overdue → current → future ───────────────────────────────
 
   const sortedTasks = useMemo(() => {
-    const withDates = tasks.filter((t) => t.startDate || t.dueDate);
-    return [...withDates].sort((a, b) => {
+    // Include ALL tasks — those without dates appear at the bottom as "unscheduled"
+    return [...tasks].sort((a, b) => {
       const aEnd = safeDate(a.dueDate);
       const bEnd = safeDate(b.dueDate);
       const aStatus = statuses.find((s) => s.id === a.statusId);
@@ -149,6 +155,13 @@ export const GanttGrid: FC<GanttGridProps> = ({
       const bOverdue = bEnd && bEnd < today && !bStatus?.isFinal;
       const aFuture = (safeDate(a.startDate) ?? today) > today;
       const bFuture = (safeDate(b.startDate) ?? today) > today;
+
+      // No-date tasks sink to bottom
+      const aHasDate = !!(a.startDate || a.dueDate);
+      const bHasDate = !!(b.startDate || b.dueDate);
+      if (aHasDate && !bHasDate) return -1;
+      if (!aHasDate && bHasDate) return 1;
+      if (!aHasDate && !bHasDate) return 0;
 
       if (aOverdue && !bOverdue) return -1;
       if (!aOverdue && bOverdue) return 1;
@@ -225,16 +238,17 @@ export const GanttGrid: FC<GanttGridProps> = ({
     const map = new Map<string, BarRect>();
     let rowIndex = 0;
 
+    const pxPerDayLocal = gridWidth / Math.max(totalDays, 1);
     for (const lane of swimlanes) {
       rowIndex++; // lane header row
       for (const task of lane.tasks) {
-        const taskStart = safeDate(task.startDate) ?? today;
+        if (!task.startDate && !task.dueDate) { rowIndex++; continue; }
+        const taskStart = safeDate(task.startDate) ?? safeDate(task.dueDate) ?? today;
         const taskEnd = safeDate(task.dueDate) ?? taskStart;
         const startOffset = Math.max(differenceInDays(taskStart, rangeStart), 0);
         const endOffset = Math.min(differenceInDays(taskEnd, rangeStart), totalDays - 1);
-        const pxPerDay = gridWidth / totalDays;
-        const leftPx = startOffset * pxPerDay;
-        const widthPx = Math.max((endOffset - startOffset + 1) * pxPerDay, 12);
+        const leftPx = startOffset * pxPerDayLocal;
+        const widthPx = Math.max((endOffset - startOffset + 1) * pxPerDayLocal, 12);
         const topPx = rowIndex * ROW_HEIGHT + ROW_HEIGHT / 2;
         map.set(task.id, { taskId: task.id, left: leftPx, top: topPx, width: widthPx });
         rowIndex++;
@@ -258,10 +272,10 @@ export const GanttGrid: FC<GanttGridProps> = ({
 
   // ─── Empty state ──────────────────────────────────────────────────────────
 
-  if (swimlanes.length === 0) {
+  if (tasks.length === 0) {
     return (
       <div className="flex-1 flex items-center justify-center text-slate-400 dark:text-slate-500 text-sm h-full">
-        No tasks with start or due dates found. Add dates to tasks to see them here.
+        No tasks yet. Create tasks in the Kanban or Task List view to see them here.
       </div>
     );
   }
@@ -434,39 +448,68 @@ export const GanttGrid: FC<GanttGridProps> = ({
                 rowIdx++; // skip lane header row
                 for (const task of lane.tasks) {
                   const rowTop = rowIdx * ROW_HEIGHT;
-                  const taskStart = safeDate(task.startDate) ?? today;
-                  const taskEnd = safeDate(task.dueDate) ?? taskStart;
                   const taskStatus = statuses.find((s) => s.id === task.statusId);
+                  const hasDate = !!(task.startDate || task.dueDate);
 
-                  const startOffset = Math.max(differenceInDays(taskStart, rangeStart), 0);
-                  const endOffset = Math.min(differenceInDays(taskEnd, rangeStart), totalDays - 1);
+                  if (!hasDate) {
+                    // No dates — show a dashed "unscheduled" placeholder
+                    bars.push(
+                      <div
+                        key={task.id}
+                        className="absolute left-0"
+                        style={{ top: rowTop, height: ROW_HEIGHT, width: '100%' }}
+                      >
+                        <div
+                          className="absolute top-3 h-4 rounded border-2 border-dashed border-slate-300 dark:border-slate-600 flex items-center px-2 cursor-pointer hover:border-indigo-400 transition-colors"
+                          style={{ left: 4, right: 4 }}
+                          onClick={() => onTaskClick(task)}
+                          title="No dates set — click to edit"
+                        >
+                          <span className="text-xs text-slate-400 dark:text-slate-500 truncate">{task.title} (unscheduled)</span>
+                        </div>
+                      </div>,
+                    );
+                  } else {
+                    const taskStart = safeDate(task.startDate) ?? safeDate(task.dueDate) ?? today;
+                    const taskEnd = safeDate(task.dueDate) ?? taskStart;
 
-                  // Use pixel percentages relative to gridWidth
-                  const leftPct = (startOffset * pxPerDay / gridWidth) * 100;
-                  const widthPct = Math.max(((endOffset - startOffset + 1) * pxPerDay / gridWidth) * 100, 0.5);
+                    const rawStartOffset = differenceInDays(taskStart, rangeStart);
+                    const rawEndOffset = differenceInDays(taskEnd, rangeStart);
 
-                  const isOverdue = !!taskEnd && taskEnd < today && !taskStatus?.isFinal;
+                    // Task is completely outside visible range — skip rendering bar
+                    if (rawEndOffset < 0 || rawStartOffset >= totalDays) {
+                      rowIdx++;
+                      continue;
+                    }
 
-                  bars.push(
-                    <div
-                      key={task.id}
-                      className="absolute left-0"
-                      style={{ top: rowTop, height: ROW_HEIGHT, width: '100%' }}
-                    >
-                      <GanttTaskBar
-                        task={task}
-                        status={taskStatus}
-                        leftPct={leftPct}
-                        widthPct={widthPct}
-                        gridWidthPx={gridWidth}
-                        totalDays={totalDays}
-                        isDragEnabled={isDragEnabled}
-                        isOverdue={isOverdue}
-                        onClick={() => onTaskClick(task)}
-                        onDragEnd={handleDragEnd}
-                      />
-                    </div>,
-                  );
+                    const startOffset = Math.max(rawStartOffset, 0);
+                    const endOffset = Math.min(rawEndOffset, totalDays - 1);
+
+                    const leftPct = (startOffset * pxPerDay / gridWidth) * 100;
+                    const widthPct = Math.max(((endOffset - startOffset + 1) * pxPerDay / gridWidth) * 100, 0.5);
+                    const isOverdue = !!taskEnd && taskEnd < today && !taskStatus?.isFinal;
+
+                    bars.push(
+                      <div
+                        key={task.id}
+                        className="absolute left-0"
+                        style={{ top: rowTop, height: ROW_HEIGHT, width: '100%' }}
+                      >
+                        <GanttTaskBar
+                          task={task}
+                          status={taskStatus}
+                          leftPct={leftPct}
+                          widthPct={widthPct}
+                          gridWidthPx={gridWidth}
+                          totalDays={totalDays}
+                          isDragEnabled={isDragEnabled}
+                          isOverdue={isOverdue}
+                          onClick={() => onTaskClick(task)}
+                          onDragEnd={handleDragEnd}
+                        />
+                      </div>,
+                    );
+                  }
                   rowIdx++;
                 }
               }

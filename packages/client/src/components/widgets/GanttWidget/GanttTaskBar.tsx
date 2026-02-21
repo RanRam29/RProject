@@ -32,8 +32,9 @@ export const GanttTaskBar: FC<GanttTaskBarProps> = ({
   onClick,
   onDragEnd,
 }) => {
-  const pxPerDay = gridWidthPx / totalDays;
-  const dragStartX = useRef(0);
+  const pxPerDay = gridWidthPx / Math.max(totalDays, 1);
+  // Track accumulated drag offset in px (info.offset.x is the total pan from start)
+  const lastOffsetX = useRef(0);
 
   // ── Milestone: render as a diamond ────────────────────────────────────────
   if (task.isMilestone) {
@@ -68,11 +69,15 @@ export const GanttTaskBar: FC<GanttTaskBarProps> = ({
         dragConstraints={{ left: -gridWidthPx, right: gridWidthPx }}
         dragElastic={0}
         dragMomentum={false}
-        onDragStart={(_e, info: PanInfo) => {
-          dragStartX.current = info.point.x;
+        onDragStart={() => {
+          lastOffsetX.current = 0;
+        }}
+        onDrag={(_e, info: PanInfo) => {
+          lastOffsetX.current = info.offset.x;
         }}
         onDragEnd={(_e, info: PanInfo) => {
-          const deltaX = info.point.x - dragStartX.current + info.offset.x;
+          // Use info.offset.x — total displacement from drag start (already accounts for full delta)
+          const deltaX = info.offset.x;
           const deltaDays = Math.round(deltaX / pxPerDay);
           if (deltaDays !== 0) {
             onDragEnd(task, deltaDays);
@@ -87,7 +92,7 @@ export const GanttTaskBar: FC<GanttTaskBarProps> = ({
         {/* Filled portion */}
         <div
           className="absolute inset-y-0 left-0 bg-indigo-500 dark:bg-indigo-400 transition-all duration-300"
-          style={{ width: `${task.progressPercentage}%` }}
+          style={{ width: `${task.progressPercentage ?? 0}%` }}
         />
 
         {/* Label */}
