@@ -70,11 +70,6 @@ export const GanttGrid = forwardRef(function GanttGrid(
 
   useImperativeHandle(ref, () => ({ scrollToToday }), [scrollToToday]);
 
-  // Auto-scroll to today on mount
-  useEffect(() => {
-    scrollToToday();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
   const { start: rangeStart, end: rangeEnd } = useMemo(
     () => getRangeForView(view, year),
     [view, year],
@@ -201,6 +196,13 @@ export const GanttGrid = forwardRef(function GanttGrid(
       oe ? format(addDays(oe, deltaDays), 'yyyy-MM-dd') : null,
     );
   }, [onTimelineUpdate]);
+
+  // Auto-scroll to today on mount — placed here so todayColRef is populated
+  // by the useMemos above before this effect fires after first paint.
+  useEffect(() => {
+    scrollToToday();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // ── Empty state ───────────────────────────────────────────────────────────
   if (tasks.length === 0) {
