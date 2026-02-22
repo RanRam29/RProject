@@ -74,7 +74,9 @@ export const GanttGrid = forwardRef(function GanttGrid(
     () => getRangeForView(view, year),
     [view, year],
   );
-  const today = startOfDay(new Date());
+  // Memoized so downstream useMemos that depend on it are not invalidated on every render.
+  // Date only changes meaningfully at midnight — the empty dep array is intentional.
+  const today = useMemo(() => startOfDay(new Date()), []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const columns = useMemo(
     () => getColumnsForView(view, rangeStart, rangeEnd),

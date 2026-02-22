@@ -26,6 +26,7 @@ import { useUIStore } from '../../../stores/ui.store';
 import type { WidgetProps } from '../widget.types';
 import { FilterBar } from '../../filter/FilterBar';
 import { useTaskFilters } from '../../../hooks/useTaskFilters';
+import type { TaskDTO } from '@pm/shared';
 
 export const GanttWidget: FC<WidgetProps> = ({ projectId }) => {
   const queryClient = useQueryClient();
@@ -92,7 +93,7 @@ export const GanttWidget: FC<WidgetProps> = ({ projectId }) => {
   );
 
   // ── Task click → open detail modal (reuse existing pattern) ─────────────────
-  const handleTaskClick = useCallback(() => {
+  const handleTaskClick = useCallback((_task: TaskDTO) => {
     // Intentionally left for the consuming page/widget host to handle via WS invalidation.
     // Phase 6.1.C integration: wire to LivingTaskModal from the project page.
   }, []);
