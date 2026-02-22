@@ -2,12 +2,12 @@ import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { ProtectedRoute } from './ProtectedRoute';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
+import { SystemRole } from '@pm/shared';
 
-// Mock useAuth hook
 vi.mock('../../hooks/useAuth');
 
 import { useAuth } from '../../hooks/useAuth';
-const mockUseAuth = useAuth as ReturnType<typeof vi.fn>;
+const mockUseAuth = vi.mocked(useAuth);
 
 describe('ProtectedRoute', () => {
   beforeEach(() => {
@@ -28,11 +28,10 @@ describe('ProtectedRoute', () => {
         <ProtectedRoute />
       </MemoryRouter>
     );
-    // Lucide Loader2 renders an inline SVG
     expect(container.querySelector('svg')).not.toBeNull();
   });
 
-  it('does not redirect while isLoading is true', () => {
+  it('keeps spinner visible (does not redirect) while isLoading is true', () => {
     mockUseAuth.mockReturnValue({
       isAuthenticated: false,
       isLoading: true,
@@ -41,20 +40,30 @@ describe('ProtectedRoute', () => {
       register: vi.fn(),
       logout: vi.fn(),
     });
-    render(
+    const { container } = render(
       <MemoryRouter initialEntries={['/dashboard']}>
         <ProtectedRoute />
       </MemoryRouter>
     );
-    // No navigate happens — just the spinner
-    expect(screen.queryByRole('link')).toBeNull();
+    // Spinner still visible means we did not navigate away
+    expect(container.querySelector('svg')).not.toBeNull();
   });
 
   it('renders Outlet when authenticated and not loading', () => {
     mockUseAuth.mockReturnValue({
       isAuthenticated: true,
       isLoading: false,
-      user: { id: '1', email: 'a@b.com', displayName: 'A' },
+      user: {
+        id: '1',
+        email: 'a@b.com',
+        displayName: 'A',
+        avatarUrl: null,
+        systemRole: SystemRole.PROJECT_CREATOR,
+        isActive: true,
+        emailNotifications: true,
+        createdAt: '2024-01-01T00:00:00.000Z',
+        updatedAt: '2024-01-01T00:00:00.000Z',
+      },
       login: vi.fn(),
       register: vi.fn(),
       logout: vi.fn(),
@@ -64,7 +73,7 @@ describe('ProtectedRoute', () => {
         <ProtectedRoute />
       </MemoryRouter>
     );
-    // Outlet renders nothing without nested routes, but no spinner either
+    // No spinner when authenticated
     expect(screen.queryByRole('img')).toBeNull();
   });
 });
