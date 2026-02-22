@@ -1,4 +1,7 @@
-import { useRef, useMemo, useCallback, type FC } from 'react';
+import {
+  useRef, useMemo, useCallback, useEffect, useImperativeHandle, forwardRef,
+  type ForwardedRef,
+} from 'react';
 import { parseISO, isValid } from 'date-fns';
 import type { TaskDTO, TaskStatusDTO } from '@pm/shared';
 import type { GanttView } from './GanttHeader';
@@ -42,18 +45,36 @@ interface GanttGridProps {
   onTimelineUpdate: (taskId: string, newStart: string | null, newEnd: string | null) => void;
 }
 
+// ─── Handle ──────────────────────────────────────────────────────────────────────────────
+
+export interface GanttGridHandle {
+  scrollToToday: () => void;
+}
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export const GanttGrid: FC<GanttGridProps> = ({
-  tasks,
-  statuses,
-  view,
-  year,
-  isDragEnabled,
-  onTaskClick,
-  onTimelineUpdate,
-}) => {
+export const GanttGrid = forwardRef(function GanttGrid(
+  { tasks, statuses, view, year, isDragEnabled, onTaskClick, onTimelineUpdate }: GanttGridProps,
+  ref: ForwardedRef<GanttGridHandle>,
+) {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const todayColRef = useRef<HTMLDivElement | null>(null);
+
+  const scrollToToday = useCallback(() => {
+    todayColRef.current?.scrollIntoView({
+      behavior: 'smooth',
+      block: 'nearest',
+      inline: 'center',
+    });
+  }, []);
+
+  useImperativeHandle(ref, () => ({ scrollToToday }), [scrollToToday]);
+
+  // Auto-scroll to today on mount
+  useEffect(() => {
+    scrollToToday();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const { start: rangeStart, end: rangeEnd } = useMemo(
     () => getRangeForView(view, year),
     [view, year],
@@ -254,6 +275,7 @@ export const GanttGrid: FC<GanttGridProps> = ({
               return (
                 <div
                   key={i}
+                  ref={highlight ? todayColRef : undefined}
                   style={{
                     width: colWidth,
                     minWidth: colWidth,
@@ -537,4 +559,4 @@ export const GanttGrid: FC<GanttGridProps> = ({
       </div>
     </div>
   );
-};
+});
