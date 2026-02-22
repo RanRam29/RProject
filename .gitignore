@@ -12,3 +12,4 @@ coverage/
 .turbo/
 packages/server/prisma/migrations/.gitkeep
 *.tsbuildinfo
+.worktrees/
