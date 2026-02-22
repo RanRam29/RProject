@@ -29,7 +29,7 @@ jobs:
         run: pnpm --filter @pm/shared build
 
       - name: Generate Prisma client
-        run: pnpm --filter @pm/server prisma generate
+        run: pnpm --filter @pm/server exec prisma generate
 
       - name: Type check
         run: pnpm typecheck
