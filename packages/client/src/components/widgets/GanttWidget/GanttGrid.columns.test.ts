@@ -16,7 +16,7 @@ describe('getColumnsForView', () => {
 
   it('returns one date per week (Mondays) for week view', () => {
     const start = parseISO('2026-01-05'); // Monday
-    const end   = parseISO('2026-03-29'); // 12 Mondays later
+    const end   = parseISO('2026-03-29'); // range contains exactly 12 Mondays (Jan 5 – Mar 23)
     const cols  = getColumnsForView('week', start, end);
     expect(cols.length).toBe(12);
     // Each should be a Monday (day 1)

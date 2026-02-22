@@ -54,7 +54,10 @@ export const GanttGrid: FC<GanttGridProps> = ({
   onTimelineUpdate,
 }) => {
   const scrollRef = useRef<HTMLDivElement>(null);
-  const { start: rangeStart, end: rangeEnd } = getRangeForView(view, year);
+  const { start: rangeStart, end: rangeEnd } = useMemo(
+    () => getRangeForView(view, year),
+    [view, year],
+  );
   const today = startOfDay(new Date());
 
   const columns = useMemo(
