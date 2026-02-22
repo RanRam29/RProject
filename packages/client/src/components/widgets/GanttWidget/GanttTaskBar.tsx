@@ -35,7 +35,7 @@ export const GanttTaskBar: FC<GanttTaskBarProps> = ({
   if (task.isMilestone) {
     return (
       <GanttTooltip task={task} status={status}>
-        <div
+        <motion.div
           style={{
             position: 'absolute',
             top: 6,
@@ -48,6 +48,7 @@ export const GanttTaskBar: FC<GanttTaskBarProps> = ({
             alignItems: 'center',
             justifyContent: 'center',
           }}
+          whileHover={{ scale: 1.15 }}
           onClick={onClick}
         >
           <div style={{
@@ -58,7 +59,7 @@ export const GanttTaskBar: FC<GanttTaskBarProps> = ({
             boxShadow: 'var(--shadow-sm)',
             transition: 'transform 0.15s',
           }} />
-        </div>
+        </motion.div>
       </GanttTooltip>
     );
   }
@@ -75,7 +76,7 @@ export const GanttTaskBar: FC<GanttTaskBarProps> = ({
           left: `${leftPct}%`,
           width: `${widthPct}%`,
           minWidth: 12,
-          borderRadius: 4,
+          borderRadius: 'var(--radius-md)',
           overflow: 'hidden',
           boxShadow: 'var(--shadow-xs)',
           cursor: isDragEnabled ? 'grab' : 'pointer',
@@ -94,6 +95,7 @@ export const GanttTaskBar: FC<GanttTaskBarProps> = ({
         }}
         onClick={onClick}
         whileDrag={{ cursor: 'grabbing', boxShadow: 'var(--shadow-drag)' }}
+        whileHover={{ filter: 'brightness(1.12)' }}
       >
         {/* Background track */}
         <div style={{

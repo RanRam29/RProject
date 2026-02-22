@@ -253,13 +253,16 @@ export const GanttGrid = forwardRef(function GanttGrid(
           background: 'var(--color-bg-elevated)',
           borderBottom: '1px solid var(--color-border)',
         }}>
-          {/* Label header spacer */}
+          {/* Label header spacer — sticky at left, above header zIndex */}
           <div style={{
             width: LABEL_W,
             minWidth: LABEL_W,
             flexShrink: 0,
-            borderRight: '1px solid var(--color-border)',
+            borderRight: '2px solid var(--color-border)',
             background: 'var(--color-bg-elevated)',
+            position: 'sticky',
+            left: 0,
+            zIndex: 30,
           }} />
 
           {/* Date columns — MUST be flex row, no wrap */}
@@ -304,13 +307,18 @@ export const GanttGrid = forwardRef(function GanttGrid(
         {/* ── BODY ───────────────────────────────────────────────────────── */}
         <div style={{ display: 'flex', height: totalHeight }}>
 
-          {/* Label column */}
+          {/* Label column — sticky at left, opaque elevated background */}
           <div style={{
             width: LABEL_W,
             minWidth: LABEL_W,
             flexShrink: 0,
             display: 'flex',
             flexDirection: 'column',
+            position: 'sticky',
+            left: 0,
+            zIndex: 10,
+            background: 'var(--color-bg-elevated)',
+            borderRight: '2px solid var(--color-border)',
           }}>
             {swimlanes.map((lane) => (
               <div key={lane.assigneeId ?? '__unassigned__'}>
@@ -321,9 +329,8 @@ export const GanttGrid = forwardRef(function GanttGrid(
                   alignItems: 'center',
                   gap: 8,
                   padding: '0 12px',
-                  background: 'var(--color-bg-secondary)',
+                  background: 'var(--color-bg-elevated)',
                   borderBottom: '1px solid var(--color-border)',
-                  borderRight: '1px solid var(--color-border)',
                 }}>
                   <div style={{
                     width: 24,
@@ -368,7 +375,6 @@ export const GanttGrid = forwardRef(function GanttGrid(
                       alignItems: 'center',
                       padding: '0 12px',
                       borderBottom: '1px solid var(--color-border)',
-                      borderRight: '1px solid var(--color-border)',
                       cursor: 'pointer',
                       background: 'transparent',
                       transition: 'background 0.1s',
