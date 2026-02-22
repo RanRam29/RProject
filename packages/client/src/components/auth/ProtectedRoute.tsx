@@ -8,21 +8,11 @@ export const ProtectedRoute: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          height: '100vh',
-          width: '100%',
-          backgroundColor: 'var(--color-bg-primary)',
-        }}
-      >
+      <div className="flex items-center justify-center h-screen w-full bg-[var(--color-bg-primary)]">
         <Loader2
           size={40}
           strokeWidth={2}
-          className="animate-spin"
-          style={{ color: 'var(--color-accent)' }}
+          className="animate-spin text-[var(--color-accent)]"
         />
       </div>
     );
