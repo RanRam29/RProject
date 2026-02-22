@@ -1,4 +1,5 @@
 import type { FC } from 'react';
+import { CalendarDays } from 'lucide-react';
 
 export type GanttView = 'day' | 'week' | 'month' | 'quarter' | 'year';
 
@@ -14,6 +15,7 @@ interface GanttHeaderProps {
   onAutoScheduleToggle: () => void;
   onExportPdf: () => void;
   isExporting: boolean;
+  onScrollToToday: () => void;
 }
 
 export const GanttHeader: FC<GanttHeaderProps> = ({
@@ -25,6 +27,7 @@ export const GanttHeader: FC<GanttHeaderProps> = ({
   onAutoScheduleToggle,
   onExportPdf,
   isExporting,
+  onScrollToToday,
 }) => (
   <div style={{
     display: 'flex',
@@ -113,6 +116,37 @@ export const GanttHeader: FC<GanttHeaderProps> = ({
         transition: 'background 0.15s',
       }} />
       Auto-Schedule
+    </button>
+
+    {/* Today button */}
+    <button
+      onClick={onScrollToToday}
+      title="Scroll to today"
+      aria-label="Today"
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 6,
+        fontSize: 12,
+        padding: '4px 10px',
+        borderRadius: 'var(--radius-sm)',
+        border: '1px solid var(--color-border)',
+        cursor: 'pointer',
+        background: 'var(--color-bg-elevated)',
+        color: 'var(--color-text-secondary)',
+        transition: 'all 0.15s',
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.background = 'var(--color-accent-light)';
+        e.currentTarget.style.color = 'var(--color-accent-text)';
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.background = 'var(--color-bg-elevated)';
+        e.currentTarget.style.color = 'var(--color-text-secondary)';
+      }}
+    >
+      <CalendarDays size={14} strokeWidth={2} />
+      Today
     </button>
 
     {/* Export PDF */}

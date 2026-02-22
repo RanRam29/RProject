@@ -21,7 +21,7 @@ import { useState, useCallback, useRef, type FC } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { tasksApi } from '../../../api/tasks.api';
 import { GanttHeader, type GanttView } from './GanttHeader';
-import { GanttGrid } from './GanttGrid';
+import { GanttGrid, type GanttGridHandle } from './GanttGrid';
 import { useUIStore } from '../../../stores/ui.store';
 import type { WidgetProps } from '../widget.types';
 
@@ -36,6 +36,7 @@ export const GanttWidget: FC<WidgetProps> = ({ projectId }) => {
   const [isExporting, setIsExporting] = useState(false);
 
   const ganttRef = useRef<HTMLDivElement>(null);
+  const ganttGridRef = useRef<GanttGridHandle>(null);
 
   // ── Remote data ─────────────────────────────────────────────────────────────
   const { data: tasks = [] } = useQuery({
@@ -127,6 +128,11 @@ export const GanttWidget: FC<WidgetProps> = ({ projectId }) => {
     }
   }, [isExporting, projectId, addToast]);
 
+  // ── Scroll to today
+  const handleScrollToToday = useCallback(() => {
+    ganttGridRef.current?.scrollToToday();
+  }, []);
+
   // ── DnD is only enabled for Day and Week views ────────────────────────────────
   const isDragEnabled = view === 'day' || view === 'week';
 
@@ -147,10 +153,12 @@ export const GanttWidget: FC<WidgetProps> = ({ projectId }) => {
         onAutoScheduleToggle={() => setAutoSchedule((v) => !v)}
         onExportPdf={handleExportPdf}
         isExporting={isExporting}
+        onScrollToToday={handleScrollToToday}
       />
 
       <div ref={ganttRef} style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
         <GanttGrid
+          ref={ganttGridRef}
           tasks={tasks}
           statuses={statuses}
           view={view}
