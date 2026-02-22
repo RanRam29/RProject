@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseISO } from 'date-fns';
+import { parseISO, startOfWeek, startOfMonth, startOfQuarter } from 'date-fns';
 import {
   getColumnsForView,
   colLabelForView,
@@ -60,6 +60,19 @@ describe('colLabelForView', () => {
   it('formats month columns as "Mon YYYY"', () => {
     expect(colLabelForView(parseISO('2026-01-01'), 'month')).toBe('Jan 2026');
   });
+
+  it('formats week columns as "W{n} Mon" (ISO week number + month abbrev)', () => {
+    // 2026-01-05 is the Monday of ISO week 2 in January
+    const label = colLabelForView(parseISO('2026-01-05'), 'week');
+    // Should start with W and contain Jan
+    expect(label).toMatch(/^W\d+\s+\w{3}$/);
+    expect(label).toContain('Jan');
+  });
+
+  it('formats day columns as "Day-abbrev date" e.g. "Mon 5"', () => {
+    const label = colLabelForView(parseISO('2026-01-05'), 'day');
+    expect(label).toBe('Mon 5');
+  });
 });
 
 describe('isTodayColumn', () => {
@@ -75,5 +88,25 @@ describe('isTodayColumn', () => {
   it('returns true for this year in year view', () => {
     const thisYear = new Date(new Date().getFullYear(), 0, 1);
     expect(isTodayColumn(thisYear, 'year')).toBe(true);
+  });
+
+  it('returns true for the current week in week view', () => {
+    const thisWeekMonday = startOfWeek(new Date(), { weekStartsOn: 1 });
+    expect(isTodayColumn(thisWeekMonday, 'week')).toBe(true);
+  });
+
+  it('returns false for a past week in week view', () => {
+    const pastMonday = startOfWeek(parseISO('2020-01-06'), { weekStartsOn: 1 });
+    expect(isTodayColumn(pastMonday, 'week')).toBe(false);
+  });
+
+  it('returns true for the current month in month view', () => {
+    const thisMonth = startOfMonth(new Date());
+    expect(isTodayColumn(thisMonth, 'month')).toBe(true);
+  });
+
+  it('returns true for the current quarter in quarter view', () => {
+    const thisQuarter = startOfQuarter(new Date());
+    expect(isTodayColumn(thisQuarter, 'quarter')).toBe(true);
   });
 });
