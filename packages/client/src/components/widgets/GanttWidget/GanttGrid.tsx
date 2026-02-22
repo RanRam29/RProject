@@ -1,31 +1,29 @@
-import { useRef, useMemo, useCallback, type FC } from 'react';
 import {
-  eachDayOfInterval,
-  startOfDay,
-  startOfWeek,
-  endOfWeek,
-  startOfMonth,
-  endOfMonth,
-  startOfYear,
-  endOfYear,
-  format,
-  parseISO,
-  isValid,
-  differenceInDays,
-  addDays,
-  isToday,
-} from 'date-fns';
+  useRef, useMemo, useCallback, useEffect, useImperativeHandle, forwardRef,
+  type ForwardedRef,
+} from 'react';
+import { parseISO, isValid } from 'date-fns';
 import type { TaskDTO, TaskStatusDTO } from '@pm/shared';
 import type { GanttView } from './GanttHeader';
 import { GanttTaskBar } from './GanttTaskBar';
 import { GanttDependencyLines, type BarRect } from './GanttDependencyLines';
+import {
+  COL_W,
+  getRangeForView,
+  getColumnsForView,
+  colLabelForView,
+  isTodayColumn,
+  startOfDay,
+  differenceInDays,
+  addDays,
+  format,
+} from './ganttGridHelpers';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const ROW_H = 44;
 const LABEL_W = 200;
 const HEADER_H = 36;
-const COL_W: Record<GanttView, number> = { day: 80, week: 50, month: 36, quarter: 30, year: 24 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -33,58 +31,6 @@ function safeDate(s: string | null | undefined): Date | null {
   if (!s) return null;
   const d = parseISO(s);
   return isValid(d) ? startOfDay(d) : null;
-}
-
-function getRangeForView(view: GanttView, year: number): { start: Date; end: Date } {
-  const base = new Date(year, 0, 1);
-  const now = new Date();
-  switch (view) {
-    case 'day':
-      return {
-        start: startOfWeek(addDays(now, -7), { weekStartsOn: 1 }),
-        end: endOfWeek(addDays(now, 7), { weekStartsOn: 1 }),
-      };
-    case 'week':
-      return {
-        start: startOfMonth(addDays(now, -30)),
-        end: endOfMonth(addDays(now, 60)),
-      };
-    case 'month':
-      return { start: startOfYear(base), end: endOfYear(base) };
-    case 'quarter':
-      return { start: startOfYear(base), end: endOfYear(base) };
-    case 'year':
-      return { start: startOfYear(base), end: endOfYear(base) };
-  }
-}
-
-function getColumns(view: GanttView, rangeStart: Date, rangeEnd: Date, allDays: Date[]): Date[] {
-  if (view === 'year') {
-    const months: Date[] = [];
-    let c = new Date(rangeStart);
-    while (c <= rangeEnd) {
-      months.push(startOfMonth(c));
-      c = new Date(c.getFullYear(), c.getMonth() + 1, 1);
-    }
-    return months;
-  }
-  if (view === 'quarter') {
-    const weeks: Date[] = [];
-    let c = startOfWeek(rangeStart, { weekStartsOn: 1 });
-    while (c <= rangeEnd) { weeks.push(c); c = addDays(c, 7); }
-    return weeks;
-  }
-  return allDays;
-}
-
-function colLabel(date: Date, view: GanttView): string {
-  switch (view) {
-    case 'day':     return format(date, 'EEE d');
-    case 'week':    return format(date, 'EEE d');
-    case 'month':   return format(date, 'd');
-    case 'quarter': return format(date, 'd MMM');
-    case 'year':    return format(date, 'MMM');
-  }
 }
 
 // ─── Props ────────────────────────────────────────────────────────────────────
@@ -99,29 +45,42 @@ interface GanttGridProps {
   onTimelineUpdate: (taskId: string, newStart: string | null, newEnd: string | null) => void;
 }
 
+// ─── Handle ──────────────────────────────────────────────────────────────────────────────
+
+export interface GanttGridHandle {
+  scrollToToday: () => void;
+}
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export const GanttGrid: FC<GanttGridProps> = ({
-  tasks,
-  statuses,
-  view,
-  year,
-  isDragEnabled,
-  onTaskClick,
-  onTimelineUpdate,
-}) => {
+export const GanttGrid = forwardRef(function GanttGrid(
+  { tasks, statuses, view, year, isDragEnabled, onTaskClick, onTimelineUpdate }: GanttGridProps,
+  ref: ForwardedRef<GanttGridHandle>,
+) {
   const scrollRef = useRef<HTMLDivElement>(null);
-  const { start: rangeStart, end: rangeEnd } = getRangeForView(view, year);
-  const today = startOfDay(new Date());
+  const todayColRef = useRef<HTMLDivElement | null>(null);
 
-  const allDays = useMemo(
-    () => eachDayOfInterval({ start: rangeStart, end: rangeEnd }),
-    [rangeStart, rangeEnd],
+  const scrollToToday = useCallback(() => {
+    todayColRef.current?.scrollIntoView({
+      behavior: 'smooth',
+      block: 'nearest',
+      inline: 'center',
+    });
+  }, []);
+
+  useImperativeHandle(ref, () => ({ scrollToToday }), [scrollToToday]);
+
+  const { start: rangeStart, end: rangeEnd } = useMemo(
+    () => getRangeForView(view, year),
+    [view, year],
   );
+  // Memoized so downstream useMemos that depend on it are not invalidated on every render.
+  // Date only changes meaningfully at midnight — the empty dep array is intentional.
+  const today = useMemo(() => startOfDay(new Date()), []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const columns = useMemo(
-    () => getColumns(view, rangeStart, rangeEnd, allDays),
-    [view, rangeStart, rangeEnd, allDays],
+    () => getColumnsForView(view, rangeStart, rangeEnd),
+    [view, rangeStart, rangeEnd],
   );
 
   const totalDays = differenceInDays(rangeEnd, rangeStart) + 1;
@@ -176,13 +135,15 @@ export const GanttGrid: FC<GanttGridProps> = ({
       const s = safeDate(task.startDate);
       const e = safeDate(task.dueDate);
       if (!s || !e) continue;
-      const days = eachDayOfInterval({ start: s, end: e });
-      const hpd = (task.estimatedHours ?? 0) / Math.max(days.length, 1);
-      for (const day of days) {
-        const k = format(day, 'yyyy-MM-dd');
+      const days = Math.max(differenceInDays(e, s) + 1, 1);
+      const hpd = (task.estimatedHours ?? 0) / days;
+      let cur = s;
+      for (let i = 0; i < days; i++) {
+        const k = format(cur, 'yyyy-MM-dd');
         const am = map.get(task.assigneeId) ?? new Map<string, number>();
         am.set(k, (am.get(k) ?? 0) + hpd);
         map.set(task.assigneeId, am);
+        cur = addDays(cur, 1);
       }
     }
     const overloaded = new Set<string>();
@@ -238,6 +199,13 @@ export const GanttGrid: FC<GanttGridProps> = ({
     );
   }, [onTimelineUpdate]);
 
+  // Auto-scroll to today on mount — placed here so todayColRef is populated
+  // by the useMemos above before this effect fires after first paint.
+  useEffect(() => {
+    scrollToToday();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // ── Empty state ───────────────────────────────────────────────────────────
   if (tasks.length === 0) {
     return (
@@ -261,7 +229,7 @@ export const GanttGrid: FC<GanttGridProps> = ({
   const totalCanvasWidth = LABEL_W + gridWidth;
 
   // Today column index
-  const todayColIdx = columns.findIndex((c) => isToday(c));
+  const todayColIdx = columns.findIndex((c) => isTodayColumn(c, view));
 
   return (
     // Outer scroll container
@@ -287,13 +255,16 @@ export const GanttGrid: FC<GanttGridProps> = ({
           background: 'var(--color-bg-elevated)',
           borderBottom: '1px solid var(--color-border)',
         }}>
-          {/* Label header spacer */}
+          {/* Label header spacer — sticky at left, above header zIndex */}
           <div style={{
             width: LABEL_W,
             minWidth: LABEL_W,
             flexShrink: 0,
-            borderRight: '1px solid var(--color-border)',
+            borderRight: '2px solid var(--color-border)',
             background: 'var(--color-bg-elevated)',
+            position: 'sticky',
+            left: 0,
+            zIndex: 30,
           }} />
 
           {/* Date columns — MUST be flex row, no wrap */}
@@ -307,10 +278,11 @@ export const GanttGrid: FC<GanttGridProps> = ({
             overflow: 'hidden',
           }}>
             {columns.map((col, i) => {
-              const highlight = isToday(col);
+              const highlight = isTodayColumn(col, view);
               return (
                 <div
                   key={i}
+                  ref={highlight ? todayColRef : undefined}
                   style={{
                     width: colWidth,
                     minWidth: colWidth,
@@ -327,7 +299,7 @@ export const GanttGrid: FC<GanttGridProps> = ({
                     whiteSpace: 'nowrap',
                   }}
                 >
-                  {colLabel(col, view)}
+                  {colLabelForView(col, view)}
                 </div>
               );
             })}
@@ -337,13 +309,18 @@ export const GanttGrid: FC<GanttGridProps> = ({
         {/* ── BODY ───────────────────────────────────────────────────────── */}
         <div style={{ display: 'flex', height: totalHeight }}>
 
-          {/* Label column */}
+          {/* Label column — sticky at left, opaque elevated background */}
           <div style={{
             width: LABEL_W,
             minWidth: LABEL_W,
             flexShrink: 0,
             display: 'flex',
             flexDirection: 'column',
+            position: 'sticky',
+            left: 0,
+            zIndex: 10,
+            background: 'var(--color-bg-elevated)',
+            borderRight: '2px solid var(--color-border)',
           }}>
             {swimlanes.map((lane) => (
               <div key={lane.assigneeId ?? '__unassigned__'}>
@@ -354,9 +331,8 @@ export const GanttGrid: FC<GanttGridProps> = ({
                   alignItems: 'center',
                   gap: 8,
                   padding: '0 12px',
-                  background: 'var(--color-bg-secondary)',
+                  background: 'var(--color-bg-elevated)',
                   borderBottom: '1px solid var(--color-border)',
-                  borderRight: '1px solid var(--color-border)',
                 }}>
                   <div style={{
                     width: 24,
@@ -401,7 +377,6 @@ export const GanttGrid: FC<GanttGridProps> = ({
                       alignItems: 'center',
                       padding: '0 12px',
                       borderBottom: '1px solid var(--color-border)',
-                      borderRight: '1px solid var(--color-border)',
                       cursor: 'pointer',
                       background: 'transparent',
                       transition: 'background 0.1s',
@@ -594,4 +569,4 @@ export const GanttGrid: FC<GanttGridProps> = ({
       </div>
     </div>
   );
-};
+});

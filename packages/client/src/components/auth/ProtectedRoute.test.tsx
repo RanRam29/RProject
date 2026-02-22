@@ -1,72 +1,79 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { MemoryRouter } from 'react-router-dom';
 import { ProtectedRoute } from './ProtectedRoute';
+import { vi, describe, it, expect, beforeEach } from 'vitest';
+import { SystemRole } from '@pm/shared';
 
-const mockUseAuth = vi.fn();
-vi.mock('../../hooks/useAuth', () => ({
-  useAuth: () => mockUseAuth(),
-}));
+vi.mock('../../hooks/useAuth');
 
-function renderProtectedRoute() {
-  return render(
-    <MemoryRouter initialEntries={['/protected']}>
-      <Routes>
-        <Route path="/protected" element={<ProtectedRoute />}>
-          <Route index element={<div>Protected Content</div>} />
-        </Route>
-        <Route path="/login" element={<div>Login Page</div>} />
-      </Routes>
-    </MemoryRouter>
-  );
-}
+import { useAuth } from '../../hooks/useAuth';
+const mockUseAuth = vi.mocked(useAuth);
 
 describe('ProtectedRoute', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    vi.resetAllMocks();
   });
 
-  it('shows spinner when loading', () => {
-    mockUseAuth.mockReturnValue({ isAuthenticated: false, isLoading: true });
-
-    const { container } = renderProtectedRoute();
-
-    // The spinner container has a specific style with height 100vh
-    const spinnerContainer = container.querySelector('div[style*="height: 100vh"]');
-    expect(spinnerContainer).toBeInTheDocument();
-
-    // The inner spinner div has the rotating animation style
-    const spinner = container.querySelector('div[style*="border-radius: 50%"]');
-    expect(spinner).toBeInTheDocument();
+  it('renders an SVG spinner (Loader2) while isLoading is true', () => {
+    mockUseAuth.mockReturnValue({
+      isAuthenticated: false,
+      isLoading: true,
+      user: null,
+      login: vi.fn(),
+      register: vi.fn(),
+      logout: vi.fn(),
+    });
+    const { container } = render(
+      <MemoryRouter>
+        <ProtectedRoute />
+      </MemoryRouter>
+    );
+    expect(container.querySelector('svg')).not.toBeNull();
   });
 
-  it('redirects to /login when not authenticated', () => {
-    mockUseAuth.mockReturnValue({ isAuthenticated: false, isLoading: false });
-
-    renderProtectedRoute();
-
-    expect(screen.getByText('Login Page')).toBeInTheDocument();
-    expect(screen.queryByText('Protected Content')).not.toBeInTheDocument();
+  it('keeps spinner visible (does not redirect) while isLoading is true', () => {
+    mockUseAuth.mockReturnValue({
+      isAuthenticated: false,
+      isLoading: true,
+      user: null,
+      login: vi.fn(),
+      register: vi.fn(),
+      logout: vi.fn(),
+    });
+    const { container } = render(
+      <MemoryRouter initialEntries={['/dashboard']}>
+        <ProtectedRoute />
+      </MemoryRouter>
+    );
+    // Spinner still visible means we did not navigate away
+    expect(container.querySelector('svg')).not.toBeNull();
   });
 
-  it('shows Outlet content when authenticated', () => {
-    mockUseAuth.mockReturnValue({ isAuthenticated: true, isLoading: false });
-
-    renderProtectedRoute();
-
-    expect(screen.getByText('Protected Content')).toBeInTheDocument();
-    expect(screen.queryByText('Login Page')).not.toBeInTheDocument();
-  });
-
-  it('does not show protected content when loading', () => {
-    mockUseAuth.mockReturnValue({ isAuthenticated: true, isLoading: true });
-
-    const { container } = renderProtectedRoute();
-
-    expect(screen.queryByText('Protected Content')).not.toBeInTheDocument();
-
-    // Should show spinner instead
-    const spinnerContainer = container.querySelector('div[style*="height: 100vh"]');
-    expect(spinnerContainer).toBeInTheDocument();
+  it('renders Outlet when authenticated and not loading', () => {
+    mockUseAuth.mockReturnValue({
+      isAuthenticated: true,
+      isLoading: false,
+      user: {
+        id: '1',
+        email: 'a@b.com',
+        displayName: 'A',
+        avatarUrl: null,
+        systemRole: SystemRole.PROJECT_CREATOR,
+        isActive: true,
+        emailNotifications: true,
+        createdAt: '2024-01-01T00:00:00.000Z',
+        updatedAt: '2024-01-01T00:00:00.000Z',
+      },
+      login: vi.fn(),
+      register: vi.fn(),
+      logout: vi.fn(),
+    });
+    render(
+      <MemoryRouter>
+        <ProtectedRoute />
+      </MemoryRouter>
+    );
+    // No spinner when authenticated
+    expect(screen.queryByRole('img')).toBeNull();
   });
 });

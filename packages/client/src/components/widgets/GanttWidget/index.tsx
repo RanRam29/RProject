@@ -21,9 +21,12 @@ import { useState, useCallback, useRef, type FC } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { tasksApi } from '../../../api/tasks.api';
 import { GanttHeader, type GanttView } from './GanttHeader';
-import { GanttGrid } from './GanttGrid';
+import { GanttGrid, type GanttGridHandle } from './GanttGrid';
 import { useUIStore } from '../../../stores/ui.store';
 import type { WidgetProps } from '../widget.types';
+import { FilterBar } from '../../filter/FilterBar';
+import { useTaskFilters } from '../../../hooks/useTaskFilters';
+import type { TaskDTO } from '@pm/shared';
 
 export const GanttWidget: FC<WidgetProps> = ({ projectId }) => {
   const queryClient = useQueryClient();
@@ -36,6 +39,7 @@ export const GanttWidget: FC<WidgetProps> = ({ projectId }) => {
   const [isExporting, setIsExporting] = useState(false);
 
   const ganttRef = useRef<HTMLDivElement>(null);
+  const ganttGridRef = useRef<GanttGridHandle>(null);
 
   // ── Remote data ─────────────────────────────────────────────────────────────
   const { data: tasks = [] } = useQuery({
@@ -47,6 +51,10 @@ export const GanttWidget: FC<WidgetProps> = ({ projectId }) => {
     queryKey: ['statuses', projectId],
     queryFn: () => tasksApi.getStatuses(projectId),
   });
+
+  // ── Filtering ─────────────────────────────────────────────────────────────
+  const { filters, filteredTasks, updateFilter, clearFilters, activeCount } =
+    useTaskFilters(tasks);
 
   // ── Timeline mutation (calls PATCH /tasks/:id/timeline) ─────────────────────
   const timelineMutation = useMutation({
@@ -85,7 +93,7 @@ export const GanttWidget: FC<WidgetProps> = ({ projectId }) => {
   );
 
   // ── Task click → open detail modal (reuse existing pattern) ─────────────────
-  const handleTaskClick = useCallback(() => {
+  const handleTaskClick = useCallback((_task: TaskDTO) => {
     // Intentionally left for the consuming page/widget host to handle via WS invalidation.
     // Phase 6.1.C integration: wire to LivingTaskModal from the project page.
   }, []);
@@ -127,6 +135,11 @@ export const GanttWidget: FC<WidgetProps> = ({ projectId }) => {
     }
   }, [isExporting, projectId, addToast]);
 
+  // ── Scroll to today
+  const handleScrollToToday = useCallback(() => {
+    ganttGridRef.current?.scrollToToday();
+  }, []);
+
   // ── DnD is only enabled for Day and Week views ────────────────────────────────
   const isDragEnabled = view === 'day' || view === 'week';
 
@@ -147,11 +160,21 @@ export const GanttWidget: FC<WidgetProps> = ({ projectId }) => {
         onAutoScheduleToggle={() => setAutoSchedule((v) => !v)}
         onExportPdf={handleExportPdf}
         isExporting={isExporting}
+        onScrollToToday={handleScrollToToday}
+      />
+
+      <FilterBar
+        projectId={projectId}
+        filters={filters}
+        activeCount={activeCount}
+        onFilterChange={updateFilter}
+        onClear={clearFilters}
       />
 
       <div ref={ganttRef} style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
         <GanttGrid
-          tasks={tasks}
+          ref={ganttGridRef}
+          tasks={filteredTasks}
           statuses={statuses}
           view={view}
           year={year}
