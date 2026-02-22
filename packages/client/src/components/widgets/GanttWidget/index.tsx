@@ -24,6 +24,8 @@ import { GanttHeader, type GanttView } from './GanttHeader';
 import { GanttGrid, type GanttGridHandle } from './GanttGrid';
 import { useUIStore } from '../../../stores/ui.store';
 import type { WidgetProps } from '../widget.types';
+import { FilterBar } from '../../filter/FilterBar';
+import { useTaskFilters } from '../../../hooks/useTaskFilters';
 
 export const GanttWidget: FC<WidgetProps> = ({ projectId }) => {
   const queryClient = useQueryClient();
@@ -48,6 +50,10 @@ export const GanttWidget: FC<WidgetProps> = ({ projectId }) => {
     queryKey: ['statuses', projectId],
     queryFn: () => tasksApi.getStatuses(projectId),
   });
+
+  // ── Filtering ─────────────────────────────────────────────────────────────
+  const { filters, filteredTasks, updateFilter, clearFilters, activeCount } =
+    useTaskFilters(tasks);
 
   // ── Timeline mutation (calls PATCH /tasks/:id/timeline) ─────────────────────
   const timelineMutation = useMutation({
@@ -156,10 +162,18 @@ export const GanttWidget: FC<WidgetProps> = ({ projectId }) => {
         onScrollToToday={handleScrollToToday}
       />
 
+      <FilterBar
+        projectId={projectId}
+        filters={filters}
+        activeCount={activeCount}
+        onFilterChange={updateFilter}
+        onClear={clearFilters}
+      />
+
       <div ref={ganttRef} style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
         <GanttGrid
           ref={ganttGridRef}
-          tasks={tasks}
+          tasks={filteredTasks}
           statuses={statuses}
           view={view}
           year={year}
