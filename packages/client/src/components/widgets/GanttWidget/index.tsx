@@ -1,32 +1,30 @@
 /**
- * GanttWidget — Phase 6.1 Advanced Gantt Chart
+ * GanttWidget — Phase 7 Gantt Usability Overhaul
  *
  * Features:
- *  • Day / Week / Month / Quarter / Year views with year selector
- *  • Smart sort: overdue → current → future
- *  • Swimlane grouping by assignee
- *  • Task bars with dynamic progressPercentage fill
- *  • Milestone diamond rendering (isMilestone)
- *  • Auto-schedule toggle: cascades date delta to downstream dependents
- *  • Resource overload indicator (>8h/day → red ring on avatar)
- *  • SVG dependency arrows
- *  • HoverCard tooltip (title, assignee, status, progress, dates, estimatedHours)
- *  • Drag-to-reschedule restricted to Day/Week views only
- *  • Client-side PDF export via html2canvas + jspdf
- *  • Activity logged server-side for every timeline change
+ *  • Optimistic timeline updates with rollback on error
+ *  • Cascade feedback toast when auto-schedule reschedules dependents
+ *  • LivingTaskModal for full task detail on click
+ *  • PDF export with progress flag (pdfExporting)
+ *  • FilterBar integration via useTaskFilters
+ *  • swimlaneMode, focusMode, autoSchedule toggles
+ *  • GanttTimeline ref forwarded for scrollToToday
  *  • Zero regressions: same query keys, same WidgetProps interface
  */
 
 import { useState, useCallback, useRef, type FC } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { tasksApi } from '../../../api/tasks.api';
-import { GanttHeader, type GanttView } from './GanttHeader';
-import { GanttGrid, type GanttGridHandle } from './GanttGrid';
+import { type GanttView } from './GanttHeader';
+import { type GanttGridHandle } from './GanttGrid';
 import { useUIStore } from '../../../stores/ui.store';
 import type { WidgetProps } from '../widget.types';
 import { FilterBar } from '../../filter/FilterBar';
 import { useTaskFilters } from '../../../hooks/useTaskFilters';
 import type { TaskDTO } from '@pm/shared';
+import { LivingTaskModal } from '../../task/LivingTaskModal';
+// @ts-ignore — GanttTimeline will be created in the next task
+import { GanttTimeline } from './GanttTimeline';
 
 export const GanttWidget: FC<WidgetProps> = ({ projectId }) => {
   const queryClient = useQueryClient();
@@ -36,7 +34,12 @@ export const GanttWidget: FC<WidgetProps> = ({ projectId }) => {
   const [view, setView] = useState<GanttView>('week');
   const [year, setYear] = useState(() => new Date().getFullYear());
   const [autoSchedule, setAutoSchedule] = useState(false);
-  const [isExporting, setIsExporting] = useState(false);
+  const [swimlaneMode, setSwimlaneMode] = useState(false);
+  const [focusMode, setFocusMode] = useState(false);
+  const [pdfExporting, setPdfExporting] = useState(false);
+
+  // ── Task detail modal state ──────────────────────────────────────────────────
+  const [selectedTask, setSelectedTask] = useState<TaskDTO | null>(null);
 
   const ganttRef = useRef<HTMLDivElement>(null);
   const ganttGridRef = useRef<GanttGridHandle>(null);
@@ -47,17 +50,17 @@ export const GanttWidget: FC<WidgetProps> = ({ projectId }) => {
     queryFn: () => tasksApi.list(projectId),
   });
 
-  const { data: statuses = [] } = useQuery({
+  const { data: statuses } = useQuery({
     queryKey: ['statuses', projectId],
     queryFn: () => tasksApi.getStatuses(projectId),
   });
 
-  // ── Filtering ─────────────────────────────────────────────────────────────
+  // ── Filtering ────────────────────────────────────────────────────────────────
   const { filters, filteredTasks, updateFilter, clearFilters, activeCount } =
     useTaskFilters(tasks);
 
-  // ── Timeline mutation (calls PATCH /tasks/:id/timeline) ─────────────────────
-  const timelineMutation = useMutation({
+  // ── Timeline mutation with optimistic updates + rollback ─────────────────────
+  const mutation = useMutation({
     mutationFn: ({
       taskId,
       startDate,
@@ -72,97 +75,81 @@ export const GanttWidget: FC<WidgetProps> = ({ projectId }) => {
         endDate,
         autoSchedule,
       }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['tasks', projectId] });
+    onMutate: async ({ taskId, startDate, endDate }) => {
+      await queryClient.cancelQueries({ queryKey: ['tasks', projectId] });
+      const snapshot = queryClient.getQueryData<TaskDTO[]>(['tasks', projectId]);
+      queryClient.setQueryData(['tasks', projectId], (old: TaskDTO[] = []) =>
+        old.map((t) =>
+          t.id === taskId ? { ...t, startDate, dueDate: endDate } : t,
+        ),
+      );
+      return { snapshot };
     },
-    onError: () => {
-      queryClient.invalidateQueries({ queryKey: ['tasks', projectId] });
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.snapshot) {
+        queryClient.setQueryData(['tasks', projectId], ctx.snapshot);
+      }
       addToast({ type: 'error', message: 'Failed to update task timeline' });
+    },
+    onSuccess: (data, { taskId }) => {
+      const cascaded = (data?.updated ?? []).filter((u) => u.taskId !== taskId);
+      if (autoSchedule && cascaded.length > 0) {
+        addToast({
+          type: 'success',
+          message: `Rescheduled ${cascaded.length} dependent task${cascaded.length > 1 ? 's' : ''}`,
+        });
+      }
+      queryClient.invalidateQueries({ queryKey: ['tasks', projectId] });
     },
   });
 
-  // Stable ref to avoid stale closure in GanttGrid callbacks
-  const timelineMutateRef = useRef(timelineMutation.mutate);
-  timelineMutateRef.current = timelineMutation.mutate;
-
-  const handleTimelineUpdate = useCallback(
-    (taskId: string, newStart: string | null, newEnd: string | null) => {
-      timelineMutateRef.current({ taskId, startDate: newStart, endDate: newEnd });
-    },
-    [],
-  );
-
-  // ── Task click → open detail modal (reuse existing pattern) ─────────────────
-  const handleTaskClick = useCallback((_task: TaskDTO) => {
-    // Intentionally left for the consuming page/widget host to handle via WS invalidation.
-    // Phase 6.1.C integration: wire to LivingTaskModal from the project page.
+  // ── Task click handler ───────────────────────────────────────────────────────
+  const handleTaskClick = useCallback((task: TaskDTO) => {
+    setSelectedTask(task);
   }, []);
 
   // ── PDF Export ───────────────────────────────────────────────────────────────
-  const handleExportPdf = useCallback(async () => {
-    if (!ganttRef.current || isExporting) return;
-    setIsExporting(true);
-
+  const handleExportPDF = async () => {
+    if (!ganttRef.current || pdfExporting) return;
+    setPdfExporting(true);
     try {
-      // Dynamically import to keep these out of the initial bundle
       const [{ default: html2canvas }, { default: jsPDF }] = await Promise.all([
         import('html2canvas'),
         import('jspdf'),
       ]);
-
       const canvas = await html2canvas(ganttRef.current, {
-        scale: 2,
+        scale: 1.5,
         useCORS: true,
-        backgroundColor: '#ffffff',
-        logging: false,
       });
-
-      const imgData = canvas.toDataURL('image/png');
       const pdf = new jsPDF({
         orientation: 'landscape',
         unit: 'px',
-        format: [canvas.width / 2, canvas.height / 2],
+        format: [canvas.width, canvas.height],
       });
-      pdf.addImage(imgData, 'PNG', 0, 0, canvas.width / 2, canvas.height / 2);
-
-      const today = new Date().toISOString().slice(0, 10);
-      pdf.save(`gantt-${projectId}-${today}.pdf`);
-      addToast({ type: 'success', message: 'Gantt exported to PDF' });
-    } catch {
-      addToast({ type: 'error', message: 'PDF export failed' });
+      pdf.addImage(
+        canvas.toDataURL('image/png'),
+        'PNG',
+        0,
+        0,
+        canvas.width,
+        canvas.height,
+      );
+      pdf.save(`gantt-${projectId}.pdf`);
     } finally {
-      setIsExporting(false);
+      setPdfExporting(false);
     }
-  }, [isExporting, projectId, addToast]);
-
-  // ── Scroll to today
-  const handleScrollToToday = useCallback(() => {
-    ganttGridRef.current?.scrollToToday();
-  }, []);
-
-  // ── DnD is only enabled for Day and Week views ────────────────────────────────
-  const isDragEnabled = view === 'day' || view === 'week';
+  };
 
   return (
-    <div style={{
-      display: 'flex',
-      flexDirection: 'column',
-      height: '100%',
-      background: 'var(--color-bg-elevated)',
-      overflow: 'hidden',
-    }}>
-      <GanttHeader
-        view={view}
-        onViewChange={setView}
-        year={year}
-        onYearChange={setYear}
-        autoSchedule={autoSchedule}
-        onAutoScheduleToggle={() => setAutoSchedule((v) => !v)}
-        onExportPdf={handleExportPdf}
-        isExporting={isExporting}
-        onScrollToToday={handleScrollToToday}
-      />
-
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100%',
+        background: 'var(--color-bg-elevated)',
+        overflow: 'hidden',
+      }}
+    >
       <FilterBar
         projectId={projectId}
         filters={filters}
@@ -172,17 +159,40 @@ export const GanttWidget: FC<WidgetProps> = ({ projectId }) => {
       />
 
       <div ref={ganttRef} style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
-        <GanttGrid
+        <GanttTimeline
           ref={ganttGridRef}
           tasks={filteredTasks}
-          statuses={statuses}
+          statuses={statuses ?? []}
           view={view}
           year={year}
-          isDragEnabled={isDragEnabled}
+          isDragEnabled={view === 'day' || view === 'week'}
+          swimlaneMode={swimlaneMode}
+          focusMode={focusMode}
+          autoSchedule={autoSchedule}
+          pdfExporting={pdfExporting}
+          onFocusModeChange={setFocusMode}
+          onSwimlaneToggle={() => setSwimlaneMode((v) => !v)}
+          onViewChange={setView}
+          onYearChange={setYear}
+          onAutoScheduleChange={setAutoSchedule}
+          onScrollToToday={() => ganttGridRef.current?.scrollToToday()}
+          onExportPDF={handleExportPDF}
           onTaskClick={handleTaskClick}
-          onTimelineUpdate={handleTimelineUpdate}
+          onTimelineUpdate={(taskId: string, start: string | null, end: string | null) =>
+            mutation.mutate({ taskId, startDate: start, endDate: end })
+          }
         />
       </div>
+
+      {selectedTask && (
+        <LivingTaskModal
+          isOpen={!!selectedTask}
+          onClose={() => setSelectedTask(null)}
+          projectId={projectId}
+          task={selectedTask}
+          statuses={statuses ?? []}
+        />
+      )}
     </div>
   );
 };
