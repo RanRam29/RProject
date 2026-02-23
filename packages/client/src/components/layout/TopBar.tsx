@@ -94,76 +94,30 @@ export const TopBar: React.FC<TopBarProps> = ({ onMenuClick }) => {
     ? user.displayName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
     : '??';
 
-  /* ── Icon button style ── */
-  const iconBtn: React.CSSProperties = {
-    display: 'flex', alignItems: 'center', justifyContent: 'center',
-    width: '34px', height: '34px',
-    border: 'none', borderRadius: '8px',
-    backgroundColor: 'transparent',
-    color: 'var(--color-text-secondary)',
-    cursor: 'pointer',
-    transition: 'all var(--transition-fast)',
-    flexShrink: 0,
-  };
+  /* ── Shared Tailwind class for icon buttons ── */
+  const iconBtnClass = 'flex items-center justify-center w-[34px] h-[34px] rounded-lg border-none text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition-colors duration-200 cursor-pointer shrink-0 bg-transparent';
 
   return (
-    <header style={{
-      display: 'flex', alignItems: 'center',
-      height: 'var(--topbar-height)', padding: '0 16px 0 8px',
-      backgroundColor: 'var(--color-bg-elevated)',
-      boxShadow: 'var(--shadow-topbar)',
-      flexShrink: 0,
-      position: 'sticky', top: 0, zIndex: 50,
-      gap: '8px',
-    }}>
+    <header className="flex items-center gap-2 shrink-0 sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-200/60 pr-4 pl-2" style={{ height: 'var(--topbar-height)' }}>
 
       {/* ── Left: Menu toggle ── */}
-      <button
-        style={iconBtn}
-        onClick={onMenuClick}
-        title="Toggle sidebar"
-        onMouseEnter={e => { e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)'; e.currentTarget.style.color = 'var(--color-text-primary)'; }}
-        onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = 'var(--color-text-secondary)'; }}
-      >
+      <button className={iconBtnClass} onClick={onMenuClick} title="Toggle sidebar">
         <MenuIcon />
       </button>
 
       {/* ── Center: Search bar ── */}
-      <div style={{ flex: 1, maxWidth: '480px', margin: '0 auto' }}>
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: '8px',
-          padding: '0 12px',
-          height: '36px',
-          backgroundColor: 'var(--color-bg-primary)',
-          border: '1.5px solid var(--color-border)',
-          borderRadius: '9px',
-          color: 'var(--color-text-tertiary)',
-          cursor: 'text',
-          transition: 'border-color var(--transition-fast), box-shadow var(--transition-fast)',
-        }}
+      <div className="flex-1 max-w-[480px] mx-auto">
+        <div
+          className="flex items-center gap-2 px-3 h-9 rounded-[9px] cursor-text bg-slate-100 text-slate-400 transition-all duration-200 hover:bg-white hover:ring-2 hover:ring-slate-200"
           onClick={() => {
-            /* Trigger command palette */
             const event = new KeyboardEvent('keydown', { key: 'k', ctrlKey: true, bubbles: true });
             document.dispatchEvent(event);
           }}
-          onMouseEnter={e => {
-            (e.currentTarget as HTMLDivElement).style.borderColor = 'var(--color-accent)';
-            (e.currentTarget as HTMLDivElement).style.boxShadow = '0 0 0 3px var(--color-accent-light)';
-          }}
-          onMouseLeave={e => {
-            (e.currentTarget as HTMLDivElement).style.borderColor = 'var(--color-border)';
-            (e.currentTarget as HTMLDivElement).style.boxShadow = 'none';
-          }}
         >
           <SearchIcon />
-          <span style={{ fontSize: '13px', flex: 1, userSelect: 'none' }}>Search...</span>
+          <span className="text-[13px] flex-1 select-none">Search...</span>
           {!isMobile && (
-            <span style={{
-              fontSize: '10px', fontWeight: 600, padding: '2px 5px',
-              borderRadius: '4px', border: '1px solid var(--color-border)',
-              color: 'var(--color-text-tertiary)', letterSpacing: '0.3px',
-              userSelect: 'none',
-            }}>
+            <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded border border-slate-200 text-slate-400 tracking-wide select-none">
               ⌘K
             </span>
           )}
@@ -175,23 +129,16 @@ export const TopBar: React.FC<TopBarProps> = ({ onMenuClick }) => {
 
         {/* Help */}
         {!isMobile && (
-          <button
-            style={iconBtn}
-            title="Help"
-            onMouseEnter={e => { e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)'; e.currentTarget.style.color = 'var(--color-text-primary)'; }}
-            onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = 'var(--color-text-secondary)'; }}
-          >
+          <button className={iconBtnClass} title="Help">
             <QuestionIcon />
           </button>
         )}
 
         {/* Theme toggle */}
         <button
-          style={iconBtn}
+          className={iconBtnClass}
           onClick={toggleTheme}
           title={theme === 'dark' ? 'Light mode' : 'Dark mode'}
-          onMouseEnter={e => { e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)'; e.currentTarget.style.color = 'var(--color-text-primary)'; }}
-          onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = 'var(--color-text-secondary)'; }}
         >
           {theme === 'dark' ? <SunIcon /> : <MoonIcon />}
         </button>
@@ -200,17 +147,10 @@ export const TopBar: React.FC<TopBarProps> = ({ onMenuClick }) => {
         <NotificationBell />
 
         {/* ── User avatar dropdown ── */}
-        <div ref={dropdownRef} style={{ position: 'relative', marginLeft: '4px' }}>
+        <div ref={dropdownRef} className="relative ml-1">
           <button
             onClick={() => setDropdownOpen(p => !p)}
-            style={{
-              display: 'flex', alignItems: 'center', gap: '7px',
-              padding: '4px 8px 4px 4px', border: 'none', borderRadius: '9px',
-              backgroundColor: 'transparent', cursor: 'pointer',
-              transition: 'all var(--transition-fast)',
-            }}
-            onMouseEnter={e => { e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)'; }}
-            onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+            className="flex items-center gap-1.5 pl-1 pr-2 py-1 border-none rounded-[9px] bg-transparent cursor-pointer hover:bg-slate-100 transition-colors duration-200"
           >
             {/* Avatar circle */}
             {user?.avatarUrl ? (
@@ -311,23 +251,14 @@ const DropdownItem: React.FC<{
 }> = ({ icon, label, onClick, danger }) => (
   <button
     onClick={onClick}
-    style={{
-      display: 'flex', alignItems: 'center', gap: '9px',
-      width: '100%', padding: '8px 10px',
-      border: 'none', borderRadius: '8px',
-      backgroundColor: 'transparent',
-      color: danger ? 'var(--color-danger)' : 'var(--color-text-secondary)',
-      fontSize: '13px', fontWeight: 500,
-      cursor: 'pointer', transition: 'all var(--transition-fast)', textAlign: 'left',
-    }}
-    onMouseEnter={e => {
-      e.currentTarget.style.backgroundColor = danger ? 'var(--color-danger-light)' : 'var(--color-bg-tertiary)';
-      e.currentTarget.style.color = danger ? 'var(--color-danger)' : 'var(--color-text-primary)';
-    }}
-    onMouseLeave={e => {
-      e.currentTarget.style.backgroundColor = 'transparent';
-      e.currentTarget.style.color = danger ? 'var(--color-danger)' : 'var(--color-text-secondary)';
-    }}
+    className={[
+      'flex items-center gap-2 w-full px-2.5 py-2 border-none rounded-lg',
+      'text-[13px] font-medium cursor-pointer text-left bg-transparent',
+      'transition-colors duration-200',
+      danger
+        ? 'text-rose-500 hover:bg-rose-50 hover:text-rose-600'
+        : 'text-slate-500 hover:bg-slate-100 hover:text-slate-800',
+    ].join(' ')}
   >
     {icon}
     {label}

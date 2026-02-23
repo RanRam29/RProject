@@ -190,45 +190,9 @@ export function TaskListWidget({ projectId }: WidgetProps) {
     overflow: 'hidden',
   };
 
-  const thStyle: React.CSSProperties = {
-    padding: '8px 12px',
-    textAlign: 'left',
-    fontSize: '11px',
-    fontWeight: 600,
-    color: 'var(--color-text-secondary)',
-    textTransform: 'uppercase',
-    letterSpacing: '0.5px',
-    cursor: 'pointer',
-    userSelect: 'none',
-    whiteSpace: 'nowrap',
-    borderBottom: '2px solid var(--color-border)',
-    backgroundColor: 'var(--color-bg-secondary)',
-    position: 'sticky',
-    top: 0,
-    zIndex: 1,
-  };
-
-  const tdStyle: React.CSSProperties = {
-    padding: '8px 12px',
-    fontSize: '13px',
-    color: 'var(--color-text-primary)',
-    borderBottom: '1px solid var(--color-border)',
-    whiteSpace: 'nowrap',
-    overflow: 'hidden',
-    textOverflow: 'ellipsis',
-  };
-
-  const actionBtnStyle: React.CSSProperties = {
-    background: 'none',
-    border: 'none',
-    cursor: 'pointer',
-    fontSize: '14px',
-    padding: '2px 6px',
-    borderRadius: 'var(--radius-sm)',
-    transition: 'all var(--transition-fast)',
-    opacity: 0,
-    color: 'var(--color-text-secondary)',
-  };
+  // Tailwind class helpers — "Clean Scan" table spec
+  const thClass = 'px-3 py-2 text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wide cursor-pointer select-none whitespace-nowrap border-b border-slate-100 bg-slate-50/50 sticky top-0 z-[1]';
+  const tdClass = 'px-3 py-2 text-[13px] text-slate-700 border-b border-slate-100 whitespace-nowrap overflow-hidden text-ellipsis';
 
   if (isLoading) {
     return (
@@ -356,14 +320,7 @@ export function TaskListWidget({ projectId }: WidgetProps) {
                 <div
                   key={task.id}
                   onClick={() => setSelectedTask(task)}
-                  style={{
-                    padding: '12px',
-                    borderRadius: 'var(--radius-md)',
-                    border: '1px solid var(--color-border)',
-                    backgroundColor: 'var(--color-bg-elevated)',
-                    cursor: 'pointer',
-                    transition: 'background var(--transition-fast)',
-                  }}
+                  className="p-3 rounded-xl border border-slate-200/60 bg-white cursor-pointer transition-colors duration-200 hover:bg-slate-50/50"
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
                     <input
@@ -411,26 +368,26 @@ export function TaskListWidget({ projectId }: WidgetProps) {
           </div>
         ) : (
           /* Desktop table layout */
-          <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '700px' }}>
+          <table className="w-full min-w-[700px]" style={{ borderCollapse: 'collapse' }}>
             <thead>
               <tr>
-                <th style={{ ...thStyle, width: '36px', cursor: 'default' }}></th>
-                <th style={thStyle} onClick={() => handleSort('title')}>
+                <th className={`${thClass} w-9 cursor-default`}></th>
+                <th className={thClass} onClick={() => handleSort('title')}>
                   Title <SortIcon field="title" />
                 </th>
-                <th style={{ ...thStyle, width: '120px' }} onClick={() => handleSort('status')}>
+                <th className={`${thClass} w-[120px]`} onClick={() => handleSort('status')}>
                   Status <SortIcon field="status" />
                 </th>
-                <th style={{ ...thStyle, width: '100px' }} onClick={() => handleSort('priority')}>
+                <th className={`${thClass} w-[100px]`} onClick={() => handleSort('priority')}>
                   Priority <SortIcon field="priority" />
                 </th>
-                <th style={{ ...thStyle, width: '140px' }} onClick={() => handleSort('assignee')}>
+                <th className={`${thClass} w-[140px]`} onClick={() => handleSort('assignee')}>
                   Assignee <SortIcon field="assignee" />
                 </th>
-                <th style={{ ...thStyle, width: '100px' }} onClick={() => handleSort('dueDate')}>
+                <th className={`${thClass} w-[100px]`} onClick={() => handleSort('dueDate')}>
                   Due Date <SortIcon field="dueDate" />
                 </th>
-                <th style={{ ...thStyle, width: '60px', cursor: 'default' }}></th>
+                <th className={`${thClass} w-[60px] cursor-default`}></th>
               </tr>
             </thead>
             <tbody>
@@ -443,19 +400,9 @@ export function TaskListWidget({ projectId }: WidgetProps) {
                 return (
                   <tr
                     key={task.id}
-                    style={{ transition: 'background var(--transition-fast)' }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = 'var(--color-bg-secondary)';
-                      const btns = e.currentTarget.querySelectorAll<HTMLButtonElement>('[data-action-btn]');
-                      btns.forEach((b) => (b.style.opacity = '1'));
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = 'transparent';
-                      const btns = e.currentTarget.querySelectorAll<HTMLButtonElement>('[data-action-btn]');
-                      btns.forEach((b) => (b.style.opacity = '0'));
-                    }}
+                    className="group transition-colors duration-200 hover:bg-slate-50/80"
                   >
-                    <td style={{ ...tdStyle, textAlign: 'center' }}>
+                    <td className={`${tdClass} text-center`}>
                       <input
                         type="checkbox"
                         checked={status?.isFinal || false}
@@ -464,66 +411,43 @@ export function TaskListWidget({ projectId }: WidgetProps) {
                       />
                     </td>
                     <td
-                      style={{
-                        ...tdStyle,
-                        cursor: 'pointer',
-                        fontWeight: 500,
-                        textDecoration: status?.isFinal ? 'line-through' : 'none',
-                        color: status?.isFinal ? 'var(--color-text-tertiary)' : 'var(--color-text-primary)',
-                        maxWidth: '300px',
-                      }}
+                      className={`${tdClass} cursor-pointer font-medium max-w-[300px] ${status?.isFinal ? 'line-through text-slate-400' : 'text-slate-700'}`}
                       onClick={() => setSelectedTask(task)}
                     >
                       {task.title}
                     </td>
-                    <td style={tdStyle}>
+                    <td className={tdClass}>
                       {status && (
                         <span
+                          className="text-[11px] font-medium px-2 py-0.5 rounded-full"
                           style={{
-                            fontSize: '11px',
-                            padding: '2px 8px',
-                            borderRadius: 'var(--radius-full)',
                             backgroundColor: status.color + '20',
                             color: status.color,
-                            fontWeight: 500,
                           }}
                         >
                           {status.name}
                         </span>
                       )}
                     </td>
-                    <td style={tdStyle}>
+                    <td className={tdClass}>
                       {task.priority && task.priority !== 'NONE' && (
-                        <span style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px' }}>
+                        <span className="flex items-center gap-1 text-xs">
                           <span
-                            style={{
-                              width: '8px',
-                              height: '8px',
-                              borderRadius: '50%',
-                              backgroundColor: priorityCfg?.color,
-                              flexShrink: 0,
-                            }}
+                            className="w-2 h-2 rounded-full shrink-0"
+                            style={{ backgroundColor: priorityCfg?.color }}
                           />
                           {priorityCfg?.label}
                         </span>
                       )}
                     </td>
-                    <td style={tdStyle}>
+                    <td className={tdClass}>
                       {assigneeName && (
-                        <span style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px' }}>
+                        <span className="flex items-center gap-1.5 text-xs">
                           <span
+                            className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-semibold shrink-0"
                             style={{
-                              width: '20px',
-                              height: '20px',
-                              borderRadius: '50%',
                               backgroundColor: 'var(--color-accent-light)',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              fontSize: '10px',
-                              fontWeight: 600,
                               color: 'var(--color-accent)',
-                              flexShrink: 0,
                             }}
                           >
                             {assigneeName.charAt(0).toUpperCase()}
@@ -532,26 +456,22 @@ export function TaskListWidget({ projectId }: WidgetProps) {
                         </span>
                       )}
                     </td>
-                    <td style={{ ...tdStyle, color: isOverdue ? 'var(--color-danger)' : 'var(--color-text-tertiary)', fontSize: '12px' }}>
+                    <td className={`${tdClass} text-xs ${isOverdue ? 'text-rose-500' : 'text-slate-400'}`}>
                       {task.dueDate
                         ? new Date(task.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
                         : ''}
                     </td>
-                    <td style={{ ...tdStyle, textAlign: 'center' }}>
-                      <div style={{ display: 'flex', gap: '2px' }}>
+                    <td className={`${tdClass} text-center`}>
+                      <div className="flex gap-0.5">
                         <button
-                          data-action-btn
-                          style={actionBtnStyle}
+                          className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 p-1 rounded text-slate-400 hover:bg-slate-100 hover:text-slate-700 cursor-pointer border-none bg-transparent text-sm"
                           title="Edit task"
                           onClick={() => setSelectedTask(task)}
-                          onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)'; }}
-                          onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
                         >
                           &#9998;
                         </button>
                         <button
-                          data-action-btn
-                          style={{ ...actionBtnStyle, color: 'var(--color-danger)' }}
+                          className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 p-1 rounded text-rose-400 hover:bg-rose-50 hover:text-rose-600 cursor-pointer border-none bg-transparent text-sm"
                           title="Delete task"
                           onClick={(e) => {
                             e.stopPropagation();
@@ -559,8 +479,6 @@ export function TaskListWidget({ projectId }: WidgetProps) {
                               deleteMutation.mutate(task.id);
                             }
                           }}
-                          onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--color-danger-light)'; }}
-                          onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
                         >
                           &#215;
                         </button>
