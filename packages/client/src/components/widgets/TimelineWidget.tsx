@@ -14,7 +14,8 @@ import { useState, useCallback, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { tasksApi } from '../../api/tasks.api';
-import { GanttTimeline } from '../gantt/GanttTimeline';
+import { GanttTimeline } from './GanttWidget/GanttTimeline';
+import type { GanttView } from './GanttWidget/ganttGridHelpers';
 import { LivingTaskModal } from '../task/LivingTaskModal';
 import { ZenInput, type ZenInputResult } from '../ui/ZenInput';
 import { useUIStore } from '../../stores/ui.store';
@@ -41,11 +42,17 @@ export function TimelineWidget({ projectId }: WidgetProps) {
     queryFn: () => tasksApi.getStatuses(projectId),
   });
 
-  // ─── Local modal state ────────────────────────────────────────────────────
+  // ─── Local state ──────────────────────────────────────────────────────────
 
   const [selectedTask, setSelectedTask] = useState<TaskDTO | null>(null);
   const [showCreate, setShowCreate] = useState(false);
   const [zenOpen, setZenOpen] = useState(false);
+  const [ganttView, setGanttView] = useState<GanttView>('week');
+  const [ganttYear, setGanttYear] = useState(() => new Date().getFullYear());
+  const [swimlaneMode, setSwimlaneMode] = useState(false);
+  const [focusMode, setFocusMode] = useState(false);
+  const [autoSchedule, setAutoSchedule] = useState(false);
+  const [pdfExporting, setPdfExporting] = useState(false);
 
   // ─── Keyboard shortcut: Shift+Space → ZenInput ────────────────────────────
 
@@ -108,37 +115,21 @@ export function TimelineWidget({ projectId }: WidgetProps) {
 
   // ─── Handlers ─────────────────────────────────────────────────────────────
 
-  const handleTaskDateChange = useCallback(
-    (
-      taskId: string,
-      newStartDate: string | null,
-      newEndDate: string | null,
-      cascadedUpdates: Array<{ taskId: string; newStartDate: string | null; newEndDate: string | null }>
-    ) => {
-      // Optimistic update: reflect new dates immediately in the cache
+  const handleTimelineUpdate = useCallback(
+    (taskId: string, newStartDate: string | null, newEndDate: string | null) => {
+      // Optimistic update
       queryClient.setQueryData<TaskDTO[]>(['tasks', projectId], (old) => {
         if (!old) return old;
-
-        const allUpdates = [
-          { taskId, newStartDate, newEndDate },
-          ...cascadedUpdates,
-        ];
-
-        return old.map((t) => {
-          const upd = allUpdates.find((u) => u.taskId === t.id);
-          if (!upd) return t;
-          return {
-            ...t,
-            startDate: upd.newStartDate ?? t.startDate,
-            dueDate: upd.newEndDate ?? t.dueDate,
-          };
-        });
+        return old.map((t) =>
+          t.id === taskId
+            ? { ...t, startDate: newStartDate ?? t.startDate, dueDate: newEndDate ?? t.dueDate }
+            : t,
+        );
       });
-
       // Persist to server
-      dateMutateRef.current([{ taskId, newStartDate, newEndDate }, ...cascadedUpdates]);
+      dateMutateRef.current([{ taskId, newStartDate, newEndDate }]);
     },
-    [projectId, queryClient]
+    [projectId, queryClient],
   );
 
   const handleZenSubmit = useCallback(
@@ -233,8 +224,39 @@ export function TimelineWidget({ projectId }: WidgetProps) {
         <GanttTimeline
           tasks={tasks}
           statuses={statuses}
-          onTaskDateChange={handleTaskDateChange}
+          view={ganttView}
+          year={ganttYear}
+          isDragEnabled={ganttView === 'day' || ganttView === 'week'}
+          swimlaneMode={swimlaneMode}
+          focusMode={focusMode}
+          autoSchedule={autoSchedule}
+          pdfExporting={pdfExporting}
+          onFocusModeChange={setFocusMode}
+          onSwimlaneToggle={() => setSwimlaneMode((v) => !v)}
+          onViewChange={setGanttView}
+          onYearChange={setGanttYear}
+          onAutoScheduleChange={setAutoSchedule}
+          onScrollToToday={() => {}}
+          onExportPDF={async () => {
+            if (pdfExporting) return;
+            setPdfExporting(true);
+            try {
+              const [{ default: html2canvas }, { default: jsPDF }] = await Promise.all([
+                import('html2canvas'),
+                import('jspdf'),
+              ]);
+              const el = document.querySelector('.gantt-export-target') as HTMLElement;
+              if (!el) return;
+              const canvas = await html2canvas(el, { scale: 1.5, useCORS: true });
+              const pdf = new jsPDF({ orientation: 'landscape', unit: 'px', format: [canvas.width, canvas.height] });
+              pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, canvas.width, canvas.height);
+              pdf.save(`timeline-${projectId}.pdf`);
+            } finally {
+              setPdfExporting(false);
+            }
+          }}
           onTaskClick={(task) => setSelectedTask(task)}
+          onTimelineUpdate={handleTimelineUpdate}
         />
       </div>
 

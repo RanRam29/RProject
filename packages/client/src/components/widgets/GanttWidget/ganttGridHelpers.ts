@@ -22,7 +22,9 @@ import {
   isSameYear,
   differenceInDays,
 } from 'date-fns';
-import type { GanttView } from './GanttHeader';
+// ── GanttView type (moved here from deleted GanttHeader.tsx) ─────────────────
+
+export type GanttView = 'day' | 'week' | 'month' | 'quarter' | 'year';
 
 // ── Column widths (px) ───────────────────────────────────────────────────────
 

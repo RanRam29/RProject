@@ -1,6 +1,11 @@
+/**
+ * GanttTimeline — forwardRef / scrollToToday tests
+ * Updated from GanttGrid.ref.test.tsx (Task 13 — Phase 7 overhaul)
+ */
+
 import { render } from '@testing-library/react';
 import { createRef } from 'react';
-import { GanttGrid, type GanttGridHandle } from './GanttGrid';
+import { GanttTimeline, type GanttTimelineHandle } from './GanttTimeline';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { TaskPriority } from '@pm/shared';
 import type { TaskDTO, TaskStatusDTO } from '@pm/shared';
@@ -29,6 +34,7 @@ const mockTask: TaskDTO = {
   labels: [],
   comments: [],
   blockedBy: [],
+  blocking: [],
 };
 
 const mockStatus: TaskStatusDTO = {
@@ -40,12 +46,33 @@ const mockStatus: TaskStatusDTO = {
   isFinal: false,
 };
 
-describe('GanttGrid forwardRef', () => {
-  let scrollIntoViewSpy: ReturnType<typeof vi.fn>;
+const defaultProps = {
+  tasks: [],
+  statuses: [],
+  view: 'week' as const,
+  year: 2026,
+  isDragEnabled: false,
+  swimlaneMode: false,
+  focusMode: false,
+  autoSchedule: false,
+  pdfExporting: false,
+  onFocusModeChange: vi.fn(),
+  onSwimlaneToggle: vi.fn(),
+  onViewChange: vi.fn(),
+  onYearChange: vi.fn(),
+  onAutoScheduleChange: vi.fn(),
+  onScrollToToday: vi.fn(),
+  onExportPDF: vi.fn(),
+  onTaskClick: vi.fn(),
+  onTimelineUpdate: vi.fn(),
+};
+
+describe('GanttTimeline forwardRef', () => {
+  let scrollToSpy: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
-    scrollIntoViewSpy = vi.fn();
-    Element.prototype.scrollIntoView = scrollIntoViewSpy as unknown as typeof Element.prototype.scrollIntoView;
+    scrollToSpy = vi.fn();
+    HTMLElement.prototype.scrollTo = scrollToSpy as unknown as typeof HTMLElement.prototype.scrollTo;
   });
 
   afterEach(() => {
@@ -53,43 +80,26 @@ describe('GanttGrid forwardRef', () => {
   });
 
   it('exposes scrollToToday function via ref', () => {
-    const ref = createRef<GanttGridHandle>();
-    render(
-      <GanttGrid
-        ref={ref}
-        tasks={[]}
-        statuses={[]}
-        view="week"
-        year={2026}
-        isDragEnabled={false}
-        onTaskClick={() => {}}
-        onTimelineUpdate={() => {}}
-      />
-    );
+    const ref = createRef<GanttTimelineHandle>();
+    render(<GanttTimeline ref={ref} {...defaultProps} />);
     expect(typeof ref.current?.scrollToToday).toBe('function');
   });
 
-  it('calls scrollIntoView with inline:center when scrollToToday is invoked', () => {
-    const ref = createRef<GanttGridHandle>();
+  it('calls scrollTo on the container when scrollToToday is invoked', () => {
+    const ref = createRef<GanttTimelineHandle>();
     render(
-      <GanttGrid
+      <GanttTimeline
         ref={ref}
+        {...defaultProps}
         tasks={[mockTask]}
         statuses={[mockStatus]}
         view="day"
         year={new Date().getFullYear()}
-        isDragEnabled={false}
-        onTaskClick={() => {}}
-        onTimelineUpdate={() => {}}
-      />
+      />,
     );
-    // Clear calls from the mount auto-scroll effect
-    scrollIntoViewSpy.mockClear();
 
     ref.current!.scrollToToday();
 
-    expect(scrollIntoViewSpy).toHaveBeenCalledWith(
-      expect.objectContaining({ inline: 'center', behavior: 'smooth' }),
-    );
+    expect(scrollToSpy).toHaveBeenCalled();
   });
 });

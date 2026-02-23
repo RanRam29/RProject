@@ -15,7 +15,7 @@
 import { useState, useCallback, useRef, type FC } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { tasksApi } from '../../../api/tasks.api';
-import { type GanttView } from './GanttHeader';
+import { type GanttView } from './ganttGridHelpers';
 import { type GanttTimelineHandle, GanttTimeline } from './GanttTimeline';
 import { useUIStore } from '../../../stores/ui.store';
 import type { WidgetProps } from '../widget.types';

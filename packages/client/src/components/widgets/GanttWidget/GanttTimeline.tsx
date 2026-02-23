@@ -44,7 +44,7 @@ import {
   isTodayColumn,
   COL_W,
 } from './ganttGridHelpers';
-import type { GanttView } from './GanttHeader';
+import type { GanttView } from './ganttGridHelpers';
 
 // ─── Handle ───────────────────────────────────────────────────────────────────
 
