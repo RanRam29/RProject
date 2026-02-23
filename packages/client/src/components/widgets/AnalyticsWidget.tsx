@@ -47,7 +47,7 @@ function MetricTile({ icon, value, label, accentClass, valueClass }: MetricTileP
   return (
     <div
       className={[
-        'bg-white rounded-xl flex-1 min-w-[80px]',
+        'bg-white rounded-xl',
         'border border-slate-200/60 border-l-[3px]',
         accentClass,
         'shadow-tile p-4 flex flex-col gap-2',
@@ -140,7 +140,7 @@ export function AnalyticsWidget({ projectId }: WidgetProps) {
     <div className="p-6 h-full overflow-y-auto flex flex-col gap-5">
 
       {/* ── KPI Metric Tiles ── */}
-      <div className="flex gap-3 flex-wrap">
+      <div className="grid grid-cols-2 gap-3">
         <MetricTile
           icon={<ListChecks size={18} strokeWidth={1.5} />}
           value={analytics.totalTasks}
