@@ -16,15 +16,13 @@ import { useState, useCallback, useRef, type FC } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { tasksApi } from '../../../api/tasks.api';
 import { type GanttView } from './GanttHeader';
-import { type GanttGridHandle } from './GanttGrid';
+import { type GanttTimelineHandle, GanttTimeline } from './GanttTimeline';
 import { useUIStore } from '../../../stores/ui.store';
 import type { WidgetProps } from '../widget.types';
 import { FilterBar } from '../../filter/FilterBar';
 import { useTaskFilters } from '../../../hooks/useTaskFilters';
 import type { TaskDTO } from '@pm/shared';
 import { LivingTaskModal } from '../../task/LivingTaskModal';
-// @ts-ignore — GanttTimeline will be created in the next task
-import { GanttTimeline } from './GanttTimeline';
 
 export const GanttWidget: FC<WidgetProps> = ({ projectId }) => {
   const queryClient = useQueryClient();
@@ -42,7 +40,7 @@ export const GanttWidget: FC<WidgetProps> = ({ projectId }) => {
   const [selectedTask, setSelectedTask] = useState<TaskDTO | null>(null);
 
   const ganttRef = useRef<HTMLDivElement>(null);
-  const ganttGridRef = useRef<GanttGridHandle>(null);
+  const ganttGridRef = useRef<GanttTimelineHandle>(null);
 
   // ── Remote data ─────────────────────────────────────────────────────────────
   const { data: tasks = [] } = useQuery({
