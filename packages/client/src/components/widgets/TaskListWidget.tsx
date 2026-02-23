@@ -191,8 +191,8 @@ export function TaskListWidget({ projectId }: WidgetProps) {
   };
 
   // Tailwind class helpers — "Clean Scan" table spec
-  const thClass = 'px-3 py-2 text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wide cursor-pointer select-none whitespace-nowrap border-b border-slate-100 bg-slate-50/50 sticky top-0 z-[1]';
-  const tdClass = 'px-3 py-2 text-[13px] text-slate-700 border-b border-slate-100 whitespace-nowrap overflow-hidden text-ellipsis';
+  const thClass = 'px-3 py-2 text-left text-[11px] font-semibold text-[var(--color-text-secondary)] uppercase tracking-wide cursor-pointer select-none whitespace-nowrap border-b border-[var(--color-border)] bg-[var(--color-bg-secondary)] sticky top-0 z-[1]';
+  const tdClass = 'px-3 py-2 text-[13px] text-[var(--color-text-primary)] border-b border-[var(--color-border)] whitespace-nowrap overflow-hidden text-ellipsis';
 
   if (isLoading) {
     return (
@@ -320,7 +320,7 @@ export function TaskListWidget({ projectId }: WidgetProps) {
                 <div
                   key={task.id}
                   onClick={() => setSelectedTask(task)}
-                  className="p-3 rounded-xl border border-slate-200/60 bg-white cursor-pointer transition-colors duration-200 hover:bg-slate-50/50"
+                  className="p-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-elevated)] cursor-pointer transition-colors duration-200 hover:bg-[var(--color-bg-tertiary)]"
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
                     <input
@@ -400,7 +400,7 @@ export function TaskListWidget({ projectId }: WidgetProps) {
                 return (
                   <tr
                     key={task.id}
-                    className="group transition-colors duration-200 hover:bg-slate-50/80"
+                    className="group transition-colors duration-200 hover:bg-[var(--color-bg-tertiary)]"
                   >
                     <td className={`${tdClass} text-center`}>
                       <input
@@ -411,7 +411,7 @@ export function TaskListWidget({ projectId }: WidgetProps) {
                       />
                     </td>
                     <td
-                      className={`${tdClass} cursor-pointer font-medium max-w-[300px] ${status?.isFinal ? 'line-through text-slate-400' : 'text-slate-700'}`}
+                      className={`${tdClass} cursor-pointer font-medium max-w-[300px] ${status?.isFinal ? 'line-through text-[var(--color-text-tertiary)]' : ''}`}
                       onClick={() => setSelectedTask(task)}
                     >
                       {task.title}
@@ -456,7 +456,7 @@ export function TaskListWidget({ projectId }: WidgetProps) {
                         </span>
                       )}
                     </td>
-                    <td className={`${tdClass} text-xs ${isOverdue ? 'text-rose-500' : 'text-slate-400'}`}>
+                    <td className={`${tdClass} text-xs ${isOverdue ? 'text-rose-500' : 'text-[var(--color-text-tertiary)]'}`}>
                       {task.dueDate
                         ? new Date(task.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
                         : ''}
@@ -464,7 +464,7 @@ export function TaskListWidget({ projectId }: WidgetProps) {
                     <td className={`${tdClass} text-center`}>
                       <div className="flex gap-0.5">
                         <button
-                          className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 p-1 rounded text-slate-400 hover:bg-slate-100 hover:text-slate-700 cursor-pointer border-none bg-transparent text-sm"
+                          className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 p-1 rounded text-[var(--color-text-tertiary)] hover:bg-[var(--color-bg-tertiary)] hover:text-[var(--color-text-primary)] cursor-pointer border-none bg-transparent text-sm"
                           title="Edit task"
                           onClick={() => setSelectedTask(task)}
                         >
