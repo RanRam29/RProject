@@ -141,15 +141,7 @@ export const GanttWidget: FC<WidgetProps> = ({ projectId }) => {
   };
 
   return (
-    <div
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        height: '100%',
-        background: 'var(--color-bg-elevated)',
-        overflow: 'hidden',
-      }}
-    >
+    <div className="flex flex-col h-full bg-[var(--color-bg-elevated)] overflow-hidden">
       <FilterBar
         projectId={projectId}
         filters={filters}
@@ -158,7 +150,7 @@ export const GanttWidget: FC<WidgetProps> = ({ projectId }) => {
         onClear={clearFilters}
       />
 
-      <div ref={ganttRef} style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
+      <div ref={ganttRef} className="flex-1 min-h-0 overflow-hidden">
         <GanttTimeline
           ref={ganttGridRef}
           tasks={filteredTasks}
