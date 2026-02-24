@@ -6,6 +6,14 @@ import { projectsApi } from '../api/projects.api';
 import { useUIStore } from '../stores/ui.store';
 import type { TemplateDTO } from '@pm/shared';
 
+const LayoutTemplateIcon: React.FC<{ size?: number }> = ({ size = 40 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="var(--color-text-tertiary)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+    <line x1="3" y1="9" x2="21" y2="9" />
+    <line x1="9" y1="21" x2="9" y2="9" />
+  </svg>
+);
+
 export default function TemplatesPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -108,8 +116,24 @@ export default function TemplatesPage() {
         ))}
 
         {templates.length === 0 && (
-          <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '40px', color: 'var(--color-text-tertiary)' }}>
-            No templates available yet
+          <div style={{
+            gridColumn: '1 / -1',
+            display: 'flex', flexDirection: 'column', alignItems: 'center',
+            justifyContent: 'center', gap: '16px', padding: '60px 20px',
+            backgroundColor: 'var(--color-bg-elevated)',
+            border: '1px dashed var(--color-border)',
+            borderRadius: 'var(--radius-lg)',
+            marginTop: '12px'
+          }}>
+            <LayoutTemplateIcon />
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: '16px', fontWeight: 600, color: 'var(--color-text-primary)', marginBottom: '4px' }}>
+                No templates available yet
+              </div>
+              <div style={{ fontSize: '13px', color: 'var(--color-text-tertiary)' }}>
+                System administrators can create layout templates to appear here.
+              </div>
+            </div>
           </div>
         )}
       </div>
