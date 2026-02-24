@@ -14,6 +14,7 @@ import authRoutes from './modules/auth/auth.routes.js';
 import projectRoutes from './modules/projects/projects.routes.js';
 import widgetRoutes from './modules/widgets/widgets.routes.js';
 import statusRoutes from './modules/statuses/statuses.routes.js';
+import laneRoutes from './modules/lanes/lanes.routes.js';
 import taskRoutes from './modules/tasks/tasks.routes.js';
 import permissionRoutes from './modules/permissions/permissions.routes.js';
 import fileRoutes from './modules/files/files.routes.js';
@@ -83,6 +84,7 @@ const createApp = (): express.Application => {
   app.use('/api/v1/projects', projectRoutes);
   app.use('/api/v1/projects/:projectId/widgets', widgetRoutes);
   app.use('/api/v1/projects/:projectId/statuses', statusRoutes);
+  app.use('/api/v1/projects/:projectId/lanes', laneRoutes);
   app.use('/api/v1/projects/:projectId/tasks', taskRoutes);
   app.use('/api/v1/projects/:projectId/permissions', permissionRoutes);
   app.use('/api/v1/projects/:projectId/files', fileRoutes);
