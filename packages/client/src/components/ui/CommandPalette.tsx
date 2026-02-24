@@ -171,6 +171,8 @@ export function CommandPalette() {
 
   const paletteStyle: React.CSSProperties = {
     backgroundColor: 'var(--color-bg-elevated)',
+    backdropFilter: 'blur(24px) saturate(1.8)',
+    WebkitBackdropFilter: 'blur(24px) saturate(1.8)',
     border: '1px solid var(--color-border)',
     borderRadius: 'var(--radius-lg)',
     boxShadow: 'var(--shadow-lg)',

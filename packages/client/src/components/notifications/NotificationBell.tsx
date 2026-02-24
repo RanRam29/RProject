@@ -69,6 +69,8 @@ export const NotificationBell: React.FC = () => {
     maxWidth: 'calc(100vw - 16px)',
     maxHeight: '480px',
     backgroundColor: 'var(--color-bg-elevated)',
+    backdropFilter: 'blur(24px) saturate(1.8)',
+    WebkitBackdropFilter: 'blur(24px) saturate(1.8)',
     border: '1px solid var(--color-border)',
     borderRadius: 'var(--radius-md)',
     boxShadow: 'var(--shadow-lg)',

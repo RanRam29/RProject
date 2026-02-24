@@ -193,6 +193,8 @@ export const TopBar: React.FC<TopBarProps> = ({ onMenuClick }) => {
               position: 'absolute', top: 'calc(100% + 6px)', right: 0,
               minWidth: '210px',
               backgroundColor: 'var(--color-bg-elevated)',
+              backdropFilter: 'blur(24px) saturate(1.8)',
+              WebkitBackdropFilter: 'blur(24px) saturate(1.8)',
               border: '1px solid var(--color-border)',
               borderRadius: '12px',
               boxShadow: 'var(--shadow-lg)',
