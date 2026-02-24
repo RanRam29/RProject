@@ -33,7 +33,7 @@ export const GanttWidget: FC<WidgetProps> = ({ projectId }) => {
   const [view, setView] = useState<GanttView>('week');
   const [year, setYear] = useState(() => new Date().getFullYear());
   const [autoSchedule, setAutoSchedule] = useState(false);
-  const [swimlaneMode, setSwimlaneMode] = useState(false);
+  const [groupBy, setGroupBy] = useState<'assignee' | 'status' | 'priority' | null>(null);
   const [focusMode, setFocusMode] = useState(false);
   const [pdfExporting, setPdfExporting] = useState(false);
 
@@ -157,12 +157,12 @@ export const GanttWidget: FC<WidgetProps> = ({ projectId }) => {
           view={view}
           year={year}
           isDragEnabled={view === 'day' || view === 'week'}
-          swimlaneMode={swimlaneMode}
+          groupBy={groupBy}
           focusMode={focusMode}
           autoSchedule={autoSchedule}
           pdfExporting={pdfExporting}
           onFocusModeChange={setFocusMode}
-          onSwimlaneToggle={() => setSwimlaneMode((v) => !v)}
+          onGroupByChange={setGroupBy}
           onViewChange={setView}
           onYearChange={setYear}
           onAutoScheduleChange={setAutoSchedule}

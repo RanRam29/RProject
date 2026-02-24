@@ -66,12 +66,12 @@ export interface GanttTimelineProps {
   view: GanttView;
   year: number;
   isDragEnabled: boolean;
-  swimlaneMode: boolean;
+  groupBy: 'assignee' | 'status' | 'priority' | null;
   focusMode: boolean;
   autoSchedule: boolean;
   pdfExporting: boolean;
   onFocusModeChange: (mode: boolean) => void;
-  onSwimlaneToggle: () => void;
+  onGroupByChange: (v: 'assignee' | 'status' | 'priority' | null) => void;
   onViewChange: (v: GanttView) => void;
   onYearChange: (y: number) => void;
   onAutoScheduleChange: (v: boolean) => void;
@@ -333,12 +333,12 @@ export const GanttTimeline = forwardRef<GanttTimelineHandle, GanttTimelineProps>
       view,
       year,
       isDragEnabled,
-      swimlaneMode,
+      groupBy,
       focusMode,
       autoSchedule: _autoSchedule,
       pdfExporting,
       onFocusModeChange,
-      onSwimlaneToggle,
+      onGroupByChange,
       onViewChange,
       onYearChange,
       onAutoScheduleChange,
@@ -428,24 +428,61 @@ export const GanttTimeline = forwardRef<GanttTimelineHandle, GanttTimelineProps>
 
     // ── Swimlanes ─────────────────────────────────────────────────────────────
     const swimlanes = useMemo<Swimlane[]>(() => {
-      if (!swimlaneMode) {
+      if (!groupBy) {
         return [{ assigneeId: null, displayName: null, tasks: sortedTasks }];
       }
-      const map = new Map<string, Swimlane>();
-      for (const task of sortedTasks) {
-        const key = task.assigneeId ?? '__unassigned__';
-        if (!map.has(key)) {
-          map.set(key, {
-            assigneeId: task.assigneeId ?? null,
-            displayName:
-              (task as any).assignee?.displayName ?? 'Unassigned',
-            tasks: [],
-          });
+
+      if (groupBy === 'assignee') {
+        const map = new Map<string, Swimlane>();
+        for (const task of sortedTasks) {
+          const key = task.assigneeId ?? '__unassigned__';
+          if (!map.has(key)) {
+            map.set(key, {
+              assigneeId: task.assigneeId ?? null,
+              displayName: (task as any).assignee?.displayName ?? 'Unassigned',
+              tasks: [],
+            });
+          }
+          map.get(key)!.tasks.push(task);
         }
-        map.get(key)!.tasks.push(task);
+        return [...map.values()];
       }
-      return [...map.values()];
-    }, [sortedTasks, swimlaneMode]);
+
+      if (groupBy === 'status') {
+        const map = new Map<string, Swimlane>();
+        for (const task of sortedTasks) {
+          const status = statusMap.get(task.statusId);
+          const key = task.statusId;
+          if (!map.has(key)) {
+            map.set(key, {
+              assigneeId: null,
+              displayName: status?.name ?? 'Unknown',
+              tasks: [],
+            });
+          }
+          map.get(key)!.tasks.push(task);
+        }
+        return [...map.values()];
+      }
+
+      if (groupBy === 'priority') {
+        const PRIORITY_ORDER = ['URGENT', 'HIGH', 'MEDIUM', 'LOW', 'NONE'];
+        const map = new Map<string, Swimlane>();
+        for (const p of PRIORITY_ORDER) {
+          const tasksForPriority = sortedTasks.filter((t) => t.priority === p);
+          if (tasksForPriority.length > 0) {
+            const label =
+              p === 'NONE'
+                ? 'No Priority'
+                : p.charAt(0) + p.slice(1).toLowerCase();
+            map.set(p, { assigneeId: null, displayName: label, tasks: tasksForPriority });
+          }
+        }
+        return [...map.values()];
+      }
+
+      return [{ assigneeId: null, displayName: null, tasks: sortedTasks }];
+    }, [sortedTasks, groupBy, statusMap]);
 
     // ── Single rowMap — THE source of truth for row positions ─────────────────
     const rowMap = useMemo(() => buildRowMap(swimlanes), [swimlanes]);
@@ -713,28 +750,34 @@ export const GanttTimeline = forwardRef<GanttTimelineHandle, GanttTimelineProps>
             ⚡ Auto
           </button>
 
-          {/* Swimlane toggle */}
-          <button
-            onClick={onSwimlaneToggle}
+          {/* Group-by selector */}
+          <select
+            value={groupBy ?? ''}
+            onChange={(e) => {
+              const v = e.target.value;
+              onGroupByChange(
+                v === '' ? null : (v as 'assignee' | 'status' | 'priority'),
+              );
+            }}
             style={{
-              padding: '4px 10px',
+              padding: '4px 8px',
               fontSize: 12,
-              fontWeight: swimlaneMode ? 600 : 400,
               borderRadius: 6,
-              border: swimlaneMode
+              border: groupBy
                 ? '1.5px solid var(--color-accent)'
                 : '1.5px solid var(--color-border)',
-              background: swimlaneMode ? 'var(--color-accent-light)' : 'transparent',
-              color: swimlaneMode
-                ? 'var(--color-accent-text)'
-                : 'var(--color-text-secondary)',
+              background: groupBy ? 'var(--color-accent-light)' : 'var(--color-bg-elevated)',
+              color: groupBy ? 'var(--color-accent-text)' : 'var(--color-text-secondary)',
               cursor: 'pointer',
-              transition: 'all 150ms ease',
+              fontWeight: groupBy ? 600 : 400,
             }}
-            title="Group tasks by assignee"
+            title="Group rows by field"
           >
-            👥 Lanes
-          </button>
+            <option value="">No grouping</option>
+            <option value="assignee">👤 By Assignee</option>
+            <option value="status">🔵 By Status</option>
+            <option value="priority">⚡ By Priority</option>
+          </select>
 
           {/* Focus Mode */}
           <button
@@ -1060,7 +1103,7 @@ export const GanttTimeline = forwardRef<GanttTimelineHandle, GanttTimelineProps>
                   )}
 
                   {/* Swimlane header stripes in bar area */}
-                  {swimlaneMode &&
+                  {groupBy &&
                     swimlanes.map((lane) => {
                       if (lane.displayName === null || lane.tasks.length === 0)
                         return null;
