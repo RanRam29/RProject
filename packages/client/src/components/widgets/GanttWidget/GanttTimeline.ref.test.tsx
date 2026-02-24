@@ -27,6 +27,7 @@ const mockTask: TaskDTO = {
   sortOrder: 0,
   createdAt: TODAY_ISO,
   updatedAt: TODAY_ISO,
+  laneId: null,
   isMilestone: false,
   estimatedHours: 0,
   progressPercentage: 0,
