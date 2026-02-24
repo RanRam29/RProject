@@ -35,7 +35,7 @@ import {
   startOfDay,
   parseISO,
 } from 'date-fns';
-import type { TaskDTO, TaskStatusDTO } from '@pm/shared';
+import type { TaskDTO, TaskStatusDTO, LaneDTO } from '@pm/shared';
 import { GanttTooltip } from './GanttTooltip';
 import {
   getRangeForView,
@@ -57,6 +57,8 @@ export interface GanttTimelineHandle {
 type Swimlane = {
   assigneeId: string | null;
   displayName: string | null;
+  laneId?: string | null;
+  laneColor?: string;
   tasks: TaskDTO[];
 };
 
@@ -66,12 +68,16 @@ export interface GanttTimelineProps {
   view: GanttView;
   year: number;
   isDragEnabled: boolean;
-  groupBy: 'assignee' | 'status' | 'priority' | null;
+  groupBy: 'assignee' | 'status' | 'priority' | 'custom' | null;
   focusMode: boolean;
   autoSchedule: boolean;
   pdfExporting: boolean;
   onFocusModeChange: (mode: boolean) => void;
-  onGroupByChange: (v: 'assignee' | 'status' | 'priority' | null) => void;
+  onGroupByChange: (v: 'assignee' | 'status' | 'priority' | 'custom' | null) => void;
+  lanes?: LaneDTO[];
+  onCreateLane?: (name: string) => void;
+  onUpdateLane?: (laneId: string, data: { name?: string; color?: string }) => void;
+  onDeleteLane?: (laneId: string) => void;
   onViewChange: (v: GanttView) => void;
   onYearChange: (y: number) => void;
   onAutoScheduleChange: (v: boolean) => void;
@@ -339,6 +345,10 @@ export const GanttTimeline = forwardRef<GanttTimelineHandle, GanttTimelineProps>
       pdfExporting,
       onFocusModeChange,
       onGroupByChange,
+      lanes = [],
+      onCreateLane,
+      onUpdateLane,
+      onDeleteLane,
       onViewChange,
       onYearChange,
       onAutoScheduleChange,
@@ -352,6 +362,10 @@ export const GanttTimeline = forwardRef<GanttTimelineHandle, GanttTimelineProps>
     const scrollContainerRef = useRef<HTMLDivElement>(null);
     const [focusedTaskId, setFocusedTaskId] = useState<string | null>(null);
     const [focusedRow, setFocusedRow] = useState(-1);
+    const [newLaneName, setNewLaneName] = useState('');
+    const [creatingLane, setCreatingLane] = useState(false);
+    const [editingLaneId, setEditingLaneId] = useState<string | null>(null);
+    const [editingLaneName, setEditingLaneName] = useState('');
 
     // ── Column system ─────────────────────────────────────────────────────────
     const { start: rangeStart, end: rangeEnd } = useMemo(
@@ -481,8 +495,38 @@ export const GanttTimeline = forwardRef<GanttTimelineHandle, GanttTimelineProps>
         return [...map.values()];
       }
 
+      if (groupBy === 'custom') {
+        if (!lanes || lanes.length === 0) {
+          return [{ assigneeId: null, displayName: null, tasks: sortedTasks }];
+        }
+        const laneMap = new Map<string | null, Swimlane>();
+        for (const lane of [...lanes].sort((a, b) => a.sortOrder - b.sortOrder)) {
+          laneMap.set(lane.id, {
+            assigneeId: null,
+            displayName: lane.name,
+            laneColor: lane.color,
+            laneId: lane.id,
+            tasks: [],
+          });
+        }
+        laneMap.set(null, {
+          assigneeId: null,
+          displayName: 'Unassigned',
+          laneColor: '#94a3b8',
+          laneId: null,
+          tasks: [],
+        });
+        for (const task of sortedTasks) {
+          const key = task.laneId != null && laneMap.has(task.laneId) ? task.laneId : null;
+          laneMap.get(key)!.tasks.push(task);
+        }
+        return [...laneMap.values()].filter(
+          (lane) => lane.tasks.length > 0 || lane.laneId !== null,
+        );
+      }
+
       return [{ assigneeId: null, displayName: null, tasks: sortedTasks }];
-    }, [sortedTasks, groupBy, statusMap]);
+    }, [sortedTasks, groupBy, statusMap, lanes]);
 
     // ── Single rowMap — THE source of truth for row positions ─────────────────
     const rowMap = useMemo(() => buildRowMap(swimlanes), [swimlanes]);
@@ -756,7 +800,7 @@ export const GanttTimeline = forwardRef<GanttTimelineHandle, GanttTimelineProps>
             onChange={(e) => {
               const v = e.target.value;
               onGroupByChange(
-                v === '' ? null : (v as 'assignee' | 'status' | 'priority'),
+                v === '' ? null : (v as 'assignee' | 'status' | 'priority' | 'custom'),
               );
             }}
             style={{
@@ -777,7 +821,94 @@ export const GanttTimeline = forwardRef<GanttTimelineHandle, GanttTimelineProps>
             <option value="assignee">👤 By Assignee</option>
             <option value="status">🔵 By Status</option>
             <option value="priority">⚡ By Priority</option>
+            <option value="custom">🏷 Custom Lanes</option>
           </select>
+
+          {/* + Lane button (custom mode only) */}
+          {groupBy === 'custom' && !creatingLane && (
+            <button
+              onClick={() => setCreatingLane(true)}
+              style={{
+                padding: '4px 10px',
+                fontSize: 12,
+                borderRadius: 6,
+                border: '1.5px solid var(--color-border)',
+                background: 'transparent',
+                color: 'var(--color-text-secondary)',
+                cursor: 'pointer',
+              }}
+            >
+              + Lane
+            </button>
+          )}
+          {creatingLane && (
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (newLaneName.trim()) {
+                  onCreateLane?.(newLaneName.trim());
+                  setNewLaneName('');
+                  setCreatingLane(false);
+                }
+              }}
+              style={{ display: 'flex', gap: 4 }}
+            >
+              <input
+                autoFocus
+                value={newLaneName}
+                onChange={(e) => setNewLaneName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Escape') {
+                    setCreatingLane(false);
+                    setNewLaneName('');
+                  }
+                }}
+                placeholder="Lane name…"
+                style={{
+                  padding: '4px 8px',
+                  fontSize: 12,
+                  borderRadius: 6,
+                  border: '1.5px solid var(--color-accent)',
+                  background: 'var(--color-bg-elevated)',
+                  color: 'var(--color-text-primary)',
+                  outline: 'none',
+                  width: 140,
+                }}
+              />
+              <button
+                type="submit"
+                style={{
+                  padding: '4px 8px',
+                  fontSize: 12,
+                  borderRadius: 6,
+                  background: 'var(--color-accent)',
+                  color: 'white',
+                  border: 'none',
+                  cursor: 'pointer',
+                }}
+              >
+                Add
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setCreatingLane(false);
+                  setNewLaneName('');
+                }}
+                style={{
+                  padding: '4px 8px',
+                  fontSize: 12,
+                  borderRadius: 6,
+                  border: '1px solid var(--color-border)',
+                  background: 'transparent',
+                  color: 'var(--color-text-secondary)',
+                  cursor: 'pointer',
+                }}
+              >
+                ✕
+              </button>
+            </form>
+          )}
 
           {/* Focus Mode */}
           <button
@@ -959,6 +1090,8 @@ export const GanttTimeline = forwardRef<GanttTimelineHandle, GanttTimelineProps>
                             display: 'flex',
                             alignItems: 'center',
                             paddingLeft: 12,
+                            paddingRight: 8,
+                            gap: 8,
                             background: 'var(--color-bg-secondary)',
                             borderBottom: '1px solid var(--color-border)',
                             fontSize: 11,
@@ -968,7 +1101,115 @@ export const GanttTimeline = forwardRef<GanttTimelineHandle, GanttTimelineProps>
                             textTransform: 'uppercase',
                           }}
                         >
-                          {lane.displayName}
+                          {/* Lane color dot (custom mode only) */}
+                          {lane.laneColor && (
+                            <span
+                              style={{
+                                width: 8,
+                                height: 8,
+                                borderRadius: '50%',
+                                backgroundColor: lane.laneColor,
+                                flexShrink: 0,
+                              }}
+                            />
+                          )}
+
+                          {/* Editable name (custom mode) vs static name */}
+                          {groupBy === 'custom' && lane.laneId && editingLaneId === lane.laneId ? (
+                            <input
+                              autoFocus
+                              value={editingLaneName}
+                              onChange={(e) => setEditingLaneName(e.target.value)}
+                              onBlur={() => {
+                                if (
+                                  editingLaneName.trim() &&
+                                  editingLaneName !== lane.displayName
+                                ) {
+                                  onUpdateLane?.(lane.laneId!, {
+                                    name: editingLaneName.trim(),
+                                  });
+                                }
+                                setEditingLaneId(null);
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter')
+                                  (e.target as HTMLInputElement).blur();
+                                if (e.key === 'Escape') setEditingLaneId(null);
+                              }}
+                              style={{
+                                flex: 1,
+                                fontSize: 11,
+                                fontWeight: 700,
+                                background: 'transparent',
+                                border: 'none',
+                                borderBottom: '1px solid var(--color-accent)',
+                                color: 'var(--color-text-secondary)',
+                                outline: 'none',
+                                textTransform: 'uppercase',
+                                letterSpacing: 0.5,
+                              }}
+                            />
+                          ) : (
+                            <span
+                              style={{
+                                flex: 1,
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap',
+                              }}
+                            >
+                              {lane.displayName} ({lane.tasks.length})
+                            </span>
+                          )}
+
+                          {/* Edit + delete icons (custom mode, non-null laneId) */}
+                          {groupBy === 'custom' &&
+                            lane.laneId &&
+                            editingLaneId !== lane.laneId && (
+                              <>
+                                <button
+                                  onClick={() => {
+                                    setEditingLaneId(lane.laneId!);
+                                    setEditingLaneName(lane.displayName ?? '');
+                                  }}
+                                  title="Rename lane"
+                                  style={{
+                                    background: 'none',
+                                    border: 'none',
+                                    cursor: 'pointer',
+                                    padding: 2,
+                                    color: 'var(--color-text-tertiary)',
+                                    fontSize: 12,
+                                    lineHeight: 1,
+                                  }}
+                                >
+                                  ✎
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    if (
+                                      confirm(
+                                        `Delete lane "${lane.displayName}"? Tasks will be unassigned.`,
+                                      )
+                                    ) {
+                                      onDeleteLane?.(lane.laneId!);
+                                    }
+                                  }}
+                                  title="Delete lane"
+                                  style={{
+                                    background: 'none',
+                                    border: 'none',
+                                    cursor: 'pointer',
+                                    padding: 2,
+                                    color: 'var(--color-danger)',
+                                    fontSize: 12,
+                                    lineHeight: 1,
+                                  }}
+                                >
+                                  ✕
+                                </button>
+                              </>
+                            )}
                         </div>
                       )}
 

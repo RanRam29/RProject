@@ -49,7 +49,7 @@ export function TimelineWidget({ projectId }: WidgetProps) {
   const [zenOpen, setZenOpen] = useState(false);
   const [ganttView, setGanttView] = useState<GanttView>('week');
   const [ganttYear, setGanttYear] = useState(() => new Date().getFullYear());
-  const [groupBy, setGroupBy] = useState<'assignee' | 'status' | 'priority' | null>(null);
+  const [groupBy, setGroupBy] = useState<'assignee' | 'status' | 'priority' | 'custom' | null>(null);
   const [focusMode, setFocusMode] = useState(false);
   const [autoSchedule, setAutoSchedule] = useState(false);
   const [pdfExporting, setPdfExporting] = useState(false);
