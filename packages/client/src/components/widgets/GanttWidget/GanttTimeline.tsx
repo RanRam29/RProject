@@ -33,6 +33,7 @@ import {
   format,
   isValid,
   startOfDay,
+  startOfWeek,
   parseISO,
 } from 'date-fns';
 import type { TaskDTO, TaskStatusDTO, LaneDTO } from '@pm/shared';
@@ -68,7 +69,7 @@ export interface GanttTimelineProps {
   view: GanttView;
   year: number;
   isDragEnabled: boolean;
-  groupBy: 'assignee' | 'status' | 'priority' | 'custom' | null;
+  groupBy: 'assignee' | 'status' | 'priority' | 'lane' | 'week' | 'custom' | null;
   focusMode: boolean;
   autoSchedule: boolean;
   pdfExporting: boolean;
@@ -188,146 +189,146 @@ const GanttBar: FC<{
   onDragEnd,
   onTaskClick,
 }) => {
-  const isDone = status?.isFinal ?? false;
-  const isStuck =
-    !isDone && task.dueDate != null && new Date(task.dueDate) < new Date();
+    const isDone = status?.isFinal ?? false;
+    const isStuck =
+      !isDone && task.dueDate != null && new Date(task.dueDate) < new Date();
 
-  const barColor = isDone
-    ? 'var(--color-success)'
-    : isStuck
-      ? 'var(--color-danger)'
-      : status?.color ?? 'var(--color-accent)';
+    const barColor = isDone
+      ? 'var(--color-success)'
+      : isStuck
+        ? 'var(--color-danger)'
+        : status?.color ?? 'var(--color-accent)';
 
-  const motionX = useMotionValue(leftPx);
+    const motionX = useMotionValue(leftPx);
 
-  // Animate to new leftPx on optimistic update or view change
-  useEffect(() => {
-    animate(motionX, leftPx, { duration: 0.25, ease: [0.4, 0, 0.2, 1] });
-  }, [leftPx]); // eslint-disable-line react-hooks/exhaustive-deps
+    // Animate to new leftPx on optimistic update or view change
+    useEffect(() => {
+      animate(motionX, leftPx, { duration: 0.25, ease: [0.4, 0, 0.2, 1] });
+    }, [leftPx]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const lastDragDeltaRef = useRef(0);
+    const lastDragDeltaRef = useRef(0);
 
-  const handleDragEnd = useCallback(
-    (_: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
-      const deltaDays = Math.round(info.offset.x / pxPerDay);
-      if (deltaDays !== 0) {
-        onDragEnd(task.id, deltaDays);
-      } else {
-        animate(motionX, leftPx, { duration: 0.2, ease: [0.4, 0, 0.2, 1] });
-      }
-    },
-    [task.id, motionX, leftPx, pxPerDay, onDragEnd],
-  );
+    const handleDragEnd = useCallback(
+      (_: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
+        const deltaDays = Math.round(info.offset.x / pxPerDay);
+        if (deltaDays !== 0) {
+          onDragEnd(task.id, deltaDays);
+        } else {
+          animate(motionX, leftPx, { duration: 0.2, ease: [0.4, 0, 0.2, 1] });
+        }
+      },
+      [task.id, motionX, leftPx, pxPerDay, onDragEnd],
+    );
 
-  const dimStyle: React.CSSProperties =
-    isFocusMode && !isFocused
-      ? { opacity: 0.25, filter: 'blur(1.5px)', pointerEvents: 'none' }
-      : {};
+    const dimStyle: React.CSSProperties =
+      isFocusMode && !isFocused
+        ? { opacity: 0.25, filter: 'blur(1.5px)', pointerEvents: 'none' }
+        : {};
 
-  // ── Milestone diamond ──
-  if (task.isMilestone) {
-    const size = 16;
+    // ── Milestone diamond ──
+    if (task.isMilestone) {
+      const size = 16;
+      return (
+        <GanttTooltip task={task} status={status}>
+          <div
+            style={{
+              position: 'absolute',
+              top: topPx + ROW_HEIGHT / 2 - size / 2,
+              left: leftPx - size / 2,
+              width: size,
+              height: size,
+              transform: 'rotate(45deg)',
+              background: 'var(--color-warning)',
+              borderRadius: 2,
+              cursor: 'pointer',
+              zIndex: 5,
+              ...dimStyle,
+            }}
+            title={task.title}
+            onClick={() => onTaskClick(task)}
+          />
+        </GanttTooltip>
+      );
+    }
+
     return (
       <GanttTooltip task={task} status={status}>
-        <div
+        <motion.div
+          className="rp-gantt-bar"
+          drag={isDragEnabled ? 'x' : false}
+          dragMomentum={false}
+          dragElastic={0.05}
           style={{
+            x: motionX,
             position: 'absolute',
-            top: topPx + ROW_HEIGHT / 2 - size / 2,
-            left: leftPx - size / 2,
-            width: size,
-            height: size,
-            transform: 'rotate(45deg)',
-            background: 'var(--color-warning)',
-            borderRadius: 2,
-            cursor: 'pointer',
-            zIndex: 5,
+            top: topPx + 8,
+            left: 0,
+            width: widthPx,
+            height: ROW_HEIGHT - 16,
+            borderRadius: 8,
+            backgroundColor: barColor,
+            display: 'flex',
+            alignItems: 'center',
+            paddingLeft: 8,
+            paddingRight: 8,
+            overflow: 'hidden',
+            cursor: isDragEnabled ? 'grab' : 'pointer',
+            userSelect: 'none',
+            boxShadow: isStuck
+              ? '0 0 0 2px rgba(248,113,113,0.45)'
+              : '0 2px 8px rgba(0,0,0,0.10)',
             ...dimStyle,
           }}
-          title={task.title}
-          onClick={() => onTaskClick(task)}
-        />
+          whileDrag={{ scale: 1.03, zIndex: 20, boxShadow: '0 8px 32px rgba(0,0,0,0.20)' }}
+          whileHover={{ scale: 1.01 }}
+          onDrag={(_, info) => {
+            lastDragDeltaRef.current = info.offset.x;
+          }}
+          onDragEnd={handleDragEnd}
+          onClick={(e) => {
+            if (Math.abs(lastDragDeltaRef.current) < 6) {
+              e.stopPropagation();
+              lastDragDeltaRef.current = 0;
+              onTaskClick(task);
+            }
+            lastDragDeltaRef.current = 0;
+          }}
+          title={`${task.title}\n${task.startDate ?? '?'} → ${task.dueDate ?? '?'}`}
+        >
+          {/* Progress fill overlay */}
+          <div
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: `${task.progressPercentage ?? 0}%`,
+              height: '100%',
+              background: 'rgba(255,255,255,0.18)',
+              borderRadius: 'inherit',
+              pointerEvents: 'none',
+            }}
+          />
+          {/* Task title */}
+          <span
+            style={{
+              position: 'relative',
+              zIndex: 1,
+              fontSize: 11,
+              fontWeight: 600,
+              color: 'white',
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              letterSpacing: 0.2,
+              textShadow: '0 1px 2px rgba(0,0,0,0.2)',
+            }}
+          >
+            {task.title}
+          </span>
+        </motion.div>
       </GanttTooltip>
     );
-  }
-
-  return (
-    <GanttTooltip task={task} status={status}>
-      <motion.div
-        className="rp-gantt-bar"
-        drag={isDragEnabled ? 'x' : false}
-        dragMomentum={false}
-        dragElastic={0.05}
-        style={{
-          x: motionX,
-          position: 'absolute',
-          top: topPx + 8,
-          left: 0,
-          width: widthPx,
-          height: ROW_HEIGHT - 16,
-          borderRadius: 8,
-          backgroundColor: barColor,
-          display: 'flex',
-          alignItems: 'center',
-          paddingLeft: 8,
-          paddingRight: 8,
-          overflow: 'hidden',
-          cursor: isDragEnabled ? 'grab' : 'pointer',
-          userSelect: 'none',
-          boxShadow: isStuck
-            ? '0 0 0 2px rgba(248,113,113,0.45)'
-            : '0 2px 8px rgba(0,0,0,0.10)',
-          ...dimStyle,
-        }}
-        whileDrag={{ scale: 1.03, zIndex: 20, boxShadow: '0 8px 32px rgba(0,0,0,0.20)' }}
-        whileHover={{ scale: 1.01 }}
-        onDrag={(_, info) => {
-          lastDragDeltaRef.current = info.offset.x;
-        }}
-        onDragEnd={handleDragEnd}
-        onClick={(e) => {
-          if (Math.abs(lastDragDeltaRef.current) < 6) {
-            e.stopPropagation();
-            lastDragDeltaRef.current = 0;
-            onTaskClick(task);
-          }
-          lastDragDeltaRef.current = 0;
-        }}
-        title={`${task.title}\n${task.startDate ?? '?'} → ${task.dueDate ?? '?'}`}
-      >
-        {/* Progress fill overlay */}
-        <div
-          style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            width: `${task.progressPercentage ?? 0}%`,
-            height: '100%',
-            background: 'rgba(255,255,255,0.18)',
-            borderRadius: 'inherit',
-            pointerEvents: 'none',
-          }}
-        />
-        {/* Task title */}
-        <span
-          style={{
-            position: 'relative',
-            zIndex: 1,
-            fontSize: 11,
-            fontWeight: 600,
-            color: 'white',
-            whiteSpace: 'nowrap',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            letterSpacing: 0.2,
-            textShadow: '0 1px 2px rgba(0,0,0,0.2)',
-          }}
-        >
-          {task.title}
-        </span>
-      </motion.div>
-    </GanttTooltip>
-  );
-};
+  };
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
@@ -426,17 +427,18 @@ export const GanttTimeline = forwardRef<GanttTimelineHandle, GanttTimelineProps>
     // ── Sort tasks (overdue first, then by due date, unscheduled last) ────────
     const sortedTasks = useMemo(() => {
       const today = startOfDay(new Date());
-      return [...tasks]
+      return tasks
+        .filter((t) => t.startDate || t.dueDate)
         .sort((a, b) => {
-        const aOverdue = a.dueDate && parseISO(a.dueDate) < today;
-        const bOverdue = b.dueDate && parseISO(b.dueDate) < today;
-        if (aOverdue && !bOverdue) return -1;
-        if (!aOverdue && bOverdue) return 1;
-        if (!a.dueDate && b.dueDate) return 1;
-        if (a.dueDate && !b.dueDate) return -1;
-        if (a.dueDate && b.dueDate) return a.dueDate.localeCompare(b.dueDate);
-        return 0;
-      });
+          const aOverdue = a.dueDate && parseISO(a.dueDate) < today;
+          const bOverdue = b.dueDate && parseISO(b.dueDate) < today;
+          if (aOverdue && !bOverdue) return -1;
+          if (!aOverdue && bOverdue) return 1;
+          if (!a.dueDate && b.dueDate) return 1;
+          if (a.dueDate && !b.dueDate) return -1;
+          if (a.dueDate && b.dueDate) return a.dueDate.localeCompare(b.dueDate);
+          return 0;
+        });
     }, [tasks]);
 
     // ── Swimlanes ─────────────────────────────────────────────────────────────
@@ -492,6 +494,71 @@ export const GanttTimeline = forwardRef<GanttTimelineHandle, GanttTimelineProps>
           }
         }
         return [...map.values()];
+      }
+
+      // ── LANE MODE ─────────────────────────────────────────────────────────────
+      if (groupBy === 'lane') {
+        if (!lanes || lanes.length === 0) {
+          return [
+            {
+              assigneeId: null,
+              displayName: 'No lanes defined. Use Custom Lanes to create some.',
+              tasks: [],
+            },
+          ];
+        }
+        const laneMap = new Map<string | null, Swimlane>();
+        for (const lane of [...lanes].sort((a, b) => a.sortOrder - b.sortOrder)) {
+          laneMap.set(lane.id, {
+            assigneeId: null,
+            displayName: lane.name,
+            laneColor: lane.color,
+            laneId: lane.id,
+            tasks: [],
+          });
+        }
+        laneMap.set(null, {
+          assigneeId: null,
+          displayName: 'Unassigned',
+          laneColor: '#94a3b8',
+          laneId: null,
+          tasks: [],
+        });
+        for (const task of sortedTasks) {
+          const key =
+            task.laneId != null && laneMap.has(task.laneId) ? task.laneId : null;
+          laneMap.get(key)!.tasks.push(task);
+        }
+        return [...laneMap.values()].filter((l) => l.tasks.length > 0);
+      }
+
+      // ── START WEEK MODE ───────────────────────────────────────────────────────
+      if (groupBy === 'week') {
+        const weekMap = new Map<string, Swimlane>();
+        const unscheduled: TaskDTO[] = [];
+        for (const task of sortedTasks) {
+          if (!task.startDate) {
+            unscheduled.push(task);
+            continue;
+          }
+          const monday = startOfWeek(parseISO(task.startDate), { weekStartsOn: 1 });
+          const key = format(monday, 'yyyy-MM-dd');
+          if (!weekMap.has(key)) {
+            weekMap.set(key, {
+              assigneeId: null,
+              displayName: `Week of ${format(monday, 'MMM d')}`,
+              tasks: [],
+            });
+          }
+          weekMap.get(key)!.tasks.push(task);
+        }
+        const sorted = [...weekMap.entries()]
+          .sort(([a], [b]) => a.localeCompare(b))
+          .map(([, v]) => v);
+        if (unscheduled.length > 0) {
+          sorted.push({ assigneeId: null, displayName: 'Unscheduled', tasks: unscheduled });
+        }
+        return sorted;
       }
 
       if (groupBy === 'custom') {
@@ -820,6 +887,8 @@ export const GanttTimeline = forwardRef<GanttTimelineHandle, GanttTimelineProps>
             <option value="assignee">👤 By Assignee</option>
             <option value="status">🔵 By Status</option>
             <option value="priority">⚡ By Priority</option>
+            <option value="lane">🗂 By Lane</option>
+            <option value="week">📅 By Start Week</option>
             <option value="custom">🏷 Custom Lanes</option>
           </select>
 
