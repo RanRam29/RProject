@@ -256,6 +256,7 @@ const LeftPane: FC<{
   const [priority, setPriority] = useState<TaskPriority>(task.priority ?? TaskPriority.NONE);
   const [startDate, setStartDate] = useState(task.startDate ? task.startDate.slice(0, 10) : '');
   const [dueDate, setDueDate] = useState(task.dueDate ? task.dueDate.slice(0, 10) : '');
+  const [laneId, setLaneId] = useState<string | null>(task.laneId ?? null);
   const [isDirty, setIsDirty] = useState(false);
 
   const markDirty = useCallback(() => setIsDirty(true), []);
@@ -277,18 +278,6 @@ const LeftPane: FC<{
   const { data: lanes = [] } = useQuery({
     queryKey: ['lanes', projectId],
     queryFn: () => lanesApi.list(projectId),
-  });
-
-  const laneUpdateMutation = useMutation({
-    mutationFn: (laneId: string | null) =>
-      tasksApi.update(projectId, task.id, { laneId }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['tasks', projectId] });
-      queryClient.invalidateQueries({ queryKey: ['lanes', projectId] });
-    },
-    onError: () => {
-      addToast({ type: 'error', message: 'Failed to update lane' });
-    },
   });
 
   const statusMutation = useMutation({
@@ -333,8 +322,9 @@ const LeftPane: FC<{
       priority,
       startDate: startDate || null,
       dueDate: dueDate || null,
+      laneId,
     });
-  }, [title, description, assigneeId, priority, startDate, dueDate, updateMutation]);
+  }, [title, description, assigneeId, priority, startDate, dueDate, laneId, updateMutation]);
 
   const inputStyle: React.CSSProperties = {
     width: '100%',
@@ -465,10 +455,10 @@ const LeftPane: FC<{
         <div style={fieldStyle}>
           <label style={labelStyle}>Lane</label>
           <select
-            value={task.laneId ?? ''}
+            value={laneId ?? ''}
             onChange={(e) => {
-              const val = e.target.value;
-              laneUpdateMutation.mutate(val === '' ? null : val);
+              setLaneId(e.target.value || null);
+              markDirty();
             }}
             style={{ ...inputStyle, height: 38 }}
           >
