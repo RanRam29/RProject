@@ -96,7 +96,7 @@ export class TasksController {
     try {
       const taskId = req.params.taskId as string;
       const userId = req.user!.id;
-      const { title, description, assigneeId, priority, startDate, dueDate, isMilestone, estimatedHours } = req.body;
+      const { title, description, assigneeId, priority, startDate, dueDate, isMilestone, estimatedHours, laneId } = req.body;
 
       // Fetch old task for change tracking
       const oldTask = await prisma.task.findUnique({ where: { id: taskId } });
@@ -114,6 +114,7 @@ export class TasksController {
           : undefined,
         isMilestone,
         estimatedHours,
+        laneId,
       });
 
       // Record field-level changes (includes isMilestone + estimatedHours)

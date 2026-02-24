@@ -26,6 +26,7 @@ export interface TaskDTO {
   sortOrder: number;
   createdAt: string;
   updatedAt: string;
+  laneId: string | null;
   // Gantt fields
   isMilestone: boolean;
   estimatedHours: number;
@@ -77,6 +78,7 @@ export interface UpdateTaskRequest {
   dueDate?: string | null;
   isMilestone?: boolean;
   estimatedHours?: number;
+  laneId?: string | null;
 }
 
 export interface UpdateTaskStatusRequest {

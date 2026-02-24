@@ -88,6 +88,9 @@ export class TasksService {
             comments: {
               select: { id: true },
             },
+            lane: {
+              select: { id: true, name: true, color: true },
+            },
             _count: {
               select: { subtasks: true },
             },
@@ -166,6 +169,9 @@ export class TasksService {
               },
             },
             orderBy: { createdAt: 'asc' },
+          },
+          lane: {
+            select: { id: true, name: true, color: true },
           },
         },
       });
@@ -286,6 +292,7 @@ export class TasksService {
       dueDate?: Date | null;
       isMilestone?: boolean;
       estimatedHours?: number;
+      laneId?: string | null;
     },
   ) {
     try {
@@ -321,11 +328,15 @@ export class TasksService {
           ...(data.dueDate !== undefined && { dueDate: data.dueDate }),
           ...(data.isMilestone !== undefined && { isMilestone: data.isMilestone }),
           ...(data.estimatedHours !== undefined && { estimatedHours: data.estimatedHours }),
+          ...(data.laneId !== undefined && { laneId: data.laneId }),
         },
         include: {
           status: true,
           assignee: {
             select: USER_SELECT_STANDARD,
+          },
+          lane: {
+            select: { id: true, name: true, color: true },
           },
         },
       });

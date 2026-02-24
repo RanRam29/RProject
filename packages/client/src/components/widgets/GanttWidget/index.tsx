@@ -13,8 +13,10 @@
  */
 
 import { useState, useCallback, useRef, type FC } from 'react';
+import { createPortal } from 'react-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { tasksApi } from '../../../api/tasks.api';
+import { lanesApi } from '../../../api/lanes.api';
 import { type GanttView } from './ganttGridHelpers';
 import { type GanttTimelineHandle, GanttTimeline } from './GanttTimeline';
 import { useUIStore } from '../../../stores/ui.store';
@@ -32,7 +34,7 @@ export const GanttWidget: FC<WidgetProps> = ({ projectId }) => {
   const [view, setView] = useState<GanttView>('week');
   const [year, setYear] = useState(() => new Date().getFullYear());
   const [autoSchedule, setAutoSchedule] = useState(false);
-  const [swimlaneMode, setSwimlaneMode] = useState(false);
+  const [groupBy, setGroupBy] = useState<'assignee' | 'status' | 'priority' | 'custom' | null>(null);
   const [focusMode, setFocusMode] = useState(false);
   const [pdfExporting, setPdfExporting] = useState(false);
 
@@ -51,6 +53,33 @@ export const GanttWidget: FC<WidgetProps> = ({ projectId }) => {
   const { data: statuses } = useQuery({
     queryKey: ['statuses', projectId],
     queryFn: () => tasksApi.getStatuses(projectId),
+  });
+
+  const { data: lanes = [] } = useQuery({
+    queryKey: ['lanes', projectId],
+    queryFn: () => lanesApi.list(projectId),
+  });
+
+  const createLaneMutation = useMutation({
+    mutationFn: (name: string) => lanesApi.create(projectId, { name }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['lanes', projectId] }),
+    onError: () => addToast({ type: 'error', message: 'Failed to create lane' }),
+  });
+
+  const updateLaneMutation = useMutation({
+    mutationFn: ({ laneId, data }: { laneId: string; data: { name?: string; color?: string } }) =>
+      lanesApi.update(projectId, laneId, data),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['lanes', projectId] }),
+    onError: () => addToast({ type: 'error', message: 'Failed to update lane' }),
+  });
+
+  const deleteLaneMutation = useMutation({
+    mutationFn: (laneId: string) => lanesApi.delete(projectId, laneId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['lanes', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['tasks', projectId] });
+    },
+    onError: () => addToast({ type: 'error', message: 'Failed to delete lane' }),
   });
 
   // ── Filtering ────────────────────────────────────────────────────────────────
@@ -148,7 +177,7 @@ export const GanttWidget: FC<WidgetProps> = ({ projectId }) => {
         onClear={clearFilters}
       />
 
-      <div ref={ganttRef} className="flex-1 min-h-0 overflow-hidden">
+      <div ref={ganttRef} className="flex-1 min-h-0 overflow-auto">
         <GanttTimeline
           ref={ganttGridRef}
           tasks={filteredTasks}
@@ -156,12 +185,16 @@ export const GanttWidget: FC<WidgetProps> = ({ projectId }) => {
           view={view}
           year={year}
           isDragEnabled={view === 'day' || view === 'week'}
-          swimlaneMode={swimlaneMode}
+          groupBy={groupBy}
           focusMode={focusMode}
           autoSchedule={autoSchedule}
           pdfExporting={pdfExporting}
           onFocusModeChange={setFocusMode}
-          onSwimlaneToggle={() => setSwimlaneMode((v) => !v)}
+          onGroupByChange={setGroupBy}
+          lanes={lanes}
+          onCreateLane={(name) => createLaneMutation.mutate(name)}
+          onUpdateLane={(laneId, data) => updateLaneMutation.mutate({ laneId, data })}
+          onDeleteLane={(laneId) => deleteLaneMutation.mutate(laneId)}
           onViewChange={setView}
           onYearChange={setYear}
           onAutoScheduleChange={setAutoSchedule}
@@ -174,15 +207,17 @@ export const GanttWidget: FC<WidgetProps> = ({ projectId }) => {
         />
       </div>
 
-      {selectedTask && (
-        <LivingTaskModal
-          isOpen={!!selectedTask}
-          onClose={() => setSelectedTask(null)}
-          projectId={projectId}
-          task={selectedTask}
-          statuses={statuses ?? []}
-        />
-      )}
+      {selectedTask &&
+        createPortal(
+          <LivingTaskModal
+            isOpen={!!selectedTask}
+            onClose={() => setSelectedTask(null)}
+            projectId={projectId}
+            task={selectedTask}
+            statuses={statuses ?? []}
+          />,
+          document.body,
+        )}
     </div>
   );
 };

@@ -49,7 +49,7 @@ export function TimelineWidget({ projectId }: WidgetProps) {
   const [zenOpen, setZenOpen] = useState(false);
   const [ganttView, setGanttView] = useState<GanttView>('week');
   const [ganttYear, setGanttYear] = useState(() => new Date().getFullYear());
-  const [swimlaneMode, setSwimlaneMode] = useState(false);
+  const [groupBy, setGroupBy] = useState<'assignee' | 'status' | 'priority' | 'custom' | null>(null);
   const [focusMode, setFocusMode] = useState(false);
   const [autoSchedule, setAutoSchedule] = useState(false);
   const [pdfExporting, setPdfExporting] = useState(false);
@@ -227,12 +227,12 @@ export function TimelineWidget({ projectId }: WidgetProps) {
           view={ganttView}
           year={ganttYear}
           isDragEnabled={ganttView === 'day' || ganttView === 'week'}
-          swimlaneMode={swimlaneMode}
+          groupBy={groupBy}
           focusMode={focusMode}
           autoSchedule={autoSchedule}
           pdfExporting={pdfExporting}
           onFocusModeChange={setFocusMode}
-          onSwimlaneToggle={() => setSwimlaneMode((v) => !v)}
+          onGroupByChange={setGroupBy}
           onViewChange={setGanttView}
           onYearChange={setGanttYear}
           onAutoScheduleChange={setAutoSchedule}
