@@ -4,6 +4,7 @@ import { labelsApi } from '../../api/labels.api';
 import { tasksApi } from '../../api/tasks.api';
 import { permissionsApi } from '../../api/permissions.api';
 import { PRIORITY_CONFIG, TaskPriority } from '@pm/shared';
+import type { LaneDTO } from '@pm/shared';
 import type { TaskFilters } from '../../hooks/useTaskFilters';
 
 interface FilterBarProps {
@@ -12,9 +13,10 @@ interface FilterBarProps {
   activeCount: number;
   onFilterChange: <K extends keyof TaskFilters>(key: K, value: TaskFilters[K]) => void;
   onClear: () => void;
+  lanes?: LaneDTO[];
 }
 
-export function FilterBar({ projectId, filters, activeCount, onFilterChange, onClear }: FilterBarProps) {
+export function FilterBar({ projectId, filters, activeCount, onFilterChange, onClear, lanes }: FilterBarProps) {
   const [searchFocused, setSearchFocused] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
 
@@ -134,6 +136,23 @@ export function FilterBar({ projectId, filters, activeCount, onFilterChange, onC
           <option key={l.id} value={l.id}>{l.name}</option>
         ))}
       </select>
+
+      {/* Lane (only shown when lanes exist) */}
+      {lanes && lanes.length > 0 && (
+        <select
+          value={filters.laneId}
+          onChange={(e) => onFilterChange('laneId', e.target.value)}
+          style={{
+            ...selectStyle,
+            ...(filters.laneId ? activeSelectStyle : {}),
+          }}
+        >
+          <option value="">All Lanes</option>
+          {lanes.map((l) => (
+            <option key={l.id} value={l.id}>{l.name}</option>
+          ))}
+        </select>
+      )}
 
       {/* Active filter count + Clear */}
       {activeCount > 0 && (

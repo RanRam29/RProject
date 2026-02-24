@@ -44,6 +44,7 @@ describe('useTaskFilters', () => {
         assigneeId: '',
         priority: '',
         labelId: '',
+        laneId: '',
       });
     });
 
@@ -454,6 +455,7 @@ describe('useTaskFilters', () => {
         assigneeId: '',
         priority: '',
         labelId: '',
+        laneId: '',
       });
     });
 

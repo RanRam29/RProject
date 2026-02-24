@@ -7,6 +7,7 @@ export interface TaskFilters {
   assigneeId: string;
   priority: string;
   labelId: string;
+  laneId: string;
 }
 
 const EMPTY_FILTERS: TaskFilters = {
@@ -15,6 +16,7 @@ const EMPTY_FILTERS: TaskFilters = {
   assigneeId: '',
   priority: '',
   labelId: '',
+  laneId: '',
 };
 
 export function useTaskFilters(tasks: TaskDTO[]) {
@@ -27,6 +29,7 @@ export function useTaskFilters(tasks: TaskDTO[]) {
     if (filters.assigneeId) count++;
     if (filters.priority) count++;
     if (filters.labelId) count++;
+    if (filters.laneId) count++;
     return count;
   }, [filters]);
 
@@ -45,6 +48,7 @@ export function useTaskFilters(tasks: TaskDTO[]) {
         );
         if (!hasLabel) return false;
       }
+      if (filters.laneId && task.laneId !== filters.laneId) return false;
       return true;
     });
   }, [tasks, filters]);

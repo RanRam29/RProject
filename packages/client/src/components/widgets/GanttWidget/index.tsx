@@ -175,6 +175,7 @@ export const GanttWidget: FC<WidgetProps> = ({ projectId }) => {
         activeCount={activeCount}
         onFilterChange={updateFilter}
         onClear={clearFilters}
+        lanes={lanes}
       />
 
       <div ref={ganttRef} className="flex-1 min-h-0 overflow-auto">
