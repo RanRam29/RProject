@@ -427,7 +427,6 @@ export const GanttTimeline = forwardRef<GanttTimelineHandle, GanttTimelineProps>
     const sortedTasks = useMemo(() => {
       const today = startOfDay(new Date());
       return [...tasks]
-        .filter((t) => t.startDate != null || t.dueDate != null)
         .sort((a, b) => {
         const aOverdue = a.dueDate && parseISO(a.dueDate) < today;
         const bOverdue = b.dueDate && parseISO(b.dueDate) < today;
@@ -984,7 +983,7 @@ export const GanttTimeline = forwardRef<GanttTimelineHandle, GanttTimelineProps>
               <rect x={3} y={4} width={18} height={18} rx={2} />
               <path d="M16 2v4M8 2v4M3 10h18" />
             </svg>
-            No tasks scheduled. Add start or due dates to tasks to see them on the timeline.
+            No tasks found. Create tasks in the project to see them here.
           </div>
         ) : (
           /* ── Scrollable timeline ── */
@@ -1428,7 +1427,39 @@ export const GanttTimeline = forwardRef<GanttTimelineHandle, GanttTimelineProps>
                     // Scheduled bar
                     const startDate = safeParseDate(task.startDate);
                     const endDate = safeParseDate(task.dueDate ?? task.startDate);
-                    if (!endDate) return null;
+
+                    // Unscheduled chip — no dates set
+                    if (!endDate) {
+                      return (
+                        <div
+                          key={task.id}
+                          onClick={() => onTaskClick?.(task)}
+                          title={`${task.title} — no dates set`}
+                          style={{
+                            position: 'absolute',
+                            top: topPx + ROW_HEIGHT * 0.2,
+                            left: Math.max(0, todayLeftPx),
+                            height: ROW_HEIGHT * 0.6,
+                            width: 80,
+                            border: '1.5px dashed var(--color-border)',
+                            borderRadius: 4,
+                            background: 'transparent',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: 10,
+                            color: 'var(--color-text-tertiary)',
+                            opacity: isFocused ? 1 : 0.25,
+                            cursor: 'pointer',
+                            userSelect: 'none',
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                          }}
+                        >
+                          No date
+                        </div>
+                      );
+                    }
 
                     const effectiveStart = startDate ?? endDate;
                     const leftPx =
