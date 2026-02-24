@@ -1,4 +1,6 @@
 export const env = {
   API_URL: import.meta.env.VITE_API_URL || '/api/v1',
-  WS_URL: import.meta.env.VITE_WS_URL || (import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace('/api/v1', '') : 'http://localhost:3002'),
+  WS_URL: import.meta.env.VITE_WS_URL || (import.meta.env.VITE_API_URL
+    ? import.meta.env.VITE_API_URL.replace('/api/v1', '')
+    : typeof window !== 'undefined' ? window.location.origin.replace(/^http/, 'ws') : 'http://localhost:3002'),
 } as const;

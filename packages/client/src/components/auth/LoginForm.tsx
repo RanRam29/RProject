@@ -28,11 +28,15 @@ export const LoginForm: React.FC = () => {
     try {
       await login({ email: email.trim(), password }, rememberMe);
       navigate('/', { replace: true });
-    } catch (err: unknown) {
-      if (err instanceof Error) {
+    } catch (err: any) {
+      if (err?.response?.status === 401) {
+        setError('Invalid email or password. Please try again.');
+      } else if (err?.response?.data?.message) {
+        setError(err.response.data.message);
+      } else if (err instanceof Error) {
         setError(err.message);
       } else {
-        setError('Invalid email or password. Please try again.');
+        setError('An error occurred during sign in.');
       }
     } finally {
       setIsSubmitting(false);

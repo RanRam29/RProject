@@ -58,11 +58,14 @@ export function KanbanWidget({ projectId }: WidgetProps) {
 
       const previousTasks = queryClient.getQueryData<TaskDTO[]>(['tasks', projectId]);
 
-      queryClient.setQueryData<TaskDTO[]>(['tasks', projectId], (old) =>
-        old?.map((t) =>
+      queryClient.setQueryData<TaskDTO[]>(['tasks', projectId], (old) => {
+        if (!old) return [];
+        // Important: Create a new array and replace the moved task to force a clean re-render,
+        // preventing race conditions with WebSocket broadcasts.
+        return old.map((t) =>
           t.id === taskId ? { ...t, statusId, sortOrder } : t
-        ) || []
-      );
+        );
+      });
 
       return { previousTasks };
     },
