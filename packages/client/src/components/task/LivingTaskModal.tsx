@@ -32,6 +32,7 @@ import { format, parseISO, isValid } from 'date-fns';
 import confetti from 'canvas-confetti';
 import { tasksApi } from '../../api/tasks.api';
 import { commentsApi } from '../../api/comments.api';
+import { lanesApi } from '../../api/lanes.api';
 import { useAuthStore } from '../../stores/auth.store';
 import { useUIStore } from '../../stores/ui.store';
 import { useSocket } from '../../contexts/SocketContext';
@@ -273,6 +274,23 @@ const LeftPane: FC<{
     },
   });
 
+  const { data: lanes = [] } = useQuery({
+    queryKey: ['lanes', projectId],
+    queryFn: () => lanesApi.list(projectId),
+  });
+
+  const laneUpdateMutation = useMutation({
+    mutationFn: (laneId: string | null) =>
+      tasksApi.update(projectId, task.id, { laneId }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tasks', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['lanes', projectId] });
+    },
+    onError: () => {
+      addToast({ type: 'error', message: 'Failed to update lane' });
+    },
+  });
+
   const statusMutation = useMutation({
     mutationFn: (newStatusId: string) =>
       tasksApi.updateTaskStatus(projectId, task.id, newStatusId),
@@ -441,6 +459,28 @@ const LeftPane: FC<{
           onChange={(id) => { setAssigneeId(id); markDirty(); }}
         />
       </div>
+
+      {/* Lane (shown only when project has lanes) */}
+      {lanes.length > 0 && (
+        <div style={fieldStyle}>
+          <label style={labelStyle}>Lane</label>
+          <select
+            value={task.laneId ?? ''}
+            onChange={(e) => {
+              const val = e.target.value;
+              laneUpdateMutation.mutate(val === '' ? null : val);
+            }}
+            style={{ ...inputStyle, height: 38 }}
+          >
+            <option value="">No lane</option>
+            {lanes.map((lane) => (
+              <option key={lane.id} value={lane.id}>
+                {lane.name}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
 
       {/* Description */}
       <div style={fieldStyle}>
