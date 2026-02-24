@@ -412,7 +412,9 @@ export const GanttTimeline = forwardRef<GanttTimelineHandle, GanttTimelineProps>
     // ── Sort tasks (overdue first, then by due date, unscheduled last) ────────
     const sortedTasks = useMemo(() => {
       const today = startOfDay(new Date());
-      return [...tasks].sort((a, b) => {
+      return [...tasks]
+        .filter((t) => t.startDate != null || t.dueDate != null)
+        .sort((a, b) => {
         const aOverdue = a.dueDate && parseISO(a.dueDate) < today;
         const bOverdue = b.dueDate && parseISO(b.dueDate) < today;
         if (aOverdue && !bOverdue) return -1;
@@ -808,7 +810,7 @@ export const GanttTimeline = forwardRef<GanttTimelineHandle, GanttTimelineProps>
               <rect x={3} y={4} width={18} height={18} rx={2} />
               <path d="M16 2v4M8 2v4M3 10h18" />
             </svg>
-            No tasks found. Add start or due dates to see tasks on the timeline.
+            No tasks scheduled. Add start or due dates to tasks to see them on the timeline.
           </div>
         ) : (
           /* ── Scrollable timeline ── */
@@ -1138,35 +1140,6 @@ export const GanttTimeline = forwardRef<GanttTimelineHandle, GanttTimelineProps>
                     const topPx = rowIndex * ROW_HEIGHT;
                     const status = statusMap.get(task.statusId);
                     const isFocused = !focusMode || connectedTaskIds.has(task.id);
-
-                    // Unscheduled chip — no start AND no due date
-                    if (!task.startDate && !task.dueDate) {
-                      return (
-                        <div
-                          key={task.id}
-                          style={{
-                            position: 'absolute',
-                            top: topPx + 8,
-                            left: 4,
-                            height: ROW_HEIGHT - 16,
-                            padding: '0 8px',
-                            borderRadius: 4,
-                            border: '1px dashed var(--color-text-tertiary)',
-                            color: 'var(--color-text-tertiary)',
-                            fontSize: 11,
-                            display: 'flex',
-                            alignItems: 'center',
-                            cursor: 'pointer',
-                            whiteSpace: 'nowrap',
-                            opacity: focusMode && !isFocused ? 0.25 : 0.7,
-                            zIndex: 5,
-                          }}
-                          onClick={() => onTaskClick(task)}
-                        >
-                          No dates — {task.title}
-                        </div>
-                      );
-                    }
 
                     // Scheduled bar
                     const startDate = safeParseDate(task.startDate);
