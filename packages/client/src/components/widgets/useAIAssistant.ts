@@ -52,17 +52,17 @@ export function useAIAssistant(projectId: string) {
   useEffect(() => {
     const welcomeContent = isAIEnabled
       ? 'Hello! I\'m your **AI-powered** project assistant. Ask me anything about your project:\n\n' +
-        '- **Analyze** your project status and risks\n' +
-        '- **Create tasks** from natural language\n' +
-        '- **Get insights** on bottlenecks and priorities\n' +
-        '- **Generate** plans, reports, and recommendations\n\n' +
-        'Try asking a question like "What are the biggest risks?" or use the quick actions above.'
+      '- **Analyze** your project status and risks\n' +
+      '- **Create tasks** from natural language\n' +
+      '- **Get insights** on bottlenecks and priorities\n' +
+      '- **Generate** plans, reports, and recommendations\n\n' +
+      'Try asking a question like "What are the biggest risks?" or use the quick actions above.'
       : 'Hello! I\'m your project assistant. I can help you:\n\n' +
-        '- **Analyze** your project status\n' +
-        '- **Create tasks** from natural language\n' +
-        '- **Identify** overdue and at-risk items\n' +
-        '- **Suggest** next steps\n\n' +
-        'Try: "project summary", "create task: Design login page", or "what\'s overdue?"';
+      '- **Analyze** your project status\n' +
+      '- **Create tasks** from natural language\n' +
+      '- **Identify** overdue and at-risk items\n' +
+      '- **Suggest** next steps\n\n' +
+      'Try: "project summary", "create task: Design login page", or "what\'s overdue?"';
 
     setMessages([{
       id: 'welcome',
@@ -100,18 +100,47 @@ export function useAIAssistant(projectId: string) {
     ]);
     isStreamingRef.current = true;
 
+    let accumulatedText = '';
+
     try {
       await aiApi.chatStream(
         projectId,
         { message: userInput, history },
         (text) => {
+          accumulatedText += text;
+          // Hide the tag from the UI while it's typing
+          const displayContent = accumulatedText.replace(/<<<.*$/s, '');
+
           setMessages((prev) =>
             prev.map((m) =>
-              m.id === assistantId ? { ...m, content: m.content + text } : m,
+              m.id === assistantId ? { ...m, content: displayContent } : m,
             ),
           );
         },
         () => {
+          // Detect Action Tag when stream completes
+          const match = accumulatedText.match(/<<<CREATE_TASK\|([^|]+)\|([^|]+)\|([^>]*)>>>/);
+          if (match) {
+            const [_, title, priorityStr, dateStr] = match;
+
+            let priority: TaskPriority | undefined;
+            if (['URGENT', 'HIGH', 'MEDIUM', 'LOW'].includes(priorityStr)) {
+              priority = priorityStr as TaskPriority;
+            }
+
+            const defaultStatus = statuses.find((s) => !s.isFinal) || statuses[0];
+
+            if (defaultStatus && title) {
+              setPendingTask({
+                title: title.trim(),
+                statusId: defaultStatus.id,
+                statusName: defaultStatus.name,
+                priority,
+                dueDate: (dateStr && dateStr.trim() && dateStr !== 'NONE') ? dateStr.trim() : undefined,
+              });
+            }
+          }
+
           setMessages((prev) =>
             prev.map((m) =>
               m.id === assistantId ? { ...m, isStreaming: false } : m,
@@ -140,7 +169,7 @@ export function useAIAssistant(projectId: string) {
       );
       isStreamingRef.current = false;
     }
-  }, [projectId, messages]);
+  }, [projectId, messages, statuses, setPendingTask]);
 
   // ── Client-side analysis functions ────────────
 

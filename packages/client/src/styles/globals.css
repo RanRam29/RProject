@@ -11,138 +11,144 @@
 }
 
 /* ═══════════════════════════════════════════════════════════════════
-   RPROJECTS 2.0 — DESIGN SYSTEM
-   Aesthetic: Dark sleek sidebar + Cream/off-white workspace
-   Flat Design 2.0: soft diffused shadows, no harsh borders on cards
+   RPROJECTS 3.0 — CYBER-GLASS DESIGN SYSTEM
+   Aesthetic: Ultra-modern tech-savvy
+   Light: Crisp white, high contrast / Dark: OLED Black, Neon Accents
+   Glassmorphism 3.0: Extreme blurs, semi-transparent elevated surfaces
    ═══════════════════════════════════════════════════════════════════ */
 
 :root {
   /* ── Workspace (main content area) ── */
-  --color-bg-primary: #F5F6FA;       /* cream off-white workspace */
-  --color-bg-secondary: #EEEEF2;     /* subtle section backgrounds */
-  --color-bg-tertiary: #E4E5EC;      /* hover states, dividers */
-  --color-bg-elevated: #FFFFFF;      /* cards, modals, topbar */
-  --color-bg-overlay: rgba(15, 17, 26, 0.55);
+  --color-bg-primary: #FAFAFA;       
+  --color-bg-secondary: #F3F4F6;     
+  --color-bg-tertiary: #E5E7EB;      
+  /* Highly transparent elevated background for glass effect */
+  --color-bg-elevated: rgba(255, 255, 255, 0.75);      
+  --color-bg-overlay: rgba(0, 0, 0, 0.45);
 
-  /* ── Sidebar (LIGHT mode: clean white/gray) ── */
-  --sidebar-bg: #FFFFFF;
-  --sidebar-bg-hover: #F0F1F7;
-  --sidebar-bg-active: #E8EDFF;
-  --sidebar-border: rgba(0,0,0,0.07);
+  /* ── Sidebar (LIGHT mode: crisp white) ── */
+  --sidebar-bg: rgba(255, 255, 255, 0.85);
+  --sidebar-bg-hover: rgba(0, 0, 0, 0.04);
+  --sidebar-bg-active: rgba(99, 102, 241, 0.1);
+  --sidebar-border: rgba(0,0,0,0.05);
   --sidebar-text: #6B7280;
-  --sidebar-text-hover: #1A1D2E;
-  --sidebar-text-active: #3B61D4;
-  --sidebar-accent: #5B8DEF;
-  --sidebar-accent-bg: #EBF2FF;
-  --sidebar-section-label: #9CA3AF;
+  --sidebar-text-hover: #111827;
+  --sidebar-text-active: #4F46E5;
+  --sidebar-accent: #6366F1;
+  --sidebar-accent-bg: rgba(99, 102, 241, 0.1);
+  --sidebar-section-label: #A1A1AA;
 
   /* ── Typography ── */
-  --color-text-primary: #0F1117;
-  --color-text-secondary: #5A5F72;
-  --color-text-tertiary: #9CA3AF;
+  --color-text-primary: #09090B;
+  --color-text-secondary: #52525B;
+  --color-text-tertiary: #A1A1AA;
   --color-text-inverse: #FFFFFF;
 
-  /* ── Borders (used sparingly — prefer shadows) ── */
-  --color-border: rgba(0, 0, 0, 0.07);
-  --color-border-hover: rgba(0, 0, 0, 0.13);
+  /* ── Borders (Extremely subtle, mostly relying on shadows) ── */
+  --color-border: rgba(0, 0, 0, 0.06);
+  --color-border-hover: rgba(0, 0, 0, 0.12);
 
-  /* ── Brand accent ── */
-  --color-accent: #5B8DEF;
-  --color-accent-hover: #4A7ADE;
-  --color-accent-light: #EBF2FF;
-  --color-accent-text: #2E5FBF;
+  /* ── Brand accent (Electric Indigo) ── */
+  --color-accent: #4F46E5;
+  --color-accent-hover: #4338CA;
+  --color-accent-light: #EEF2FF;
+  --color-accent-text: #3730A3;
 
-  /* ── Semantic status colors (pastel / muted) ── */
-  --color-success: #34D399;
+  /* ── Semantic status colors (Neon/Vibrant) ── */
+  --color-success: #10B981;
   --color-success-light: #D1FAE5;
   --color-success-text: #065F46;
-  --color-warning: #FBBF24;
+  --color-warning: #F59E0B;
   --color-warning-light: #FEF3C7;
   --color-warning-text: #92400E;
-  --color-danger: #F87171;
+  --color-danger: #EF4444;
   --color-danger-light: #FEE2E2;
   --color-danger-text: #991B1B;
 
-  /* ── Flat Design 2.0 shadows (soft diffused, no harsh lines) ── */
-  --shadow-xs:  0 1px 3px rgba(0,0,0,0.04);
-  --shadow-sm:  0 2px 8px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
-  --shadow-md:  0 4px 16px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.04);
-  --shadow-lg:  0 8px 32px rgba(0,0,0,0.10), 0 2px 8px rgba(0,0,0,0.06);
-  --shadow-xl:  0 16px 48px rgba(0,0,0,0.12), 0 4px 12px rgba(0,0,0,0.06);
-  --shadow-drag: 0 20px 48px rgba(0,0,0,0.16), 0 4px 12px rgba(0,0,0,0.08);
-  --shadow-topbar: 0 1px 0 rgba(0,0,0,0.06), 0 2px 8px rgba(0,0,0,0.04);
-  --shadow-card:  0 2px 12px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.04);
-  --shadow-card-hover: 0 8px 28px rgba(0,0,0,0.10), 0 2px 8px rgba(0,0,0,0.05);
+  /* ── Shadows (very soft, wide spread) ── */
+  --shadow-xs:  0 1px 2px rgba(0,0,0,0.05);
+  --shadow-sm:  0 4px 12px rgba(0,0,0,0.05), 0 1px 2px rgba(0,0,0,0.03);
+  --shadow-md:  0 8px 24px rgba(0,0,0,0.06), 0 2px 6px rgba(0,0,0,0.04);
+  --shadow-lg:  0 12px 36px rgba(0,0,0,0.08), 0 4px 12px rgba(0,0,0,0.05);
+  --shadow-xl:  0 24px 64px rgba(0,0,0,0.12), 0 8px 16px rgba(0,0,0,0.06);
+  --shadow-drag: 0 32px 80px rgba(0,0,0,0.16), 0 12px 24px rgba(0,0,0,0.08);
+  --shadow-topbar: 0 4px 24px rgba(0,0,0,0.04);
+  --shadow-card:  0 4px 16px rgba(0,0,0,0.05), 0 1px 3px rgba(0,0,0,0.03);
+  --shadow-card-hover: 0 12px 32px rgba(0,0,0,0.10), 0 4px 12px rgba(0,0,0,0.05);
 
   /* ── Geometry ── */
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 14px;
-  --radius-xl: 18px;
-  --radius-2xl: 24px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --radius-2xl: 32px;
   --radius-full: 9999px;
 
   /* ── Motion ── */
-  --transition-fast: 150ms ease;
-  --transition-normal: 250ms ease;
-  --transition-slow: 350ms ease;
+  --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-normal: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow: 500ms cubic-bezier(0.4, 0, 0.2, 1);
 
   /* ── Typography ── */
   --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
 
   /* ── Layout ── */
-  --sidebar-width: 252px;
-  --topbar-height: 60px;
+  --sidebar-width: 260px;
+  --topbar-height: 64px;
 }
 
-/* ── Dark mode overrides ── */
+/* ── Dark mode overrides (OLED Black, Neon Accents, Cyber-Glass) ── */
 [data-theme='dark'] {
-  --color-bg-primary: #0F1117;
-  --color-bg-secondary: #161922;
-  --color-bg-tertiary: #1E2130;
-  --color-bg-elevated: #1A1E2A;
-  --color-bg-overlay: rgba(0, 0, 0, 0.72);
+  --color-bg-primary: #000000;
+  --color-bg-secondary: #0A0A0A;
+  --color-bg-tertiary: #171717;
+  --color-bg-elevated: rgba(15, 15, 18, 0.70);
+  --color-bg-overlay: rgba(0, 0, 0, 0.85);
 
-  /* Sidebar — dark mode: deep navy */
-  --sidebar-bg: #0D0F18;
-  --sidebar-bg-hover: rgba(255,255,255,0.06);
-  --sidebar-bg-active: rgba(91,141,239,0.18);
-  --sidebar-border: rgba(255,255,255,0.06);
-  --sidebar-text: rgba(255,255,255,0.50);
-  --sidebar-text-hover: rgba(255,255,255,0.90);
-  --sidebar-text-active: #FFFFFF;
-  --sidebar-accent: #5B8DEF;
-  --sidebar-accent-bg: rgba(91,141,239,0.20);
-  --sidebar-section-label: rgba(255,255,255,0.26);
+  /* Sidebar — dark mode: OLED pure black */
+  --sidebar-bg: rgba(0, 0, 0, 0.85);
+  --sidebar-bg-hover: rgba(255,255,255,0.08);
+  --sidebar-bg-active: rgba(99, 102, 241, 0.15);
+  --sidebar-border: rgba(255,255,255,0.08);
+  --sidebar-text: rgba(255,255,255,0.60);
+  --sidebar-text-hover: rgba(255,255,255,1);
+  --sidebar-text-active: #818CF8;
+  --sidebar-accent: #818CF8;
+  --sidebar-accent-bg: rgba(129, 140, 248, 0.15);
+  --sidebar-section-label: rgba(255,255,255,0.30);
 
-  --color-text-primary: #F0F1F5;
-  --color-text-secondary: #8B90A0;
-  --color-text-tertiary: #555C6E;
-  --color-text-inverse: #0F1117;
+  --color-text-primary: #FAFAFA;
+  --color-text-secondary: #A1A1AA;
+  --color-text-tertiary: #52525B;
+  --color-text-inverse: #000000;
 
-  --color-border: rgba(255, 255, 255, 0.07);
-  --color-border-hover: rgba(255, 255, 255, 0.13);
+  --color-border: rgba(255, 255, 255, 0.08);
+  --color-border-hover: rgba(255, 255, 255, 0.15);
 
-  --color-accent-light: #1C2D4F;
-  --color-accent-text: #93C5FD;
+  /* Cyber Neon Violet/Blue */
+  --color-accent-light: rgba(99, 102, 241, 0.15);
+  --color-accent-text: #A5B4FC;
+  --color-accent: #6366F1;
+  --color-accent-hover: #818CF8;
 
-  --color-success-light: #052E1E;
+  --color-success-light: rgba(16, 185, 129, 0.15);
   --color-success-text: #6EE7B7;
-  --color-warning-light: #3B2407;
+  --color-warning-light: rgba(245, 158, 11, 0.15);
   --color-warning-text: #FCD34D;
-  --color-danger-light: #3B0B0B;
+  --color-danger-light: rgba(239, 68, 68, 0.15);
   --color-danger-text: #FCA5A5;
 
-  --shadow-xs:  0 1px 3px rgba(0,0,0,0.20);
-  --shadow-sm:  0 2px 8px rgba(0,0,0,0.30), 0 1px 2px rgba(0,0,0,0.20);
-  --shadow-md:  0 4px 16px rgba(0,0,0,0.35), 0 2px 4px rgba(0,0,0,0.20);
-  --shadow-lg:  0 8px 32px rgba(0,0,0,0.40), 0 2px 8px rgba(0,0,0,0.25);
-  --shadow-xl:  0 16px 48px rgba(0,0,0,0.45), 0 4px 12px rgba(0,0,0,0.25);
-  --shadow-drag: 0 20px 48px rgba(0,0,0,0.55);
-  --shadow-topbar: 0 1px 0 rgba(255,255,255,0.04), 0 2px 8px rgba(0,0,0,0.25);
-  --shadow-card: 0 2px 12px rgba(0,0,0,0.30), 0 1px 3px rgba(0,0,0,0.20);
-  --shadow-card-hover: 0 8px 28px rgba(0,0,0,0.40), 0 2px 8px rgba(0,0,0,0.25);
+  /* Deep OLED shadows */
+  --shadow-xs:  0 2px 4px rgba(0,0,0,0.50);
+  --shadow-sm:  0 4px 12px rgba(0,0,0,0.60), 0 2px 4px rgba(0,0,0,0.40);
+  --shadow-md:  0 8px 24px rgba(0,0,0,0.70), 0 4px 8px rgba(0,0,0,0.50);
+  --shadow-lg:  0 16px 48px rgba(0,0,0,0.80), 0 4px 16px rgba(0,0,0,0.60);
+  --shadow-xl:  0 24px 64px rgba(0,0,0,0.90), 0 8px 24px rgba(0,0,0,0.70);
+  --shadow-drag: 0 32px 80px rgba(0,0,0,0.95), 0 16px 32px rgba(0,0,0,0.80);
+  --shadow-topbar: 0 4px 24px rgba(0,0,0,0.60);
+  --shadow-card: 0 4px 16px rgba(0,0,0,0.50), 0 1px 3px rgba(0,0,0,0.40);
+  --shadow-card-hover: 0 12px 32px rgba(0,0,0,0.70), 0 4px 12px rgba(0,0,0,0.50);
 }
 
 html {
@@ -314,8 +320,24 @@ select {
 
 /* Glassmorphism surface */
 .rp-glass {
-  background: var(--rp-bg-glass);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid var(--rp-bg-glass-border);
+  background: var(--color-bg-elevated);
+  backdrop-filter: blur(24px) saturate(1.8);
+  -webkit-backdrop-filter: blur(24px) saturate(1.8);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-md);
+}
+
+/* Elevated hover surfaces */
+.rp-hover-lift {
+  transition: transform var(--transition-normal), box-shadow var(--transition-normal);
+}
+.rp-hover-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-card-hover);
+}
+
+/* Apply extreme tech aesthetic globally to body */
+body {
+  background-image: radial-gradient(circle at top right, rgba(99, 102, 241, 0.05), transparent 40%),
+                    radial-gradient(circle at bottom left, rgba(129, 140, 248, 0.03), transparent 40%);
 }

@@ -31,8 +31,11 @@ const injectCSS = `
 
 const card: React.CSSProperties = {
   backgroundColor: 'var(--color-bg-elevated)',
-  borderRadius: '14px',
-  boxShadow: 'var(--shadow-card)',
+  backdropFilter: 'blur(24px) saturate(1.8)',
+  WebkitBackdropFilter: 'blur(24px) saturate(1.8)',
+  border: '1px solid var(--color-border)',
+  borderRadius: 'var(--radius-lg)',
+  boxShadow: 'var(--shadow-md)',
   overflow: 'hidden',
 };
 
@@ -53,22 +56,22 @@ const cardHover = {
 
 const PlusIcon = () => (
   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-    <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+    <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
   </svg>
 );
 const SearchIcon = () => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+    <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
   </svg>
 );
 const FolderIcon = () => (
   <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="var(--color-text-tertiary)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
   </svg>
 );
 const ClockIcon = () => (
   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+    <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />
   </svg>
 );
 
@@ -168,10 +171,10 @@ const NewProjectModal: React.FC<NewProjectModalProps> = ({ isOpen, onClose }) =>
 /* ------------------------------------------------------------------ */
 
 const STAT_CONFIGS = [
-  { key: 'totalTasks',        label: 'Active Tasks',        color: '#5B8DEF', bg: '#EBF2FF', icon: '📋' },
-  { key: 'overdueTasks',      label: 'Overdue',             color: '#F87171', bg: '#FEE2E2', icon: '⚠️' },
-  { key: 'completedThisWeek', label: 'Done This Week',      color: '#34D399', bg: '#D1FAE5', icon: '✅' },
-  { key: 'teamMembers',       label: 'Team Members',        color: '#A78BFA', bg: '#EDE9FE', icon: '👥' },
+  { key: 'totalTasks', label: 'Active Tasks', color: '#5B8DEF', bg: '#EBF2FF', icon: '📋' },
+  { key: 'overdueTasks', label: 'Overdue', color: '#F87171', bg: '#FEE2E2', icon: '⚠️' },
+  { key: 'completedThisWeek', label: 'Done This Week', color: '#34D399', bg: '#D1FAE5', icon: '✅' },
+  { key: 'teamMembers', label: 'Team Members', color: '#A78BFA', bg: '#EDE9FE', icon: '👥' },
 ] as const;
 
 const StatsCardsSection: React.FC = () => {
@@ -286,9 +289,9 @@ const MyTasksPanel: React.FC = () => {
   const priorityBadge = (priority: string): React.CSSProperties => {
     const map: Record<string, { bg: string; color: string }> = {
       URGENT: { bg: '#FEE2E2', color: '#991B1B' },
-      HIGH:   { bg: '#FFE4E6', color: '#9F1239' },
+      HIGH: { bg: '#FFE4E6', color: '#9F1239' },
       MEDIUM: { bg: '#FEF3C7', color: '#92400E' },
-      LOW:    { bg: '#D1FAE5', color: '#065F46' },
+      LOW: { bg: '#D1FAE5', color: '#065F46' },
     };
     const c = map[priority] ?? { bg: 'var(--color-bg-tertiary)', color: 'var(--color-text-tertiary)' };
     return { ...c, padding: '2px 8px', borderRadius: '999px', fontSize: '10.5px', fontWeight: 600, whiteSpace: 'nowrap' };
