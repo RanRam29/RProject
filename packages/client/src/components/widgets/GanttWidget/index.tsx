@@ -13,6 +13,7 @@
  */
 
 import { useState, useCallback, useRef, type FC } from 'react';
+import { createPortal } from 'react-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { tasksApi } from '../../../api/tasks.api';
 import { type GanttView } from './ganttGridHelpers';
@@ -148,7 +149,7 @@ export const GanttWidget: FC<WidgetProps> = ({ projectId }) => {
         onClear={clearFilters}
       />
 
-      <div ref={ganttRef} className="flex-1 min-h-0 overflow-hidden">
+      <div ref={ganttRef} className="flex-1 min-h-0 overflow-auto">
         <GanttTimeline
           ref={ganttGridRef}
           tasks={filteredTasks}
@@ -174,15 +175,17 @@ export const GanttWidget: FC<WidgetProps> = ({ projectId }) => {
         />
       </div>
 
-      {selectedTask && (
-        <LivingTaskModal
-          isOpen={!!selectedTask}
-          onClose={() => setSelectedTask(null)}
-          projectId={projectId}
-          task={selectedTask}
-          statuses={statuses ?? []}
-        />
-      )}
+      {selectedTask &&
+        createPortal(
+          <LivingTaskModal
+            isOpen={!!selectedTask}
+            onClose={() => setSelectedTask(null)}
+            projectId={projectId}
+            task={selectedTask}
+            statuses={statuses ?? []}
+          />,
+          document.body,
+        )}
     </div>
   );
 };
