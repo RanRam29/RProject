@@ -1007,7 +1007,18 @@ export function LivingTaskModal({
             }}
           />
 
-          {/* Modal panel */}
+          {/* Modal panel — centering wrapper (flex) so Framer Motion doesn't clobber translate) */}
+          <div
+            style={{
+              position: 'fixed',
+              inset: 0,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 9900,
+              pointerEvents: 'none',
+            }}
+          >
           <motion.div
             key="living-modal-panel"
             initial={{ opacity: 0, scale: 0.96, y: 20 }}
@@ -1019,11 +1030,7 @@ export function LivingTaskModal({
               damping: 30,
             }}
             style={{
-              position: 'fixed',
-              top: '50%',
-              left: '50%',
-              transform: 'translate(-50%, -50%)',
-              zIndex: 9900,
+              pointerEvents: 'auto',
               width: 'min(860px, 96vw)',
               height: 'min(600px, 90vh)',
               background: 'var(--color-bg-elevated)',
@@ -1122,6 +1129,7 @@ export function LivingTaskModal({
               <ChatPane task={task} projectId={projectId} />
             </div>
           </motion.div>
+          </div>
         </>
       )}
     </AnimatePresence>

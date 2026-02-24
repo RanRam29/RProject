@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { tasksApi } from '../../api/tasks.api';
+import { lanesApi } from '../../api/lanes.api';
 import { useUIStore } from '../../stores/ui.store';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
@@ -52,7 +53,14 @@ export function TaskDetailModal({
   const [priority, setPriority] = useState<TaskPriority>(TaskPriority.NONE);
   const [startDate, setStartDate] = useState('');
   const [dueDate, setDueDate] = useState('');
+  const [laneId, setLaneId] = useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+  const { data: lanes = [] } = useQuery({
+    queryKey: ['lanes', projectId],
+    queryFn: () => lanesApi.list(projectId),
+    enabled: isOpen,
+  });
 
   // Reset form when task or mode changes
   useEffect(() => {
@@ -69,6 +77,7 @@ export function TaskDetailModal({
       setPriority(task.priority || TaskPriority.NONE);
       setStartDate(task.startDate ? task.startDate.slice(0, 10) : '');
       setDueDate(task.dueDate ? task.dueDate.slice(0, 10) : '');
+      setLaneId(task.laneId ?? null);
     } else {
       setTitle('');
       setDescription('');
@@ -77,6 +86,7 @@ export function TaskDetailModal({
       setPriority(TaskPriority.NONE);
       setStartDate('');
       setDueDate(defaultDueDate || '');
+      setLaneId(null);
     }
     setShowDeleteConfirm(false);
   }, [task, mode, isOpen, defaultStatusId, defaultDueDate, statuses]);
@@ -169,10 +179,11 @@ export function TaskDetailModal({
           priority,
           startDate: startDate || null,
           dueDate: dueDate || null,
+          laneId,
         });
       }
     },
-    [mode, title, description, statusId, assigneeId, priority, startDate, dueDate, task, createMutation, updateMutation]
+    [mode, title, description, statusId, assigneeId, priority, startDate, dueDate, laneId, task, createMutation, updateMutation]
   );
 
   const handleStatusChange = useCallback(
@@ -346,6 +357,22 @@ export function TaskDetailModal({
             ))}
           </select>
         </div>
+
+        {lanes.length > 0 && (
+          <div style={fieldGroupStyle}>
+            <label style={labelStyle}>Lane</label>
+            <select
+              style={selectStyle}
+              value={laneId ?? ''}
+              onChange={(e) => setLaneId(e.target.value || null)}
+            >
+              <option value="">No lane</option>
+              {lanes.map((l) => (
+                <option key={l.id} value={l.id}>{l.name}</option>
+              ))}
+            </select>
+          </div>
+        )}
 
         <div style={{ display: 'flex', gap: '12px', marginBottom: '16px' }}>
           <div style={{ flex: 1 }}>
