@@ -1130,7 +1130,7 @@ export function LivingTaskModal({
                 task={task}
                 projectId={projectId}
                 statuses={statuses}
-                onSaved={() => { /* parent refresh handled via queryClient */ }}
+                onSaved={onClose}
               />
               <ChatPane task={task} projectId={projectId} />
             </div>

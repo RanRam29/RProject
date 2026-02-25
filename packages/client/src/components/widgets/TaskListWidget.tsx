@@ -5,6 +5,7 @@ import { permissionsApi } from '../../api/permissions.api';
 import { TaskDetailModal } from '../task/TaskDetailModal';
 import { TaskImportModal } from '../import/TaskImportModal';
 import { FilterBar } from '../filter/FilterBar';
+import { BulkActionToolbar } from '../kanban/BulkActionToolbar';
 import { useTaskFilters } from '../../hooks/useTaskFilters';
 import { useUIStore } from '../../stores/ui.store';
 import { exportTasksToCSV, exportTasksToJSON } from '../../utils/export';
@@ -30,6 +31,10 @@ export function TaskListWidget({ projectId }: WidgetProps) {
   const [selectedTask, setSelectedTask] = useState<TaskDTO | null>(null);
   const [showCreate, setShowCreate] = useState(false);
   const [showImport, setShowImport] = useState(false);
+
+  // ── Bulk selection ─────────────────────────────────────────────────────────
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedTaskIds, setSelectedTaskIds] = useState<Set<string>>(new Set());
   const [inlineTitle, setInlineTitle] = useState('');
   const inlineRef = useRef<HTMLInputElement>(null);
   const [sortField, setSortField] = useState<SortField>('createdAt');
@@ -58,6 +63,11 @@ export function TaskListWidget({ projectId }: WidgetProps) {
     });
     return map;
   }, [permissions]);
+
+  const members = useMemo(
+    () => permissions.map((p) => ({ id: p.userId, displayName: p.user?.displayName || p.user?.email || 'Unknown' })),
+    [permissions]
+  );
 
   const { filters, filteredTasks, updateFilter, clearFilters, activeCount } = useTaskFilters(tasks);
 
@@ -145,6 +155,53 @@ export function TaskListWidget({ projectId }: WidgetProps) {
     },
   });
 
+  const bulkMutation = useMutation({
+    mutationFn: (data: {
+      taskIds: string[];
+      operation: 'move' | 'assign' | 'delete' | 'setPriority';
+      statusId?: string;
+      assigneeId?: string | null;
+      priority?: string;
+    }) => tasksApi.bulkOperation(projectId, data),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['tasks', projectId] });
+      setSelectedTaskIds(new Set());
+      setSelectionMode(false);
+      const labels: Record<string, string> = { move: 'moved', assign: 'assigned', delete: 'deleted', setPriority: 'updated' };
+      addToast({ type: 'success', message: `${variables.taskIds.length} task${variables.taskIds.length !== 1 ? 's' : ''} ${labels[variables.operation]}` });
+    },
+    onError: () => {
+      addToast({ type: 'error', message: 'Bulk operation failed' });
+    },
+  });
+
+  const handleTaskSelectionChange = useCallback((taskId: string, checked: boolean) => {
+    setSelectedTaskIds((prev) => {
+      const next = new Set(prev);
+      if (checked) next.add(taskId);
+      else next.delete(taskId);
+      return next;
+    });
+  }, []);
+
+  const handleSelectAll = useCallback((checked: boolean) => {
+    setSelectedTaskIds(checked ? new Set(sortedTasks.map((t) => t.id)) : new Set());
+  }, [sortedTasks]);
+
+  const handleClearSelection = useCallback(() => {
+    setSelectedTaskIds(new Set());
+    setSelectionMode(false);
+  }, []);
+
+  const handleBulkMove = (statusId: string) =>
+    bulkMutation.mutate({ taskIds: [...selectedTaskIds], operation: 'move', statusId });
+  const handleBulkAssign = (assigneeId: string | null) =>
+    bulkMutation.mutate({ taskIds: [...selectedTaskIds], operation: 'assign', assigneeId });
+  const handleBulkSetPriority = (priority: string) =>
+    bulkMutation.mutate({ taskIds: [...selectedTaskIds], operation: 'setPriority', priority });
+  const handleBulkDelete = () =>
+    bulkMutation.mutate({ taskIds: [...selectedTaskIds], operation: 'delete' });
+
   const handleToggle = (task: TaskDTO) => {
     const currentStatus = statusMap[task.statusId];
     if (!currentStatus) return;
@@ -212,7 +269,42 @@ export function TaskListWidget({ projectId }: WidgetProps) {
         onClear={clearFilters}
       />
 
+      {/* Bulk action toolbar */}
+      {selectionMode && selectedTaskIds.size > 0 && (
+        <div style={{ padding: '8px 12px 0' }}>
+          <BulkActionToolbar
+            selectedCount={selectedTaskIds.size}
+            statuses={statuses}
+            members={members}
+            onMove={handleBulkMove}
+            onAssign={handleBulkAssign}
+            onSetPriority={handleBulkSetPriority}
+            onDelete={handleBulkDelete}
+            onClearSelection={handleClearSelection}
+          />
+        </div>
+      )}
+
       <div style={{ padding: '8px 12px 0', display: 'flex', gap: '4px', justifyContent: 'flex-end' }}>
+        <button
+          style={{
+            padding: '4px 10px',
+            fontSize: '12px',
+            backgroundColor: selectionMode ? 'var(--color-accent)' : 'transparent',
+            color: selectionMode ? 'white' : 'var(--color-text-secondary)',
+            border: `1px solid ${selectionMode ? 'var(--color-accent)' : 'var(--color-border)'}`,
+            borderRadius: 'var(--radius-full)',
+            cursor: 'pointer',
+            fontWeight: selectionMode ? 600 : 400,
+          }}
+          onClick={() => {
+            setSelectionMode((v) => !v);
+            setSelectedTaskIds(new Set());
+          }}
+          title={selectionMode ? 'Exit selection mode' : 'Select tasks for bulk actions'}
+        >
+          {selectionMode ? '✓ Selecting' : 'Select'}
+        </button>
         <button
           style={{
             padding: '4px 8px',
@@ -371,7 +463,20 @@ export function TaskListWidget({ projectId }: WidgetProps) {
           <table className="w-full min-w-[700px]" style={{ borderCollapse: 'collapse' }}>
             <thead>
               <tr>
-                <th className={`${thClass} w-9 cursor-default`}></th>
+                <th className={`${thClass} w-9 cursor-default`}>
+                  {selectionMode && (
+                    <input
+                      type="checkbox"
+                      checked={sortedTasks.length > 0 && selectedTaskIds.size === sortedTasks.length}
+                      ref={(el) => {
+                        if (el) el.indeterminate = selectedTaskIds.size > 0 && selectedTaskIds.size < sortedTasks.length;
+                      }}
+                      onChange={(e) => handleSelectAll(e.target.checked)}
+                      style={{ width: '16px', height: '16px', accentColor: 'var(--color-accent)', cursor: 'pointer' }}
+                      title="Select all"
+                    />
+                  )}
+                </th>
                 <th className={thClass} onClick={() => handleSort('title')}>
                   Title <SortIcon field="title" />
                 </th>
@@ -397,22 +502,34 @@ export function TaskListWidget({ projectId }: WidgetProps) {
                 const isOverdue = task.dueDate && new Date(task.dueDate) < new Date() && !status?.isFinal;
                 const priorityCfg = PRIORITY_CONFIG[task.priority];
 
+                const isRowSelected = selectedTaskIds.has(task.id);
                 return (
                   <tr
                     key={task.id}
                     className="group transition-colors duration-200 hover:bg-[var(--color-bg-tertiary)]"
+                    style={isRowSelected ? { backgroundColor: 'var(--color-accent-light, rgba(59,130,246,0.08))' } : undefined}
+                    onClick={selectionMode ? () => handleTaskSelectionChange(task.id, !isRowSelected) : undefined}
                   >
-                    <td className={`${tdClass} text-center`}>
-                      <input
-                        type="checkbox"
-                        checked={status?.isFinal || false}
-                        onChange={() => handleToggle(task)}
-                        style={{ width: '16px', height: '16px', accentColor: 'var(--color-accent)' }}
-                      />
+                    <td className={`${tdClass} text-center`} onClick={(e) => e.stopPropagation()}>
+                      {selectionMode ? (
+                        <input
+                          type="checkbox"
+                          checked={isRowSelected}
+                          onChange={(e) => handleTaskSelectionChange(task.id, e.target.checked)}
+                          style={{ width: '16px', height: '16px', accentColor: 'var(--color-accent)', cursor: 'pointer' }}
+                        />
+                      ) : (
+                        <input
+                          type="checkbox"
+                          checked={status?.isFinal || false}
+                          onChange={() => handleToggle(task)}
+                          style={{ width: '16px', height: '16px', accentColor: 'var(--color-accent)' }}
+                        />
+                      )}
                     </td>
                     <td
                       className={`${tdClass} cursor-pointer font-medium max-w-[300px] ${status?.isFinal ? 'line-through text-[var(--color-text-tertiary)]' : ''}`}
-                      onClick={() => setSelectedTask(task)}
+                      onClick={!selectionMode ? () => setSelectedTask(task) : undefined}
                     >
                       {task.title}
                     </td>
