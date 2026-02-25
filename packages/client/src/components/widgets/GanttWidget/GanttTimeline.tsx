@@ -1497,38 +1497,8 @@ export const GanttTimeline = forwardRef<GanttTimelineHandle, GanttTimelineProps>
                     const startDate = safeParseDate(task.startDate);
                     const endDate = safeParseDate(task.dueDate ?? task.startDate);
 
-                    // Unscheduled chip — no dates set
-                    if (!endDate) {
-                      return (
-                        <div
-                          key={task.id}
-                          onClick={() => onTaskClick?.(task)}
-                          title={`${task.title} — no dates set`}
-                          style={{
-                            position: 'absolute',
-                            top: topPx + ROW_HEIGHT * 0.2,
-                            left: Math.max(0, todayLeftPx),
-                            height: ROW_HEIGHT * 0.6,
-                            width: 80,
-                            border: '1.5px dashed var(--color-border)',
-                            borderRadius: 4,
-                            background: 'transparent',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            fontSize: 10,
-                            color: 'var(--color-text-tertiary)',
-                            opacity: isFocused ? 1 : 0.25,
-                            cursor: 'pointer',
-                            userSelect: 'none',
-                            whiteSpace: 'nowrap',
-                            overflow: 'hidden',
-                          }}
-                        >
-                          No date
-                        </div>
-                      );
-                    }
+                    // Skip tasks with no dates — hidden from Gantt entirely
+                    if (!endDate) return null;
 
                     const effectiveStart = startDate ?? endDate;
                     const leftPx =
