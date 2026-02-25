@@ -16,7 +16,7 @@ import { requireProjectRole, requireCapability } from './rbac.middleware.js';
 function createReq(params: Record<string, string> = {}, user?: Record<string, string>) {
   return {
     params,
-    user: user || { sub: 'user-1', email: 'test@test.com', systemRole: 'SYS_ADMIN' },
+    user: user || { sub: 'user-1', email: 'test@test.com', systemRole: 'USER' },
     projectPermission: undefined as unknown,
     projectCapabilities: undefined as unknown,
   } as unknown as Request;
@@ -83,6 +83,17 @@ describe('requireProjectRole', () => {
     expect(next).toHaveBeenCalledWith(
       expect.objectContaining({ statusCode: 403, message: 'Insufficient project permissions' })
     );
+  });
+
+  it('SYS_ADMIN bypasses project role check and is treated as OWNER', async () => {
+    const req = createReq({ projectId: 'proj-1' }, { sub: 'admin-1', email: 'admin@test.com', systemRole: 'SYS_ADMIN' });
+    const next = vi.fn();
+
+    await requireProjectRole('OWNER')(req, {} as Response, next);
+
+    expect(next).toHaveBeenCalledWith(); // no error
+    expect((req as unknown as Record<string, unknown>).projectPermission).toMatchObject({ role: 'OWNER' });
+    expect(mockFindUnique).not.toHaveBeenCalled(); // DB never hit
   });
 });
 
