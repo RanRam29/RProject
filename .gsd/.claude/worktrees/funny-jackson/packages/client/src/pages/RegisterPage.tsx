@@ -1,0 +1,111 @@
+import React from 'react';
+import { Navigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { RegisterForm } from '../components/auth/RegisterForm';
+import { useAuthStore } from '../stores/auth.store';
+import { authApi } from '../api/auth.api';
+
+const pageStyle: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  minHeight: '100vh',
+  padding: '24px',
+  backgroundColor: 'var(--color-bg-secondary)',
+};
+
+const cardStyle: React.CSSProperties = {
+  width: '100%',
+  maxWidth: '420px',
+  backgroundColor: 'var(--color-bg-elevated)',
+  border: '1px solid var(--color-border)',
+  borderRadius: 'var(--radius-lg)',
+  boxShadow: 'var(--shadow-lg)',
+  padding: '40px 32px',
+  animation: 'slideUp var(--transition-normal) ease',
+};
+
+const logoSectionStyle: React.CSSProperties = {
+  display: 'flex',
+  flexDirection: 'column',
+  alignItems: 'center',
+  gap: '12px',
+  marginBottom: '32px',
+};
+
+const logoMarkStyle: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  width: '48px',
+  height: '48px',
+  borderRadius: 'var(--radius-lg)',
+  backgroundColor: 'var(--color-accent)',
+  color: 'var(--color-text-inverse)',
+  fontWeight: 700,
+  fontSize: '18px',
+  letterSpacing: '-0.5px',
+};
+
+const titleStyle: React.CSSProperties = {
+  fontSize: '22px',
+  fontWeight: 700,
+  color: 'var(--color-text-primary)',
+  letterSpacing: '-0.3px',
+};
+
+const subtitleStyle: React.CSSProperties = {
+  fontSize: '14px',
+  color: 'var(--color-text-secondary)',
+  textAlign: 'center',
+};
+
+export const RegisterPage: React.FC = () => {
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const user = useAuthStore((s) => s.user);
+
+  // Check if system needs initial setup (no users exist)
+  const { data: setupData, isLoading } = useQuery({
+    queryKey: ['setup-check'],
+    queryFn: () => authApi.checkSetup(),
+    staleTime: 30_000,
+  });
+
+  // If already authenticated, redirect to dashboard
+  if (isAuthenticated && user) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  // If system already has users, registration is admin-only — redirect to login
+  if (!isLoading && setupData && !setupData.needsSetup) {
+    return <Navigate to="/login" replace />;
+  }
+
+  // Still loading setup check
+  if (isLoading) {
+    return (
+      <div style={pageStyle}>
+        <div style={{
+          width: '32px', height: '32px',
+          border: '3px solid var(--color-border)',
+          borderTopColor: 'var(--color-accent)',
+          borderRadius: '50%',
+          animation: 'spin 0.8s linear infinite',
+        }} />
+      </div>
+    );
+  }
+
+  return (
+    <div style={pageStyle}>
+      <div style={cardStyle}>
+        <div style={logoSectionStyle}>
+          <span style={logoMarkStyle}>PM</span>
+          <h1 style={titleStyle}>ProjectMgr</h1>
+          <p style={subtitleStyle}>Create the admin account to set up the system</p>
+        </div>
+        <RegisterForm />
+      </div>
+    </div>
+  );
+};

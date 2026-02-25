@@ -7,6 +7,12 @@ import { env } from './config/env.js';
 import { logger } from './utils/logger.js';
 
 const app = createApp();
+
+// ADD THESE 3 LINES: Health check endpoint for the Android app
+app.get('/api/v1/health', (req, res) => {
+  res.status(200).json({ status: 'ok' });
+});
+
 const server = http.createServer(app);
 
 // Initialize WebSocket server

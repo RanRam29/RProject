@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "client",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["C:/CluadeCode/node_modules/.pnpm/vite@6.4.1_@types+node@22.19.7_jiti@1.21.7_tsx@4.21.0/node_modules/vite/bin/vite.js", "--config", "C:/CluadeCode/packages/client/vite.config.ts", "--port", "5176", "--host", "127.0.0.1", "C:/CluadeCode/packages/client"],
+      "port": 5176
+    }
+  ]
+}

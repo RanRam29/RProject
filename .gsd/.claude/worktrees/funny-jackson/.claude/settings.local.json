@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git worktree:*)",
+      "Bash(git branch:*)",
+      "Bash(git pull:*)",
+      "Bash(git stash:*)",
+      "Bash(git stash pop:*)",
+      "Bash(git checkout:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(pnpm install:*)",
+      "Bash(pnpm --filter @pm/client vitest run:*)",
+      "Bash(pnpm --filter @pm/client test)",
+      "Bash(pnpm --filter @pm/shared build:*)"
+    ]
+  }
+}

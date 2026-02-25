@@ -30,5 +30,5 @@ services:
       - key: JWT_REFRESH_EXPIRES_IN
         value: 7d
       - key: CLIENT_URL
-        sync: false
+        value: "https://rproject-mocha.vercel.app,http://localhost,capacitor://localhost"
     healthCheckPath: /api/health

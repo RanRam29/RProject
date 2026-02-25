@@ -1,0 +1,13 @@
+export enum SystemRole {
+  SYS_ADMIN = 'SYS_ADMIN',
+  PROJECT_CREATOR = 'PROJECT_CREATOR',
+  TEMPLATE_MANAGER = 'TEMPLATE_MANAGER',
+  VIEWER_ONLY = 'VIEWER_ONLY',
+}
+
+export enum ProjectRole {
+  OWNER = 'OWNER',
+  EDITOR = 'EDITOR',
+  VIEWER = 'VIEWER',
+  CUSTOM = 'CUSTOM',
+}
