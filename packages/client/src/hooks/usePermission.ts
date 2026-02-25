@@ -16,7 +16,10 @@ export function useProjectPermission(projectId: string | null) {
   const myPermission = permissions?.find((p) => p.userId === user?.id);
   const myRole = myPermission?.role as ProjectRole | undefined;
 
+  const isSysAdmin = user?.systemRole === 'SYS_ADMIN';
+
   const hasCapability = (capability: string): boolean => {
+    if (isSysAdmin) return true;
     if (!myRole) return false;
     if (myRole === 'OWNER') return true;
 
@@ -32,9 +35,9 @@ export function useProjectPermission(projectId: string | null) {
     return false;
   };
 
-  const isOwner = myRole === 'OWNER';
+  const isOwner = isSysAdmin || myRole === 'OWNER';
   const isEditor = myRole === 'EDITOR' || isOwner;
-  const isViewer = !!myRole;
+  const isViewer = isSysAdmin || !!myRole;
 
   return { myRole, myPermission, hasCapability, isOwner, isEditor, isViewer };
 }

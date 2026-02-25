@@ -12,6 +12,19 @@ export function requireProjectRole(...roles: string[]) {
         return next(ApiError.badRequest('Missing project ID or user'));
       }
 
+      // SYS_ADMIN bypasses all project-role checks — treat as OWNER
+      if (req.user?.systemRole === 'SYS_ADMIN') {
+        req.projectPermission = {
+          id: 'sys-admin',
+          projectId,
+          userId: userId!,
+          role: 'OWNER',
+          capabilities: {},
+          customRole: null,
+        };
+        return next();
+      }
+
       const permission = await prisma.projectPermission.findUnique({
         where: {
           projectId_userId: { projectId, userId },

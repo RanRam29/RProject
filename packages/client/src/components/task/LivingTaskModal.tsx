@@ -355,9 +355,18 @@ const LeftPane: FC<{
     <div
       style={{
         flex: '0 0 60%',
+        borderRight: '1px solid var(--color-border)',
+        display: 'flex',
+        flexDirection: 'column',
+        minHeight: 0,
+      }}
+    >
+    {/* Scrollable content */}
+    <div
+      style={{
+        flex: 1,
         padding: '24px 28px',
         overflowY: 'auto',
-        borderRight: '1px solid var(--color-border)',
         display: 'flex',
         flexDirection: 'column',
         gap: 0,
@@ -521,14 +530,21 @@ const LeftPane: FC<{
         <div>Updated {format(parseISO(task.updatedAt), 'MMM d, yyyy · h:mm a')}</div>
       </div>
 
-      {/* Save button */}
+    </div>{/* end scrollable content */}
+
+      {/* Sticky Save footer — always visible when dirty */}
       <AnimatePresence>
         {isDirty && (
           <motion.div
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 8 }}
-            style={{ marginTop: 16 }}
+            style={{
+              padding: '12px 28px',
+              borderTop: '1px solid var(--color-border)',
+              background: 'var(--color-bg-elevated)',
+              flexShrink: 0,
+            }}
           >
             <button
               onClick={handleSave}

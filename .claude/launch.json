@@ -3,8 +3,8 @@
   "configurations": [
     {
       "name": "client",
-      "runtimeExecutable": "C:/Users/P0038974/AppData/Roaming/npm/pnpm.cmd",
-      "runtimeArgs": ["--filter", "@pm/client", "dev"],
+      "runtimeExecutable": "cmd",
+      "runtimeArgs": ["/c", "pnpm", "--filter", "@pm/client", "dev"],
       "port": 5173
     }
   ]

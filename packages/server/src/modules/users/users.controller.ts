@@ -69,7 +69,12 @@ export const usersController = {
 
   async update(req: Request, res: Response, next: NextFunction) {
     try {
-      const user = await usersService.update(req.params.id as string, req.body);
+      const targetUserId = req.params.id as string;
+      if (req.user!.id !== targetUserId && req.user!.systemRole !== 'SYS_ADMIN') {
+        throw ApiError.forbidden('Cannot update another user');
+      }
+
+      const user = await usersService.update(targetUserId, req.body);
       sendSuccess(res, user);
     } catch (err) { next(err); }
   },
@@ -87,8 +92,13 @@ export const usersController = {
 
   async changePassword(req: Request, res: Response, next: NextFunction) {
     try {
+      const targetUserId = req.params.id as string;
+      if (req.user!.id !== targetUserId) {
+        throw ApiError.forbidden('Cannot change another user\'s password');
+      }
+
       const result = await usersService.changePassword(
-        req.params.id as string,
+        targetUserId,
         req.body.currentPassword,
         req.body.newPassword
       );
