@@ -36,6 +36,8 @@ export function TaskListWidget({ projectId }: WidgetProps) {
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedTaskIds, setSelectedTaskIds] = useState<Set<string>>(new Set());
   const [inlineTitle, setInlineTitle] = useState('');
+  const [pageSize, setPageSize] = useState<20 | 50 | 100>(20);
+  const [currentPage, setCurrentPage] = useState(1);
   const inlineRef = useRef<HTMLInputElement>(null);
   const [sortField, setSortField] = useState<SortField>('createdAt');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
@@ -116,6 +118,11 @@ export function TaskListWidget({ projectId }: WidgetProps) {
     });
     return sorted;
   }, [filteredTasks, sortField, sortDirection, statusMap, memberMap]);
+
+  // Reset page to 1 when filters change
+  const totalPages = Math.max(1, Math.ceil(sortedTasks.length / pageSize));
+  const safePage = Math.min(currentPage, totalPages);
+  const pagedTasks = sortedTasks.slice((safePage - 1) * pageSize, safePage * pageSize);
 
   const toggleStatusMutation = useMutation({
     mutationFn: ({ taskId, statusId }: { taskId: string; statusId: string }) =>
@@ -404,7 +411,7 @@ export function TaskListWidget({ projectId }: WidgetProps) {
         ) : isMobile ? (
           /* Mobile card layout */
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '8px' }}>
-            {sortedTasks.map((task) => {
+            {pagedTasks.map((task) => {
               const status = statusMap[task.statusId];
               const isOverdue = task.dueDate && new Date(task.dueDate) < new Date() && !status?.isFinal;
               const priorityCfg = PRIORITY_CONFIG[task.priority];
@@ -472,6 +479,7 @@ export function TaskListWidget({ projectId }: WidgetProps) {
                         if (el) el.indeterminate = selectedTaskIds.size > 0 && selectedTaskIds.size < sortedTasks.length;
                       }}
                       onChange={(e) => handleSelectAll(e.target.checked)}
+
                       style={{ width: '16px', height: '16px', accentColor: 'var(--color-accent)', cursor: 'pointer' }}
                       title="Select all"
                     />
@@ -496,7 +504,7 @@ export function TaskListWidget({ projectId }: WidgetProps) {
               </tr>
             </thead>
             <tbody>
-              {sortedTasks.map((task) => {
+              {pagedTasks.map((task) => {
                 const status = statusMap[task.statusId];
                 const assigneeName = task.assignee?.displayName || memberMap[task.assigneeId || ''] || '';
                 const isOverdue = task.dueDate && new Date(task.dueDate) < new Date() && !status?.isFinal;
@@ -608,6 +616,72 @@ export function TaskListWidget({ projectId }: WidgetProps) {
           </table>
         )}
       </div>
+
+      {/* ── Pagination bar ── */}
+      {sortedTasks.length > 0 && (
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '8px 12px',
+          borderTop: '1px solid var(--color-border)',
+          backgroundColor: 'var(--color-bg-secondary)',
+          flexShrink: 0,
+          gap: '8px',
+          flexWrap: 'wrap',
+        }}>
+          {/* Page size selector */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--color-text-secondary)' }}>
+            <span>Show</span>
+            {([20, 50, 100] as const).map((n) => (
+              <button
+                key={n}
+                onClick={() => { setPageSize(n); setCurrentPage(1); }}
+                style={{
+                  padding: '2px 8px',
+                  fontSize: '12px',
+                  borderRadius: 'var(--radius-sm)',
+                  border: `1px solid ${pageSize === n ? 'var(--color-accent)' : 'var(--color-border)'}`,
+                  background: pageSize === n ? 'var(--color-accent)' : 'transparent',
+                  color: pageSize === n ? 'white' : 'var(--color-text-secondary)',
+                  cursor: 'pointer',
+                  fontWeight: pageSize === n ? 600 : 400,
+                }}
+              >{n}</button>
+            ))}
+            <span>per page · {sortedTasks.length} total</span>
+          </div>
+
+          {/* Page navigation */}
+          {totalPages > 1 && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <button
+                onClick={() => setCurrentPage(1)}
+                disabled={safePage === 1}
+                style={{ padding: '2px 8px', fontSize: '12px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--color-border)', background: 'transparent', color: safePage === 1 ? 'var(--color-text-tertiary)' : 'var(--color-text-secondary)', cursor: safePage === 1 ? 'default' : 'pointer' }}
+              >«</button>
+              <button
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                disabled={safePage === 1}
+                style={{ padding: '2px 8px', fontSize: '12px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--color-border)', background: 'transparent', color: safePage === 1 ? 'var(--color-text-tertiary)' : 'var(--color-text-secondary)', cursor: safePage === 1 ? 'default' : 'pointer' }}
+              >‹</button>
+              <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)', padding: '0 6px' }}>
+                {safePage} / {totalPages}
+              </span>
+              <button
+                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                disabled={safePage === totalPages}
+                style={{ padding: '2px 8px', fontSize: '12px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--color-border)', background: 'transparent', color: safePage === totalPages ? 'var(--color-text-tertiary)' : 'var(--color-text-secondary)', cursor: safePage === totalPages ? 'default' : 'pointer' }}
+              >›</button>
+              <button
+                onClick={() => setCurrentPage(totalPages)}
+                disabled={safePage === totalPages}
+                style={{ padding: '2px 8px', fontSize: '12px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--color-border)', background: 'transparent', color: safePage === totalPages ? 'var(--color-text-tertiary)' : 'var(--color-text-secondary)', cursor: safePage === totalPages ? 'default' : 'pointer' }}
+              >»</button>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Task Edit/Create Modal */}
       <TaskDetailModal

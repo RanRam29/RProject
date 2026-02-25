@@ -90,6 +90,12 @@ export interface GanttTimelineProps {
     newStart: string | null,
     newEnd: string | null,
   ) => void;
+  // Bulk selection (optional — provided by parent when bulk mode is active)
+  selectionMode?: boolean;
+  selectedTaskIds?: Set<string>;
+  onTaskSelectionChange?: (taskId: string, checked: boolean) => void;
+  onSelectAll?: (checked: boolean) => void;
+  onToggleSelectionMode?: () => void;
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -357,6 +363,11 @@ export const GanttTimeline = forwardRef<GanttTimelineHandle, GanttTimelineProps>
       onExportPDF,
       onTaskClick,
       onTimelineUpdate,
+      selectionMode = false,
+      selectedTaskIds,
+      onTaskSelectionChange,
+      onSelectAll,
+      onToggleSelectionMode,
     },
     ref,
   ) {
@@ -1004,6 +1015,31 @@ export const GanttTimeline = forwardRef<GanttTimelineHandle, GanttTimelineProps>
             ◎ Focus
           </button>
 
+          {/* Bulk select toggle */}
+          {onToggleSelectionMode && (
+            <button
+              onClick={onToggleSelectionMode}
+              style={{
+                padding: '4px 10px',
+                fontSize: 12,
+                fontWeight: selectionMode ? 600 : 400,
+                borderRadius: 6,
+                border: selectionMode
+                  ? '1.5px solid var(--color-accent)'
+                  : '1.5px solid var(--color-border)',
+                background: selectionMode ? 'var(--color-accent-light)' : 'transparent',
+                color: selectionMode
+                  ? 'var(--color-accent-text)'
+                  : 'var(--color-text-secondary)',
+                cursor: 'pointer',
+                transition: 'all 150ms ease',
+              }}
+              title="Select tasks for bulk actions"
+            >
+              {selectionMode ? '✓ Selecting' : 'Select'}
+            </button>
+          )}
+
           {/* PDF export */}
           <button
             onClick={onExportPDF}
@@ -1101,6 +1137,34 @@ export const GanttTimeline = forwardRef<GanttTimelineHandle, GanttTimelineProps>
                     textTransform: 'uppercase',
                   }}
                 >
+                  {selectionMode && (
+                    <input
+                      type="checkbox"
+                      checked={
+                        (selectedTaskIds?.size ?? 0) > 0 &&
+                        selectedTaskIds?.size === swimlanes.flatMap((l) => l.tasks).length
+                      }
+                      ref={(el) => {
+                        if (el) {
+                          const total = swimlanes.flatMap((l) => l.tasks).length;
+                          el.indeterminate =
+                            (selectedTaskIds?.size ?? 0) > 0 &&
+                            (selectedTaskIds?.size ?? 0) < total;
+                        }
+                      }}
+                      onChange={(e) => onSelectAll?.(e.target.checked)}
+                      onClick={(e) => e.stopPropagation()}
+                      style={{
+                        width: 14,
+                        height: 14,
+                        accentColor: 'var(--color-accent)',
+                        cursor: 'pointer',
+                        marginRight: 6,
+                        flexShrink: 0,
+                      }}
+                      title="Select all"
+                    />
+                  )}
                   Task
                 </div>
 
@@ -1290,6 +1354,7 @@ export const GanttTimeline = forwardRef<GanttTimelineHandle, GanttTimelineProps>
                         const isKeyboardFocused =
                           rowTasks[focusedRow]?.id === task.id;
 
+                        const isSelected = selectedTaskIds?.has(task.id) ?? false;
                         return (
                           <div
                             key={task.id}
@@ -1305,12 +1370,16 @@ export const GanttTimeline = forwardRef<GanttTimelineHandle, GanttTimelineProps>
                               filter:
                                 focusMode && !isFocused ? 'blur(1px)' : 'none',
                               transition: 'opacity 300ms ease, filter 300ms ease',
-                              background: isKeyboardFocused
-                                ? 'var(--color-bg-secondary)'
-                                : undefined,
+                              background: isSelected
+                                ? 'var(--color-accent-light, rgba(59,130,246,0.08))'
+                                : isKeyboardFocused
+                                  ? 'var(--color-bg-secondary)'
+                                  : undefined,
                             }}
                             onClick={() => {
-                              if (focusMode) {
+                              if (selectionMode) {
+                                onTaskSelectionChange?.(task.id, !isSelected);
+                              } else if (focusMode) {
                                 setFocusedTaskId((prev) =>
                                   prev === task.id ? null : task.id,
                                 );
@@ -1319,17 +1388,40 @@ export const GanttTimeline = forwardRef<GanttTimelineHandle, GanttTimelineProps>
                               }
                             }}
                             onMouseEnter={(e) => {
-                              (e.currentTarget as HTMLDivElement).style.background =
-                                'var(--color-bg-secondary)';
+                              if (!isSelected) {
+                                (e.currentTarget as HTMLDivElement).style.background =
+                                  'var(--color-bg-secondary)';
+                              }
                             }}
                             onMouseLeave={(e) => {
                               (e.currentTarget as HTMLDivElement).style.background =
-                                isKeyboardFocused
-                                  ? 'var(--color-bg-secondary)'
-                                  : 'transparent';
+                                isSelected
+                                  ? 'var(--color-accent-light, rgba(59,130,246,0.08))'
+                                  : isKeyboardFocused
+                                    ? 'var(--color-bg-secondary)'
+                                    : 'transparent';
                             }}
                           >
-                            {/* Status dot */}
+                            {/* Selection checkbox (selection mode) or status dot */}
+                            {selectionMode ? (
+                              <input
+                                type="checkbox"
+                                checked={isSelected}
+                                onChange={(e) => {
+                                  e.stopPropagation();
+                                  onTaskSelectionChange?.(task.id, e.target.checked);
+                                }}
+                                onClick={(e) => e.stopPropagation()}
+                                style={{
+                                  width: 14,
+                                  height: 14,
+                                  accentColor: 'var(--color-accent)',
+                                  cursor: 'pointer',
+                                  marginRight: 8,
+                                  flexShrink: 0,
+                                }}
+                              />
+                            ) : (
                             <span
                               style={{
                                 width: 8,
@@ -1341,6 +1433,7 @@ export const GanttTimeline = forwardRef<GanttTimelineHandle, GanttTimelineProps>
                                 marginRight: 8,
                               }}
                             />
+                            )}
                             {/* Task title — always primary text color */}
                             <span
                               style={{

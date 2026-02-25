@@ -36,7 +36,9 @@ export function ProjectHeader({ project }: ProjectHeaderProps) {
   const archiveMutation = useMutation({
     mutationFn: () => projectsApi.updateStatus(project.id, 'ARCHIVED'),
     onSuccess: () => {
+      // Invalidate both the individual project and the sidebar list so archived project disappears immediately
       queryClient.invalidateQueries({ queryKey: ['project', project.id] });
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
       addToast({ type: 'success', message: 'Project archived' });
     },
   });
