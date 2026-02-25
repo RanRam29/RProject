@@ -200,7 +200,7 @@ describe('LoginForm', () => {
 
     await waitFor(() => {
       expect(
-        screen.getByText('Invalid email or password. Please try again.')
+        screen.getByText('An error occurred during sign in.')
       ).toBeInTheDocument();
     });
 
