@@ -20,19 +20,30 @@ function lazyWithRetry(importFn: () => Promise<{ default: React.ComponentType }>
       return new Promise<{ default: React.ComponentType }>((resolve) => {
         setTimeout(() => {
           resolve(
-            importFn().catch(async (finalErr) => {
+            importFn().catch(async (finalErr: Error) => {
               console.error(`[lazyWithRetry] Final import failed for ${name}:`, finalErr);
-              // Final failure — unregister SW to dump the stale index.html cache, then reload.
-              if ('serviceWorker' in navigator) {
-                console.log(`[lazyWithRetry] Unregistering service workers...`);
-                const registrations = await navigator.serviceWorker.getRegistrations();
-                for (const registration of registrations) {
-                  await registration.unregister();
+
+              // Only reload if the error is a network/chunk failure, NOT a rendering bug!
+              const isChunkError =
+                finalErr?.name === 'ChunkLoadError' ||
+                finalErr?.message?.includes('fetch') ||
+                finalErr?.message?.includes('dynamically imported module');
+
+              if (isChunkError) {
+                if ('serviceWorker' in navigator) {
+                  console.log(`[lazyWithRetry] Unregistering service workers...`);
+                  const registrations = await navigator.serviceWorker.getRegistrations();
+                  for (const registration of registrations) {
+                    await registration.unregister();
+                  }
                 }
+                console.log(`[lazyWithRetry] Triggering window.location.reload() for ${name}`);
+                window.location.reload();
+                return { default: () => null } as { default: React.ComponentType };
               }
-              console.log(`[lazyWithRetry] Triggering window.location.reload() for ${name}`);
-              window.location.reload();
-              return { default: () => null } as { default: React.ComponentType };
+
+              // If it's a normal React/JS TypeError (like component undefined), throw it so the ErrorBoundary catches it!
+              throw finalErr;
             })
           );
         }, 1000);
