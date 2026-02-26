@@ -32,6 +32,9 @@ import aiRoutes from './modules/ai/ai.routes.js';
 const createApp = (): express.Application => {
   const app = express();
 
+  // Trust the reverse proxy (e.g. Render Load Balancer) to ensure rate limiters use the real client IPs.
+  app.set('trust proxy', 1);
+
   // ------------------------------------
   // Security & parsing middleware
   // ------------------------------------
