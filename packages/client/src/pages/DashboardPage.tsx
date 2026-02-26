@@ -1,8 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import ReactGridLayout, { Responsive } from 'react-grid-layout';
-const WidthProvider = (ReactGridLayout as any).WidthProvider;
+import { Responsive as ResponsiveGridLayout, useContainerWidth } from 'react-grid-layout';
 import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
 
@@ -20,8 +19,6 @@ import { ActivityWidget } from '../components/dashboard/ActivityWidget';
 import { VelocityWidget } from '../components/dashboard/VelocityWidget';
 import { DistributionWidget } from '../components/dashboard/DistributionWidget';
 import { ProjectCard } from '../components/dashboard/ProjectCard';
-
-const ResponsiveGridLayout = WidthProvider(Responsive);
 
 const injectCSS = `
   @media (max-width: 640px) {
@@ -73,6 +70,7 @@ const DEFAULT_LAYOUTS = {
 const DashboardPage: React.FC = () => {
   const navigate = useNavigate();
   const user = useAuthStore(s => s.user);
+  const { width, containerRef, mounted } = useContainerWidth();
   const [modalOpen, setModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -138,37 +136,41 @@ const DashboardPage: React.FC = () => {
       </div>
 
       {/* ── Grid Layout ── */}
-      <div style={{ margin: '0 -10px', marginBottom: '24px' }}>
-        <ResponsiveGridLayout
-          className="layout"
-          layouts={layouts}
-          breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
-          cols={{ lg: 12, md: 10, sm: 6, xs: 4, xxs: 2 }}
-          rowHeight={60}
-          onLayoutChange={onLayoutChange}
-          draggableHandle=".drag-handle"
-          margin={[20, 20]}
-        >
-          {/* Keyed panels */}
-          <div key="stats" style={{ cursor: 'default' }}>
-            <StatsCardsWidget />
-          </div>
-          <div key="tasks" className="drag-handle" style={{ cursor: 'grab' }}>
-            <MyTasksWidget />
-          </div>
-          <div key="upcoming" className="drag-handle" style={{ cursor: 'grab' }}>
-            <UpcomingWidget />
-          </div>
-          <div key="distribution" className="drag-handle" style={{ cursor: 'grab' }}>
-            <DistributionWidget />
-          </div>
-          <div key="velocity" className="drag-handle" style={{ cursor: 'grab' }}>
-            <VelocityWidget />
-          </div>
-          <div key="activity" className="drag-handle" style={{ cursor: 'grab' }}>
-            <ActivityWidget />
-          </div>
-        </ResponsiveGridLayout>
+      <div ref={containerRef as React.RefObject<HTMLDivElement>} style={{ margin: '0 -10px', marginBottom: '24px' }}>
+        {mounted && (
+          <ResponsiveGridLayout
+            width={width}
+            className="layout"
+            layouts={layouts}
+            breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
+            cols={{ lg: 12, md: 10, sm: 6, xs: 4, xxs: 2 }}
+            rowHeight={60}
+            onLayoutChange={onLayoutChange}
+            // @ts-ignore - 'draggableHandle' was renamed to 'handle' in v2 types but might still be passed down
+            draggableHandle=".drag-handle"
+            margin={[20, 20]}
+          >
+            {/* Keyed panels */}
+            <div key="stats" style={{ cursor: 'default' }}>
+              <StatsCardsWidget />
+            </div>
+            <div key="tasks" className="drag-handle" style={{ cursor: 'grab' }}>
+              <MyTasksWidget />
+            </div>
+            <div key="upcoming" className="drag-handle" style={{ cursor: 'grab' }}>
+              <UpcomingWidget />
+            </div>
+            <div key="distribution" className="drag-handle" style={{ cursor: 'grab' }}>
+              <DistributionWidget />
+            </div>
+            <div key="velocity" className="drag-handle" style={{ cursor: 'grab' }}>
+              <VelocityWidget />
+            </div>
+            <div key="activity" className="drag-handle" style={{ cursor: 'grab' }}>
+              <ActivityWidget />
+            </div>
+          </ResponsiveGridLayout>
+        )}
       </div>
 
 
