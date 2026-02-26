@@ -88,6 +88,12 @@ apiClient.interceptors.response.use(
       }
     }
 
+    if (error.response?.status === 429) {
+      // If we hit a rate limit, standard API calls should fail immediately
+      // without triggering retry loops or mass-logout cascades.
+      return Promise.reject(error);
+    }
+
     return Promise.reject(error);
   }
 );

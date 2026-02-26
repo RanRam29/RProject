@@ -69,6 +69,9 @@ export const LoginPage: React.FC = () => {
     queryKey: ['setup-check'],
     queryFn: () => authApi.checkSetup(),
     staleTime: 30_000,
+    retry: false, // Prevent infinite retry loops if the backend is rate limited (429)
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
   });
 
   // If already authenticated with a loaded user, redirect to dashboard
