@@ -19,10 +19,15 @@ function lazyWithRetry(importFn: () => Promise<{ default: React.ComponentType }>
       return new Promise<{ default: React.ComponentType }>((resolve) => {
         setTimeout(() => {
           resolve(
-            importFn().catch(() => {
-              // Final failure — reload page to get fresh index.html with new chunk URLs
+            importFn().catch(async () => {
+              // Final failure — unregister SW to dump the stale index.html cache, then reload.
+              if ('serviceWorker' in navigator) {
+                const registrations = await navigator.serviceWorker.getRegistrations();
+                for (const registration of registrations) {
+                  await registration.unregister();
+                }
+              }
               window.location.reload();
-              // Return a dummy to satisfy TypeScript (reload will interrupt)
               return { default: () => null } as { default: React.ComponentType };
             })
           );
@@ -68,27 +73,27 @@ function PageLoader() {
 export function AppRouter() {
   return (
     <ErrorBoundary>
-    <Suspense fallback={<PageLoader />}>
-      <Routes>
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/register" element={<RegisterPage />} />
+      <Suspense fallback={<PageLoader />}>
+        <Routes>
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
 
-        <Route element={<ProtectedRoute />}>
-          <Route element={<AppLayout />}>
-            <Route index element={<Navigate to="/dashboard" replace />} />
-            <Route path="/dashboard" element={<DashboardPage />} />
-            <Route path="/projects/:projectId" element={<ProjectPage />} />
-            <Route path="/templates" element={<TemplatesPage />} />
-            <Route path="/archive" element={<ArchivePage />} />
-            <Route path="/admin" element={<AdminPage />} />
-            <Route path="/settings" element={<SettingsPage />} />
-            <Route path="/profile" element={<ProfilePage />} />
+          <Route element={<ProtectedRoute />}>
+            <Route element={<AppLayout />}>
+              <Route index element={<Navigate to="/dashboard" replace />} />
+              <Route path="/dashboard" element={<DashboardPage />} />
+              <Route path="/projects/:projectId" element={<ProjectPage />} />
+              <Route path="/templates" element={<TemplatesPage />} />
+              <Route path="/archive" element={<ArchivePage />} />
+              <Route path="/admin" element={<AdminPage />} />
+              <Route path="/settings" element={<SettingsPage />} />
+              <Route path="/profile" element={<ProfilePage />} />
+            </Route>
           </Route>
-        </Route>
 
-        <Route path="*" element={<NotFoundPage />} />
-      </Routes>
-    </Suspense>
+          <Route path="*" element={<NotFoundPage />} />
+        </Routes>
+      </Suspense>
     </ErrorBoundary>
   );
 }
