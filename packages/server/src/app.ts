@@ -69,14 +69,15 @@ const createApp = (): express.Application => {
   } else {
     app.use(morgan('[:date[iso]] :method :url :status :response-time ms'));
   }
-  app.use(defaultLimiter);
 
   // ------------------------------------
-  // Health check
+  // Health check (Exempt from rate limits)
   // ------------------------------------
   app.get('/api/health', (_req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
   });
+
+  app.use(defaultLimiter);
 
   // ------------------------------------
   // API routes (v1)
