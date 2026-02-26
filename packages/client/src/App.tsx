@@ -5,6 +5,9 @@ import { useUIStore } from './stores/ui.store';
 import { useAuthStore } from './stores/auth.store';
 import { authApi } from './api/auth.api';
 import { hasToken, getRefreshToken, setTokens } from './utils/token-storage';
+import { Capacitor } from '@capacitor/core';
+import { SplashScreen } from '@capacitor/splash-screen';
+import { StatusBar, Style } from '@capacitor/status-bar';
 
 // ── Auth hydration singleton ─────────────────────────────────────────────────
 // Called exactly once at app startup.
@@ -54,7 +57,7 @@ function useAppHydration() {
     // No tokens at all — go straight to login
     setLoading(false);
     setHydrated();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 }
 
@@ -65,7 +68,26 @@ export default function App() {
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
+
+    // Configure StatusBar native plugin based on theme
+    if (Capacitor.isNativePlatform()) {
+      StatusBar.setStyle({
+        style: theme === 'dark' ? Style.Dark : Style.Light,
+      }).catch(console.error);
+
+      // Also set the background color to match the theme's background
+      StatusBar.setBackgroundColor({
+        color: theme === 'dark' ? '#000000' : '#FAFAFA',
+      }).catch(console.error);
+    }
   }, [theme]);
+
+  // Hide splash screen after successful hydration/initial render
+  useEffect(() => {
+    if (Capacitor.isNativePlatform()) {
+      SplashScreen.hide().catch(console.error);
+    }
+  }, []);
 
   return (
     <>

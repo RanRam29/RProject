@@ -30,8 +30,10 @@
     "onlyBuiltDependencies": [
       "@prisma/client",
       "@prisma/engines",
+      "core-js",
       "esbuild",
-      "prisma"
+      "prisma",
+      "sharp"
     ]
   }
 }

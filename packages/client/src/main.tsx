@@ -1,7 +1,10 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClient } from '@tanstack/react-query';
+import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
+import { createAsyncStoragePersister } from '@tanstack/query-async-storage-persister';
+import { get, set, del } from 'idb-keyval';
 import { SocketProvider } from './contexts/SocketContext';
 import App from './App';
 import './styles/globals.css';
@@ -16,20 +19,37 @@ const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: 30_000,
+      gcTime: 1000 * 60 * 60 * 24 * 7, // 7 days
       retry: 1,
       refetchOnWindowFocus: false,
     },
   },
 });
 
+// Configure IndexedDB persister
+const persister = createAsyncStoragePersister({
+  storage: {
+    getItem: async (key: string) => {
+      const value = await get(key);
+      return value || null;
+    },
+    setItem: async (key: string, value: string) => {
+      await set(key, value);
+    },
+    removeItem: async (key: string) => {
+      await del(key);
+    },
+  }
+});
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <QueryClientProvider client={queryClient}>
+    <PersistQueryClientProvider client={queryClient} persistOptions={{ persister }}>
       <BrowserRouter>
         <SocketProvider>
           <App />
         </SocketProvider>
       </BrowserRouter>
-    </QueryClientProvider>
+    </PersistQueryClientProvider>
   </React.StrictMode>
 );

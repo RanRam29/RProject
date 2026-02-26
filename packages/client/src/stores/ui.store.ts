@@ -12,12 +12,14 @@ interface UIState {
   theme: Theme;
   sidebarOpen: boolean;
   isMobile: boolean;
+  isOffline: boolean;
   toasts: Toast[];
   toggleTheme: () => void;
   setTheme: (theme: Theme) => void;
   toggleSidebar: () => void;
   setSidebarOpen: (open: boolean) => void;
   setIsMobile: (isMobile: boolean) => void;
+  setIsOffline: (isOffline: boolean) => void;
   addToast: (toast: Omit<Toast, 'id'>) => void;
   removeToast: (id: string) => void;
 }
@@ -38,6 +40,7 @@ export const useUIStore = create<UIState>((set) => ({
   theme: getInitialTheme(),
   sidebarOpen: getInitialSidebarOpen(),
   isMobile: typeof window !== 'undefined' ? window.innerWidth < 768 : false,
+  isOffline: false,
   toasts: [],
 
   toggleTheme: () =>
@@ -65,6 +68,7 @@ export const useUIStore = create<UIState>((set) => ({
     set({ sidebarOpen });
   },
   setIsMobile: (isMobile) => set({ isMobile }),
+  setIsOffline: (isOffline) => set({ isOffline }),
 
   addToast: (toast) =>
     set((state) => {

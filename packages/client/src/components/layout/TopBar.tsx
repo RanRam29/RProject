@@ -98,7 +98,7 @@ export const TopBar: React.FC<TopBarProps> = ({ onMenuClick }) => {
   const iconBtnClass = 'flex items-center justify-center w-[34px] h-[34px] rounded-lg border-none transition-colors duration-200 cursor-pointer shrink-0 bg-transparent';
 
   return (
-    <header className="flex items-center gap-2 shrink-0 sticky top-0 z-50 pr-4 pl-2" style={{ backgroundColor: 'var(--color-bg-elevated)', backdropFilter: 'blur(24px) saturate(1.8)', WebkitBackdropFilter: 'blur(24px) saturate(1.8)', borderBottom: '1px solid var(--color-border)', height: 'var(--topbar-height)' }}>
+    <header className="flex items-center gap-2 shrink-0 sticky top-0 z-50 pr-4 pl-2" style={{ backgroundColor: 'var(--color-bg-elevated)', backdropFilter: 'blur(24px) saturate(1.8)', WebkitBackdropFilter: 'blur(24px) saturate(1.8)', borderBottom: '1px solid var(--color-border)', height: 'calc(var(--topbar-height) + var(--safe-area-top))', paddingTop: 'var(--safe-area-top)' }}>
 
       {/* ── Left: Menu toggle ── */}
       <button className={iconBtnClass} onClick={onMenuClick} title="Toggle sidebar">

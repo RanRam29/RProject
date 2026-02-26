@@ -11,46 +11,46 @@ import { SystemRole } from '@pm/shared';
 
 const DashboardIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/>
-    <rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>
+    <rect x="3" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="3" width="7" height="7" rx="1.5" />
+    <rect x="3" y="14" width="7" height="7" rx="1.5" /><rect x="14" y="14" width="7" height="7" rx="1.5" />
   </svg>
 );
 
 
 const TemplatesIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-    <polyline points="14 2 14 8 20 8"/>
-    <line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
+    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+    <polyline points="14 2 14 8 20 8" />
+    <line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" />
   </svg>
 );
 
 const ArchiveIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <polyline points="21 8 21 21 3 21 3 8"/>
-    <rect x="1" y="3" width="22" height="5" rx="1"/>
-    <line x1="10" y1="12" x2="14" y2="12"/>
+    <polyline points="21 8 21 21 3 21 3 8" />
+    <rect x="1" y="3" width="22" height="5" rx="1" />
+    <line x1="10" y1="12" x2="14" y2="12" />
   </svg>
 );
 
 
 const SettingsIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="12" cy="12" r="3"/>
-    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+    <circle cx="12" cy="12" r="3" />
+    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
   </svg>
 );
 
 const AdminIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="12" cy="12" r="3"/>
-    <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+    <circle cx="12" cy="12" r="3" />
+    <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
   </svg>
 );
 
 const PlusIcon = () => (
   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-    <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+    <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
   </svg>
 );
 
@@ -62,14 +62,14 @@ interface NavItem { to: string; label: string; icon: React.ReactNode; adminOnly?
 
 const navItems: NavItem[] = [
   { to: '/dashboard', label: 'Dashboard', icon: <DashboardIcon />, end: true },
-  { to: '/templates',  label: 'Templates',  icon: <TemplatesIcon /> },
-  { to: '/archive',    label: 'Archive',    icon: <ArchiveIcon /> },
-  { to: '/settings',   label: 'Settings',   icon: <SettingsIcon />, adminOnly: true },
-  { to: '/admin',      label: 'Admin',      icon: <AdminIcon />, adminOnly: true },
+  { to: '/templates', label: 'Templates', icon: <TemplatesIcon /> },
+  { to: '/archive', label: 'Archive', icon: <ArchiveIcon /> },
+  { to: '/settings', label: 'Settings', icon: <SettingsIcon />, adminOnly: true },
+  { to: '/admin', label: 'Admin', icon: <AdminIcon />, adminOnly: true },
 ];
 
 /* project color dots */
-const DOT_COLORS = ['#5B8DEF','#34D399','#A78BFA','#FB7185','#FBBF24','#38BDF8','#F97316'];
+const DOT_COLORS = ['#5B8DEF', '#34D399', '#A78BFA', '#FB7185', '#FBBF24', '#38BDF8', '#F97316'];
 
 /* ------------------------------------------------------------------ */
 /*  Sidebar                                                            */
@@ -129,7 +129,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle, isMobile,
         {/* ── Header / Logo ── */}
         <div style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          height: 'var(--topbar-height)', padding: '0 16px',
+          height: 'calc(var(--topbar-height) + var(--safe-area-top))', padding: 'var(--safe-area-top) 16px 0',
           borderBottom: '1px solid var(--sidebar-border)',
           flexShrink: 0,
         }}>
@@ -166,7 +166,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle, isMobile,
             {isMobile ? '✕' : (
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
                 style={{ transform: collapsed ? 'rotate(180deg)' : 'none', transition: 'transform var(--transition-normal)' }}>
-                <polyline points="15 18 9 12 15 6"/>
+                <polyline points="15 18 9 12 15 6" />
               </svg>
             )}
           </button>
@@ -246,7 +246,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle, isMobile,
         </div>
 
         {/* ── Footer: New Project ── */}
-        <div style={{ padding: '10px 10px 14px', borderTop: '1px solid var(--sidebar-border)', flexShrink: 0 }}>
+        <div style={{ padding: '10px 10px calc(14px + var(--safe-area-bottom))', borderTop: '1px solid var(--sidebar-border)', flexShrink: 0 }}>
           <button
             onClick={() => { handleNav(); navigate('/dashboard'); }}
             style={{

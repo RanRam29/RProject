@@ -4,6 +4,7 @@ import { Sidebar } from './Sidebar';
 import { TopBar } from './TopBar';
 import { useUIStore } from '../../stores/ui.store';
 import { CommandPalette } from '../ui/CommandPalette';
+import { Network } from '@capacitor/network';
 
 /* ------------------------------------------------------------------ */
 /*  Constants                                                          */
@@ -111,7 +112,22 @@ const ToastContainer: React.FC = () => {
 /* ------------------------------------------------------------------ */
 
 export const AppLayout: React.FC = () => {
-  const { sidebarOpen, toggleSidebar, setSidebarOpen, isMobile, setIsMobile } = useUIStore();
+  const { sidebarOpen, toggleSidebar, setSidebarOpen, isMobile, setIsMobile, isOffline, setIsOffline } = useUIStore();
+
+  // Network offline detector
+  useEffect(() => {
+    Network.getStatus().then(status => {
+      setIsOffline(!status.connected);
+    });
+
+    const listener = Network.addListener('networkStatusChange', status => {
+      setIsOffline(!status.connected);
+    });
+
+    return () => {
+      listener.then(l => l.remove());
+    };
+  }, [setIsOffline]);
 
   // Responsive: track viewport width
   const wasMobileRef = useRef(window.innerWidth < MOBILE_BREAKPOINT);
@@ -179,6 +195,27 @@ export const AppLayout: React.FC = () => {
 
       {/* Main content area */}
       <div style={mainContainerStyle}>
+        {/* Offline Banner */}
+        {isOffline && (
+          <div style={{
+            backgroundColor: 'var(--color-danger)',
+            color: '#FFF',
+            textAlign: 'center',
+            padding: '4px',
+            fontSize: '12px',
+            fontWeight: 600,
+            zIndex: 1000,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '8px',
+            flexShrink: 0
+          }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m2 2 20 20" /><path d="M8.5 8.5c.35-.23.73-.42 1.13-.56" /><path d="M12.5 12.5c.32.1.66.15 1 .15 1.1 0 2-.9 2-2 0-.34-.05-.68-.15-1" /><path d="M16.5 16.5a4 4 0 0 0-4-4c-1.1 0-2 .9-2 2 0 1.1.9 2 2 2 .34 0 .68-.05 1-.15" /><path d="M22.5 22.5a10 10 0 0 0-10-10c-3.1 0-5.8 1.4-7.5 3.5" /><path d="M1.5 1.5a10 10 0 0 0 10 10c1.8 0 3.5-.5 5-1.5" /></svg>
+            <span>You are currently offline</span>
+          </div>
+        )}
+
         {/* Top bar */}
         <TopBar onMenuClick={handleSidebarToggle} />
 
