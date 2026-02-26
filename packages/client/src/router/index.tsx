@@ -12,21 +12,25 @@ import { NotFoundPage } from '../pages/NotFoundPage';
  * When Vercel deploys new code, old chunk filenames become 404s.
  * This retries the import and reloads the page on final failure.
  */
-function lazyWithRetry(importFn: () => Promise<{ default: React.ComponentType }>) {
+function lazyWithRetry(importFn: () => Promise<{ default: React.ComponentType }>, name: string) {
   return lazy(() =>
-    importFn().catch(() => {
+    importFn().catch((err) => {
+      console.warn(`[lazyWithRetry] First import failed for ${name}:`, err);
       // First retry after a short delay
       return new Promise<{ default: React.ComponentType }>((resolve) => {
         setTimeout(() => {
           resolve(
-            importFn().catch(async () => {
+            importFn().catch(async (finalErr) => {
+              console.error(`[lazyWithRetry] Final import failed for ${name}:`, finalErr);
               // Final failure — unregister SW to dump the stale index.html cache, then reload.
               if ('serviceWorker' in navigator) {
+                console.log(`[lazyWithRetry] Unregistering service workers...`);
                 const registrations = await navigator.serviceWorker.getRegistrations();
                 for (const registration of registrations) {
                   await registration.unregister();
                 }
               }
+              console.log(`[lazyWithRetry] Triggering window.location.reload() for ${name}`);
               window.location.reload();
               return { default: () => null } as { default: React.ComponentType };
             })
@@ -37,13 +41,13 @@ function lazyWithRetry(importFn: () => Promise<{ default: React.ComponentType }>
   );
 }
 
-const DashboardPage = lazyWithRetry(() => import('../pages/DashboardPage'));
-const ProjectPage = lazyWithRetry(() => import('../pages/ProjectPage'));
-const TemplatesPage = lazyWithRetry(() => import('../pages/TemplatesPage'));
-const ArchivePage = lazyWithRetry(() => import('../pages/ArchivePage'));
-const AdminPage = lazyWithRetry(() => import('../pages/AdminPage'));
-const ProfilePage = lazyWithRetry(() => import('../pages/ProfilePage'));
-const SettingsPage = lazyWithRetry(() => import('../pages/SettingsPage'));
+const DashboardPage = lazyWithRetry(() => import('../pages/DashboardPage'), 'DashboardPage');
+const ProjectPage = lazyWithRetry(() => import('../pages/ProjectPage'), 'ProjectPage');
+const TemplatesPage = lazyWithRetry(() => import('../pages/TemplatesPage'), 'TemplatesPage');
+const ArchivePage = lazyWithRetry(() => import('../pages/ArchivePage'), 'ArchivePage');
+const AdminPage = lazyWithRetry(() => import('../pages/AdminPage'), 'AdminPage');
+const ProfilePage = lazyWithRetry(() => import('../pages/ProfilePage'), 'ProfilePage');
+const SettingsPage = lazyWithRetry(() => import('../pages/SettingsPage'), 'SettingsPage');
 
 function PageLoader() {
   return (

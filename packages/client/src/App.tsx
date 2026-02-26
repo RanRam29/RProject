@@ -33,6 +33,7 @@ function useAppHydration() {
 
     if (hasToken()) {
       // Access token present — /auth/me auto-refreshes via interceptor if expired
+      console.log('[App Hydration] Access token present, fetching user');
       authApi
         .me()
         .then((user) => setUser(user))
@@ -43,6 +44,7 @@ function useAppHydration() {
     const refreshToken = getRefreshToken();
     if (refreshToken) {
       // No access token but refresh token exists — do a silent refresh first
+      console.log('[App Hydration] No access token but refresh token exists, refreshing');
       authApi
         .refresh(refreshToken)
         .then((tokens) => {
@@ -55,6 +57,7 @@ function useAppHydration() {
     }
 
     // No tokens at all — go straight to login
+    console.log('[App Hydration] No tokens found going to login');
     setLoading(false);
     setHydrated();
     // eslint-disable-next-line react-hooks/exhaustive-deps
