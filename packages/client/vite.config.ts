@@ -6,28 +6,30 @@ import path from 'path';
 export default defineConfig({
   plugins: [
     react(),
-    VitePWA({
-      registerType: 'autoUpdate',
-      includeAssets: ['favicon.svg'],
-      manifest: {
-        name: 'Project Manager',
-        short_name: 'PM',
-        theme_color: '#FAFAFA',
-        background_color: '#FAFAFA',
-        display: 'standalone',
-        orientation: 'portrait',
-        icons: [
-          {
-            src: 'favicon.svg',
-            sizes: '192x192',
-            type: 'image/svg+xml'
-          }
-        ]
-      },
-      workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg}']
-      }
-    })
+    ...(process.env.BUILD_TARGET === 'capacitor' ? [] : [
+      VitePWA({
+        registerType: 'autoUpdate',
+        includeAssets: ['favicon.svg'],
+        manifest: {
+          name: 'Project Manager',
+          short_name: 'PM',
+          theme_color: '#FAFAFA',
+          background_color: '#FAFAFA',
+          display: 'standalone',
+          orientation: 'portrait',
+          icons: [
+            {
+              src: 'favicon.svg',
+              sizes: '192x192',
+              type: 'image/svg+xml'
+            }
+          ]
+        },
+        workbox: {
+          globPatterns: ['**/*.{js,css,html,ico,png,svg}']
+        }
+      })
+    ])
   ],
   resolve: {
     alias: {
