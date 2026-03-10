@@ -149,7 +149,18 @@ export class TimeTrackingService {
   /**
    * List time entries for a task.
    */
-  async listForTask(taskId: string, page = 1, limit = 50) {
+  async listForTask(taskId: string, page = 1, limit = 50, projectId?: string) {
+    // Verify the task belongs to the expected project if provided
+    if (projectId) {
+      const task = await prisma.task.findFirst({
+        where: { id: taskId, projectId },
+        select: { id: true },
+      });
+      if (!task) {
+        throw ApiError.notFound('Task not found in this project');
+      }
+    }
+
     const skip = (page - 1) * limit;
 
     const [entries, total] = await Promise.all([
@@ -173,7 +184,18 @@ export class TimeTrackingService {
   /**
    * Get total time spent on a task (across all users).
    */
-  async getTaskTotalTime(taskId: string) {
+  async getTaskTotalTime(taskId: string, projectId?: string) {
+    // Verify the task belongs to the expected project if provided
+    if (projectId) {
+      const task = await prisma.task.findFirst({
+        where: { id: taskId, projectId },
+        select: { id: true },
+      });
+      if (!task) {
+        throw ApiError.notFound('Task not found in this project');
+      }
+    }
+
     const result = await prisma.timeEntry.aggregate({
       where: {
         taskId,

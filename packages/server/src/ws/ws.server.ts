@@ -187,6 +187,8 @@ export function initializeWebSocket(httpServer: HttpServer): SocketServer {
 
     // Leave project room
     socket.on(WS_EVENTS.PROJECT_LEAVE, withRateLimit((projectId: string) => {
+      // Only emit USER_LEFT if the socket was actually in the room
+      if (!socket.rooms.has(projectId)) return;
       socket.leave(projectId);
       socket.to(projectId).emit(WS_EVENTS.USER_LEFT, {
         projectId,

@@ -297,7 +297,7 @@ export function TaskDetailModal({
       size="md"
       footer={footer}
     >
-      <form onSubmit={handleSubmit}>
+      <div>
         <div style={fieldGroupStyle}>
           <Input
             label="Title"
@@ -459,7 +459,7 @@ export function TaskDetailModal({
             <div>Last updated: {new Date(task.updatedAt).toLocaleString()}</div>
           </div>
         )}
-      </form>
+      </div>
     </Modal>
   );
 }

@@ -32,6 +32,7 @@ export const updateTaskSchema = z.object({
   dueDate: dateString.nullable().optional(),
   isMilestone: z.boolean().optional(),
   estimatedHours: z.number().int().min(0).max(999).optional(),
+  laneId: z.string().uuid().nullable().optional(),
 });
 
 export const updateTaskStatusSchema = z.object({

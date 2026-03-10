@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { env } from '../config/env';
 import { useAuthStore } from '../stores/auth.store';
-import { getAccessToken, getRefreshToken, setAccessToken } from '../utils/token-storage';
+import { getAccessToken, getRefreshToken, setAccessToken, setTokens } from '../utils/token-storage';
 
 const apiClient = axios.create({
   baseURL: env.API_URL,
@@ -67,13 +67,11 @@ apiClient.interceptors.response.use(
         const { data } = await apiClient.post('/auth/refresh', { refreshToken });
 
         const { accessToken, refreshToken: newRefreshToken } = data.data;
-        // Update only the access token in storage; preserve the existing
-        // remember-me preference. Also update the refresh token if returned.
-        setAccessToken(accessToken);
+        // Update tokens in storage, preserving the remember-me preference.
         if (newRefreshToken) {
-          // Store the rotated refresh token using the same storage preference
-          const { setTokens } = await import('../utils/token-storage');
           setTokens(accessToken, newRefreshToken);
+        } else {
+          setAccessToken(accessToken);
         }
 
         onTokenRefreshed(accessToken);

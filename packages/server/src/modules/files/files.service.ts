@@ -42,7 +42,7 @@ export class FilesService {
         orderBy: { createdAt: 'desc' },
       });
 
-      return files;
+      return files.map((f: { sizeBytes: bigint; [key: string]: unknown }) => ({ ...f, sizeBytes: Number(f.sizeBytes) }));
     } catch (error) {
       if (error instanceof ApiError) throw error;
       throw ApiError.badRequest('Failed to list files');
@@ -101,9 +101,11 @@ export class FilesService {
         },
       });
 
-      emitToProject(projectId, WS_EVENTS.FILE_UPLOADED, { projectId, file });
+      const fileWithNumber = { ...file, sizeBytes: Number(file.sizeBytes) };
 
-      return file;
+      emitToProject(projectId, WS_EVENTS.FILE_UPLOADED, { projectId, file: fileWithNumber });
+
+      return fileWithNumber;
     } catch (error) {
       if (error instanceof ApiError) throw error;
       throw ApiError.badRequest('Failed to upload file');
@@ -165,11 +167,19 @@ export class FilesService {
         throw ApiError.badRequest(`File size exceeds maximum of ${MAX_FILE_SIZE / (1024 * 1024)} MB`);
       }
 
+      // Validate fileKey to prevent path traversal
+      if (data.fileKey.includes('..') || !data.fileKey.startsWith(`${projectId}/`)) {
+        throw ApiError.badRequest('Invalid file key');
+      }
+
+      // Sanitize originalName: strip non-printable chars and enforce max length
+      const sanitizedName = data.name.replace(/[^\x20-\x7E]/g, '').slice(0, 255);
+
       const file = await prisma.file.create({
         data: {
           projectId,
           uploadedById: userId,
-          originalName: data.name,
+          originalName: sanitizedName,
           storagePath: data.fileKey,
           mimeType: data.mimeType,
           sizeBytes: data.size,
@@ -181,9 +191,11 @@ export class FilesService {
         },
       });
 
-      emitToProject(projectId, WS_EVENTS.FILE_UPLOADED, { projectId, file });
+      const fileWithNumber = { ...file, sizeBytes: Number(file.sizeBytes) };
 
-      return file;
+      emitToProject(projectId, WS_EVENTS.FILE_UPLOADED, { projectId, file: fileWithNumber });
+
+      return fileWithNumber;
     } catch (error) {
       if (error instanceof ApiError) throw error;
       throw ApiError.badRequest('Failed to register file');
@@ -227,6 +239,12 @@ export class FilesService {
       }
 
       const filePath = path.join(UPLOADS_DIR, file.storagePath);
+      const resolvedPath = path.resolve(filePath);
+
+      // Ensure resolved path stays within UPLOADS_DIR
+      if (!resolvedPath.startsWith(path.resolve(UPLOADS_DIR))) {
+        throw ApiError.badRequest('Invalid file path');
+      }
 
       if (!existsSync(filePath)) {
         throw ApiError.notFound('File not found on disk');
