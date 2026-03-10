@@ -79,6 +79,13 @@ export function CommentThread({ projectId, taskId }: CommentThreadProps) {
     queryFn: () => commentsApi.list(projectId, taskId),
   });
 
+  // Clean up typing timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+    };
+  }, []);
+
   // Listen for typing events
   useEffect(() => {
     if (!socket) return;

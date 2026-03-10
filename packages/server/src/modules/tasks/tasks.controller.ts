@@ -336,8 +336,9 @@ export class TasksController {
   async removeDependency(req: Request, res: Response, next: NextFunction) {
     try {
       const depId = req.params.depId as string;
+      const projectId = req.params.projectId as string;
 
-      const result = await tasksService.removeDependency(depId);
+      const result = await tasksService.removeDependency(depId, projectId);
 
       sendSuccess(res, result);
     } catch (error) {
@@ -435,10 +436,11 @@ export class TasksController {
   async listTimeEntries(req: Request, res: Response, next: NextFunction) {
     try {
       const taskId = req.params.taskId as string;
+      const projectId = req.params.projectId as string;
       const page = req.query.page ? parseInt(req.query.page as string) : 1;
       const limit = req.query.limit ? parseInt(req.query.limit as string) : 50;
 
-      const result = await timeTrackingService.listForTask(taskId, page, limit);
+      const result = await timeTrackingService.listForTask(taskId, page, limit, projectId);
 
       sendPaginated(res, result.data, result.total, result.page, result.limit);
     } catch (error) {
@@ -449,8 +451,9 @@ export class TasksController {
   async getTaskTotalTime(req: Request, res: Response, next: NextFunction) {
     try {
       const taskId = req.params.taskId as string;
+      const projectId = req.params.projectId as string;
 
-      const result = await timeTrackingService.getTaskTotalTime(taskId);
+      const result = await timeTrackingService.getTaskTotalTime(taskId, projectId);
 
       sendSuccess(res, result);
     } catch (error) {

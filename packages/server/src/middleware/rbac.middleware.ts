@@ -45,10 +45,15 @@ export function requireProjectRole(...roles: string[]) {
 
       if (!roles.includes(permission.role)) {
         if (permission.role === 'CUSTOM' && roles.includes('CUSTOM') && customRole) {
-          req.projectCapabilities = customRole.capabilities as Record<string, boolean>;
+          // Fall through to set req.projectPermission below
         } else {
           return next(ApiError.forbidden('Insufficient project permissions'));
         }
+      }
+
+      // Always load custom role capabilities for CUSTOM role users
+      if (permission.role === 'CUSTOM' && customRole) {
+        req.projectCapabilities = customRole.capabilities as Record<string, boolean>;
       }
 
       req.projectPermission = {

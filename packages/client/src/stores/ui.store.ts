@@ -70,15 +70,14 @@ export const useUIStore = create<UIState>((set) => ({
   setIsMobile: (isMobile) => set({ isMobile }),
   setIsOffline: (isOffline) => set({ isOffline }),
 
-  addToast: (toast) =>
-    set((state) => {
-      const id = crypto.randomUUID();
-      const newToast = { ...toast, id };
-      setTimeout(() => {
-        set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) }));
-      }, 5000);
-      return { toasts: [...state.toasts, newToast] };
-    }),
+  addToast: (toast) => {
+    const id = crypto.randomUUID();
+    const newToast = { ...toast, id };
+    set((state) => ({ toasts: [...state.toasts, newToast] }));
+    setTimeout(() => {
+      set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) }));
+    }, 5000);
+  },
 
   removeToast: (id) =>
     set((state) => ({

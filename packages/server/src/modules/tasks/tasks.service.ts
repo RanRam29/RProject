@@ -254,6 +254,12 @@ export class TasksService {
           creator: {
             select: USER_SELECT_STANDARD,
           },
+          labels: {
+            include: { label: true },
+          },
+          comments: {
+            select: { id: true },
+          },
         },
       });
 
@@ -337,6 +343,12 @@ export class TasksService {
           },
           lane: {
             select: { id: true, name: true, color: true },
+          },
+          labels: {
+            include: { label: true },
+          },
+          comments: {
+            select: { id: true },
           },
         },
       });
@@ -423,6 +435,12 @@ export class TasksService {
           status: true,
           assignee: {
             select: USER_SELECT_STANDARD,
+          },
+          labels: {
+            include: { label: true },
+          },
+          comments: {
+            select: { id: true },
           },
         },
       });
@@ -558,6 +576,12 @@ export class TasksService {
           parentTask: {
             select: { id: true, title: true },
           },
+          labels: {
+            include: { label: true },
+          },
+          comments: {
+            select: { id: true },
+          },
         },
       });
 
@@ -605,18 +629,30 @@ export class TasksService {
         throw ApiError.conflict('This dependency already exists');
       }
 
-      // Check for circular dependency (reverse already exists)
-      const reverse = await prisma.taskDependency.findFirst({
-        where: {
-          blockedTaskId: blockingTaskId,
-          blockingTaskId: blockedTaskId,
-        },
-      });
+      // Check for circular dependency via BFS traversal
+      // If blockedTaskId is reachable from blockingTaskId following the
+      // blocking direction, adding this edge would create a cycle.
+      const visited = new Set<string>([blockingTaskId]);
+      const queue: string[] = [blockingTaskId];
 
-      if (reverse) {
-        throw ApiError.badRequest(
-          'Cannot create dependency: would create a circular dependency',
-        );
+      while (queue.length > 0) {
+        const currentId = queue.shift()!;
+        const deps = await prisma.taskDependency.findMany({
+          where: { blockedTaskId: currentId },
+          select: { blockingTaskId: true },
+        });
+
+        for (const dep of deps) {
+          if (dep.blockingTaskId === blockedTaskId) {
+            throw ApiError.badRequest(
+              'Cannot create dependency: would create a circular dependency',
+            );
+          }
+          if (!visited.has(dep.blockingTaskId)) {
+            visited.add(dep.blockingTaskId);
+            queue.push(dep.blockingTaskId);
+          }
+        }
       }
 
       const dependency = await prisma.taskDependency.create({
@@ -643,7 +679,7 @@ export class TasksService {
     }
   }
 
-  async removeDependency(depId: string) {
+  async removeDependency(depId: string, projectId?: string) {
     try {
       const dependency = await prisma.taskDependency.findUnique({
         where: { id: depId },
@@ -652,6 +688,11 @@ export class TasksService {
 
       if (!dependency) {
         throw ApiError.notFound('Dependency not found');
+      }
+
+      // Verify the dependency belongs to the expected project
+      if (projectId && dependency.blockedTask.projectId !== projectId) {
+        throw ApiError.forbidden('Dependency does not belong to this project');
       }
 
       await prisma.taskDependency.delete({
