@@ -215,24 +215,25 @@ export const authService = {
   },
 
   async refreshToken(token: string, fingerprint?: string): Promise<TokenPair> {
-    // Atomically delete the refresh token to prevent concurrent replay.
-    // If two requests race, only the first delete succeeds; the second
-    // throws a Prisma P2025 (record not found) which we catch below.
-    let deletedToken: Awaited<ReturnType<typeof prisma.refreshToken.delete>>;
-    try {
-      deletedToken = await prisma.refreshToken.delete({
-        where: { token },
-        include: { user: true },
-      });
-    } catch {
+    const storedToken = await prisma.refreshToken.findUnique({
+      where: { token },
+      include: { user: true },
+    });
+
+    if (!storedToken) {
       throw ApiError.unauthorized('Invalid refresh token');
     }
 
-    if (deletedToken.expiresAt < new Date()) {
+    // Always delete the old token (rotation)
+    await prisma.refreshToken.delete({
+      where: { id: storedToken.id },
+    });
+
+    if (storedToken.expiresAt < new Date()) {
       throw ApiError.unauthorized('Refresh token has expired');
     }
 
-    const user = (deletedToken as typeof deletedToken & { user: { id: string; email: string; systemRole: string } }).user;
+    const user = storedToken.user as { id: string; email: string; systemRole: string };
 
     const tokens = await generateTokens({
       id: user.id,
