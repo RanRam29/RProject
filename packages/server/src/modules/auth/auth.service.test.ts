@@ -65,6 +65,9 @@ vi.mock('../../utils/logger.js', () => ({
 
 vi.mock('crypto', () => ({
   randomUUID: () => 'mock-uuid-refresh-token',
+  createHash: () => ({
+    update: () => ({ digest: () => 'mock-fingerprint-hash-hex-string-1234' }),
+  }),
 }));
 
 vi.mock('../../middleware/account-lockout.middleware.js', () => ({
@@ -158,12 +161,13 @@ describe('authService.register', () => {
       { expiresIn: '15m' },
     );
 
-    // Verified refresh token was stored
+    // Verified refresh token was stored with fingerprint (empty string when none provided)
     expect(mockRefreshTokenCreate).toHaveBeenCalledWith({
       data: {
         token: 'mock-uuid-refresh-token',
         userId: mockUser.id,
         expiresAt: expect.any(Date),
+        fingerprint: '',
       },
     });
 
@@ -297,49 +301,48 @@ describe('authService.login', () => {
 // refreshToken
 // ─────────────────────────────────────────────────────────────────────────────
 describe('authService.refreshToken', () => {
+  const FINGERPRINT = 'abc123fingerprint';
+
   const storedRefreshToken = {
     id: 'rt-id-1',
     token: 'existing-refresh-token',
     userId: mockUser.id,
     expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days from now
+    fingerprint: FINGERPRINT,
     user: mockUser,
   };
 
   it('rotates token: deletes old, creates new, returns new token pair', async () => {
-    mockRefreshTokenFindUnique.mockResolvedValue(storedRefreshToken);
     mockRefreshTokenDelete.mockResolvedValue(storedRefreshToken);
 
-    const result = await authService.refreshToken('existing-refresh-token');
+    const result = await authService.refreshToken('existing-refresh-token', FINGERPRINT);
 
-    // Verified token was looked up with user included
-    expect(mockRefreshTokenFindUnique).toHaveBeenCalledWith({
+    // Verified old token was atomically deleted (rotation) with user included
+    expect(mockRefreshTokenDelete).toHaveBeenCalledWith({
       where: { token: 'existing-refresh-token' },
       include: { user: true },
     });
 
-    // Verified old token was deleted (rotation)
-    expect(mockRefreshTokenDelete).toHaveBeenCalledWith({
-      where: { id: 'rt-id-1' },
-    });
-
-    // Verified new JWT was signed (includes jti from Phase 0.9)
+    // Verified new JWT was signed (includes jti)
     expect(mockSign).toHaveBeenCalledWith(
       {
         sub: mockUser.id,
         email: mockUser.email,
         systemRole: mockUser.systemRole,
         jti: expect.any(String),
+        fpt: FINGERPRINT,
       },
       'test-secret',
       { expiresIn: '15m' },
     );
 
-    // Verified new refresh token was stored
+    // Verified new refresh token was stored with fingerprint
     expect(mockRefreshTokenCreate).toHaveBeenCalledWith({
       data: {
         token: 'mock-uuid-refresh-token',
         userId: mockUser.id,
         expiresAt: expect.any(Date),
+        fingerprint: FINGERPRINT,
       },
     });
 
@@ -351,7 +354,7 @@ describe('authService.refreshToken', () => {
   });
 
   it('throws 401 when token does not exist in database', async () => {
-    mockRefreshTokenFindUnique.mockResolvedValue(null);
+    mockRefreshTokenDelete.mockRejectedValue(new Error('Record not found'));
 
     await expect(
       authService.refreshToken('invalid-token'),
@@ -360,35 +363,54 @@ describe('authService.refreshToken', () => {
       message: 'Invalid refresh token',
     });
 
-    // Should not attempt to delete or generate new tokens
-    expect(mockRefreshTokenDelete).not.toHaveBeenCalled();
+    // Should not generate new tokens
     expect(mockSign).not.toHaveBeenCalled();
     expect(mockRefreshTokenCreate).not.toHaveBeenCalled();
   });
 
-  it('throws 401 and deletes token when expired', async () => {
+  it('throws 401 when token is expired', async () => {
     const expiredToken = {
       ...storedRefreshToken,
       expiresAt: new Date(Date.now() - 1000), // Expired 1 second ago
     };
-    mockRefreshTokenFindUnique.mockResolvedValue(expiredToken);
     mockRefreshTokenDelete.mockResolvedValue(expiredToken);
 
     await expect(
-      authService.refreshToken('existing-refresh-token'),
+      authService.refreshToken('existing-refresh-token', FINGERPRINT),
     ).rejects.toMatchObject({
       statusCode: 401,
       message: 'Refresh token has expired',
     });
 
-    // Verified expired token was deleted
-    expect(mockRefreshTokenDelete).toHaveBeenCalledWith({
-      where: { id: 'rt-id-1' },
+    // Should not generate new tokens
+    expect(mockSign).not.toHaveBeenCalled();
+    expect(mockRefreshTokenCreate).not.toHaveBeenCalled();
+  });
+
+  it('throws 401 when fingerprint does not match (token theft prevention)', async () => {
+    mockRefreshTokenDelete.mockResolvedValue(storedRefreshToken);
+
+    await expect(
+      authService.refreshToken('existing-refresh-token', 'different-fingerprint'),
+    ).rejects.toMatchObject({
+      statusCode: 401,
+      message: 'Token fingerprint mismatch',
     });
 
     // Should not generate new tokens
     expect(mockSign).not.toHaveBeenCalled();
     expect(mockRefreshTokenCreate).not.toHaveBeenCalled();
+  });
+
+  it('succeeds when no fingerprint is provided (backward-compatible)', async () => {
+    mockRefreshTokenDelete.mockResolvedValue(storedRefreshToken);
+
+    const result = await authService.refreshToken('existing-refresh-token');
+
+    expect(result).toEqual({
+      accessToken: 'mock-access-token',
+      refreshToken: 'mock-uuid-refresh-token',
+    });
   });
 });
 

@@ -64,6 +64,16 @@ vi.mock('bcryptjs', () => ({
   },
 }));
 
+// Bypass rate limiting in integration tests so request counts don't interfere
+vi.mock('../../middleware/rate-limit.middleware.js', () => {
+  const passThrough = (_req: unknown, _res: unknown, next: () => void) => next();
+  return {
+    defaultLimiter: passThrough,
+    authLimiter: passThrough,
+    aiLimiter: passThrough,
+  };
+});
+
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import createApp from '../../app.js';
@@ -286,7 +296,8 @@ describe('Auth Integration Tests', () => {
 
   describe('POST /api/v1/auth/refresh', () => {
     it('returns 401 for invalid refresh token', async () => {
-      mockRefreshTokenFindUnique.mockResolvedValue(null);
+      // Service atomically deletes the token — throw to simulate not found
+      mockRefreshTokenDelete.mockRejectedValue(new Error('Record not found'));
 
       const app = createApp();
       const res = await request(app).then((r) =>
@@ -299,14 +310,15 @@ describe('Auth Integration Tests', () => {
     });
 
     it('returns 200 with new tokens for valid refresh', async () => {
-      mockRefreshTokenFindUnique.mockResolvedValue({
+      // Service uses a single atomic delete({ where: { token }, include: { user } })
+      mockRefreshTokenDelete.mockResolvedValue({
         id: 'rt-1',
         token: 'valid-refresh-token',
         userId: testUser.id,
+        fingerprint: '',
         user: testUser,
         expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
       });
-      mockRefreshTokenDelete.mockResolvedValue({});
 
       const app = createApp();
       const res = await request(app).then((r) =>
@@ -322,14 +334,15 @@ describe('Auth Integration Tests', () => {
     });
 
     it('returns 401 for expired refresh token', async () => {
-      mockRefreshTokenFindUnique.mockResolvedValue({
+      // Service atomically deletes the token, then checks expiry
+      mockRefreshTokenDelete.mockResolvedValue({
         id: 'rt-1',
         token: 'expired-token',
         userId: testUser.id,
+        fingerprint: '',
         user: testUser,
         expiresAt: new Date(Date.now() - 1000), // expired
       });
-      mockRefreshTokenDelete.mockResolvedValue({});
 
       const app = createApp();
       const res = await request(app).then((r) =>
