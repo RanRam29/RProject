@@ -714,13 +714,14 @@ describe('RBAC Integration Tests', () => {
     describe('PATCH /tasks/:taskId/status (move)', () => {
       it('allows EDITOR to change task status', async () => {
         mockProjectPermission('user-editor', 'EDITOR');
-        mockTaskFindUnique.mockResolvedValue(mockTaskData);
+        mockTaskFindUnique.mockResolvedValue(mockTaskData); // controller oldTask history fetch
+        mockTaskFindFirst.mockResolvedValueOnce(mockTaskData); // service initial task lookup
         mockTaskStatusFindFirst.mockResolvedValue({
           id: RBAC_UUID.STATUS_2,
           name: 'In Progress',
           projectId: 'project-1',
         });
-        mockTaskFindFirst.mockResolvedValue(null);
+        mockTaskFindFirst.mockResolvedValueOnce(null); // sort order lookup
         mockTaskUpdate.mockResolvedValue({
           ...mockTaskData,
           statusId: RBAC_UUID.STATUS_2,

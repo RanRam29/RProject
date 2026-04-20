@@ -56,9 +56,10 @@ export class TasksController {
 
   async getById(req: Request, res: Response, next: NextFunction) {
     try {
+      const projectId = req.params.projectId as string;
       const taskId = req.params.taskId as string;
 
-      const task = await tasksService.getById(taskId);
+      const task = await tasksService.getById(taskId, projectId);
 
       sendSuccess(res, task);
     } catch (error) {
@@ -235,6 +236,7 @@ export class TasksController {
 
   async updateStatus(req: Request, res: Response, next: NextFunction) {
     try {
+      const projectId = req.params.projectId as string;
       const taskId = req.params.taskId as string;
       const userId = req.user!.id;
       const { statusId, sortOrder } = req.body;
@@ -245,7 +247,7 @@ export class TasksController {
         include: { status: { select: { name: true } } },
       });
 
-      const task = await tasksService.updateStatus(taskId, statusId, sortOrder);
+      const task = await tasksService.updateStatus(taskId, statusId, projectId, sortOrder);
 
       // Record status change in history
       if (oldTask) {
@@ -273,10 +275,11 @@ export class TasksController {
 
   async reorder(req: Request, res: Response, next: NextFunction) {
     try {
+      const projectId = req.params.projectId as string;
       const taskId = req.params.taskId as string;
       const { sortOrder } = req.body;
 
-      const task = await tasksService.reorder(taskId, sortOrder);
+      const task = await tasksService.reorder(taskId, sortOrder, projectId);
 
       sendSuccess(res, task);
     } catch (error) {

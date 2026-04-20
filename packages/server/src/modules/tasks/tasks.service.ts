@@ -114,10 +114,10 @@ export class TasksService {
     }
   }
 
-  async getById(taskId: string) {
+  async getById(taskId: string, projectId: string) {
     try {
-      const task = await prisma.task.findUnique({
-        where: { id: taskId },
+      const task = await prisma.task.findFirst({
+        where: { id: taskId, projectId },
         include: {
           status: true,
           project: {
@@ -391,10 +391,10 @@ export class TasksService {
     }
   }
 
-  async updateStatus(taskId: string, statusId: string, sortOrder?: number) {
+  async updateStatus(taskId: string, statusId: string, projectId: string, sortOrder?: number) {
     try {
-      const task = await prisma.task.findUnique({
-        where: { id: taskId },
+      const task = await prisma.task.findFirst({
+        where: { id: taskId, projectId },
       });
 
       if (!task) {
@@ -454,10 +454,10 @@ export class TasksService {
     }
   }
 
-  async reorder(taskId: string, sortOrder: number) {
+  async reorder(taskId: string, sortOrder: number, projectId: string) {
     try {
-      const task = await prisma.task.findUnique({
-        where: { id: taskId },
+      const task = await prisma.task.findFirst({
+        where: { id: taskId, projectId },
       });
 
       if (!task) {

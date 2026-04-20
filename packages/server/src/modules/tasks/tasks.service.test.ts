@@ -266,15 +266,15 @@ describe('TasksService', () => {
   describe('getById', () => {
     it('should return the task with all relations', async () => {
       const task = makeTask();
-      mockTaskFindUnique.mockResolvedValue(task);
+      mockTaskFindFirst.mockResolvedValue(task);
 
-      const result = await tasksService.getById(TASK_ID);
+      const result = await tasksService.getById(TASK_ID, PROJECT_ID);
 
       // getById() now enriches the task with a computed progressPercentage field
       expect(result).toEqual({ ...task, progressPercentage: 0 });
-      expect(mockTaskFindUnique).toHaveBeenCalledWith(
+      expect(mockTaskFindFirst).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: { id: TASK_ID },
+          where: { id: TASK_ID, projectId: PROJECT_ID },
           include: expect.objectContaining({
             status: true,
             project: expect.any(Object),
@@ -291,10 +291,10 @@ describe('TasksService', () => {
     });
 
     it('should throw ApiError 404 when task not found', async () => {
-      mockTaskFindUnique.mockResolvedValue(null);
+      mockTaskFindFirst.mockResolvedValue(null);
 
-      await expect(tasksService.getById('nonexistent')).rejects.toThrow(ApiError);
-      await expect(tasksService.getById('nonexistent')).rejects.toMatchObject({
+      await expect(tasksService.getById('nonexistent', PROJECT_ID)).rejects.toThrow(ApiError);
+      await expect(tasksService.getById('nonexistent', PROJECT_ID)).rejects.toMatchObject({
         statusCode: 404,
         message: 'Task not found',
       });
@@ -523,14 +523,17 @@ describe('TasksService', () => {
       const task = makeTask({ statusId: 'old-status' });
       const newStatusId = 'new-status';
       const updated = { ...task, statusId: newStatusId };
-      mockTaskFindUnique.mockResolvedValue(task);
+      mockTaskFindFirst.mockResolvedValueOnce(task); // initial task lookup
       mockStatusFindFirst.mockResolvedValue({ id: newStatusId, projectId: PROJECT_ID });
-      mockTaskFindFirst.mockResolvedValue(null); // no existing tasks in new status
+      mockTaskFindFirst.mockResolvedValueOnce(null); // no existing tasks in new status
       mockTaskUpdate.mockResolvedValue(updated);
 
-      const result = await tasksService.updateStatus(TASK_ID, newStatusId);
+      const result = await tasksService.updateStatus(TASK_ID, newStatusId, PROJECT_ID);
 
       expect(result).toEqual(updated);
+      expect(mockTaskFindFirst).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { id: TASK_ID, projectId: PROJECT_ID } }),
+      );
       expect(mockStatusFindFirst).toHaveBeenCalledWith({
         where: { id: newStatusId, projectId: PROJECT_ID },
       });
@@ -550,29 +553,29 @@ describe('TasksService', () => {
 
     it('should use provided sortOrder', async () => {
       const task = makeTask();
-      mockTaskFindUnique.mockResolvedValue(task);
+      mockTaskFindFirst.mockResolvedValueOnce(task); // initial task lookup
       mockStatusFindFirst.mockResolvedValue({ id: 'new-status', projectId: PROJECT_ID });
       mockTaskUpdate.mockResolvedValue({ ...task, statusId: 'new-status', sortOrder: 5 });
 
-      await tasksService.updateStatus(TASK_ID, 'new-status', 5);
+      await tasksService.updateStatus(TASK_ID, 'new-status', PROJECT_ID, 5);
 
       expect(mockTaskUpdate).toHaveBeenCalledWith(
         expect.objectContaining({
           data: { statusId: 'new-status', sortOrder: 5 },
         }),
       );
-      // Should NOT call findFirst to compute sortOrder
-      expect(mockTaskFindFirst).not.toHaveBeenCalled();
+      // Should NOT call findFirst a second time to compute sortOrder
+      expect(mockTaskFindFirst).toHaveBeenCalledTimes(1);
     });
 
     it('should auto-calculate sortOrder from last task in new status', async () => {
       const task = makeTask();
-      mockTaskFindUnique.mockResolvedValue(task);
+      mockTaskFindFirst.mockResolvedValueOnce(task); // initial task lookup
       mockStatusFindFirst.mockResolvedValue({ id: 'new-status', projectId: PROJECT_ID });
-      mockTaskFindFirst.mockResolvedValue({ sortOrder: 10 }); // last task in new status
+      mockTaskFindFirst.mockResolvedValueOnce({ sortOrder: 10 }); // last task in new status
       mockTaskUpdate.mockResolvedValue({ ...task, statusId: 'new-status', sortOrder: 11 });
 
-      await tasksService.updateStatus(TASK_ID, 'new-status');
+      await tasksService.updateStatus(TASK_ID, 'new-status', PROJECT_ID);
 
       expect(mockTaskUpdate).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -582,11 +585,11 @@ describe('TasksService', () => {
     });
 
     it('should throw when status is invalid for project', async () => {
-      mockTaskFindUnique.mockResolvedValue(makeTask());
+      mockTaskFindFirst.mockResolvedValueOnce(makeTask());
       mockStatusFindFirst.mockResolvedValue(null);
 
       await expect(
-        tasksService.updateStatus(TASK_ID, 'invalid-status'),
+        tasksService.updateStatus(TASK_ID, 'invalid-status', PROJECT_ID),
       ).rejects.toMatchObject({
         statusCode: 400,
         message: 'Invalid status for this project',
@@ -594,10 +597,10 @@ describe('TasksService', () => {
     });
 
     it('should throw when task not found', async () => {
-      mockTaskFindUnique.mockResolvedValue(null);
+      mockTaskFindFirst.mockResolvedValueOnce(null);
 
       await expect(
-        tasksService.updateStatus('nonexistent', STATUS_ID),
+        tasksService.updateStatus('nonexistent', STATUS_ID, PROJECT_ID),
       ).rejects.toMatchObject({
         statusCode: 404,
         message: 'Task not found',
@@ -612,12 +615,15 @@ describe('TasksService', () => {
     it('should reorder a task successfully', async () => {
       const task = makeTask();
       const updated = { ...task, sortOrder: 3 };
-      mockTaskFindUnique.mockResolvedValue(task);
+      mockTaskFindFirst.mockResolvedValueOnce(task);
       mockTaskUpdate.mockResolvedValue(updated);
 
-      const result = await tasksService.reorder(TASK_ID, 3);
+      const result = await tasksService.reorder(TASK_ID, 3, PROJECT_ID);
 
       expect(result).toEqual(updated);
+      expect(mockTaskFindFirst).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { id: TASK_ID, projectId: PROJECT_ID } }),
+      );
       expect(mockTaskUpdate).toHaveBeenCalledWith({
         where: { id: TASK_ID },
         data: { sortOrder: 3 },
@@ -630,9 +636,9 @@ describe('TasksService', () => {
     });
 
     it('should throw when task not found', async () => {
-      mockTaskFindUnique.mockResolvedValue(null);
+      mockTaskFindFirst.mockResolvedValueOnce(null);
 
-      await expect(tasksService.reorder('nonexistent', 0)).rejects.toMatchObject({
+      await expect(tasksService.reorder('nonexistent', 0, PROJECT_ID)).rejects.toMatchObject({
         statusCode: 404,
         message: 'Task not found',
       });
@@ -920,6 +926,28 @@ describe('TasksService', () => {
         .mockResolvedValueOnce(makeTask({ id: BLOCKING_TASK_ID }));
       mockDepFindFirst.mockResolvedValueOnce(null); // no direct duplicate
       // BFS from BLOCKED_TASK_ID finds that BLOCKING_TASK_ID is reachable (cycle)
+      mockDepFindMany.mockResolvedValueOnce([{ blockedTaskId: BLOCKING_TASK_ID }]);
+
+      await expect(
+        tasksService.addDependency(BLOCKED_TASK_ID, BLOCKING_TASK_ID),
+      ).rejects.toMatchObject({
+        statusCode: 409,
+        message: 'Adding this dependency would create a circular dependency',
+      });
+    });
+
+    it('rejects transitive circular dependency (depth 2)', async () => {
+      // Scenario: A blocks B, B blocks C. Adding "C blocks A" would create a cycle
+      // via A -> B -> C -> A. BFS starts from the blocked task (C = BLOCKED_TASK_ID)
+      // and traverses: C is blocked by B ('task-intermediate'), then B is blocked by
+      // A (BLOCKING_TASK_ID), so BLOCKING_TASK_ID is reachable — cycle detected.
+      mockTaskFindUnique
+        .mockResolvedValueOnce(makeTask({ id: BLOCKED_TASK_ID }))
+        .mockResolvedValueOnce(makeTask({ id: BLOCKING_TASK_ID }));
+      mockDepFindFirst.mockResolvedValueOnce(null); // no direct duplicate
+      // First BFS hop: BLOCKED_TASK_ID (C) blocks task-intermediate (B)
+      mockDepFindMany.mockResolvedValueOnce([{ blockedTaskId: 'task-intermediate' }]);
+      // Second BFS hop: task-intermediate (B) blocks BLOCKING_TASK_ID (A) — cycle!
       mockDepFindMany.mockResolvedValueOnce([{ blockedTaskId: BLOCKING_TASK_ID }]);
 
       await expect(

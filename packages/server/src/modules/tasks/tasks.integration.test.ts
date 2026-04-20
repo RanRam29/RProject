@@ -516,13 +516,13 @@ describe('Task Lifecycle Integration Tests', () => {
 
   describe('Task Status Change (Kanban Move)', () => {
     it('moves task to a different status column', async () => {
-      mockTaskFindUnique.mockResolvedValue(baseTask);
+      mockTaskFindFirst.mockResolvedValueOnce(baseTask); // initial task lookup in updateStatus
       mockTaskStatusFindFirst.mockResolvedValue({
         id: UUID.STATUS_IP,
         name: 'In Progress',
         projectId: UUID.PROJECT,
       });
-      mockTaskFindFirst.mockResolvedValue(null);
+      mockTaskFindFirst.mockResolvedValueOnce(null); // sort order lookup
       mockTaskUpdate.mockResolvedValue({
         ...baseTask,
         statusId: UUID.STATUS_IP,
@@ -543,9 +543,8 @@ describe('Task Lifecycle Integration Tests', () => {
     });
 
     it('rejects moving to invalid status', async () => {
-      mockTaskFindUnique.mockResolvedValue(baseTask);
+      mockTaskFindFirst.mockResolvedValueOnce(baseTask); // initial task lookup in updateStatus
       mockTaskStatusFindFirst.mockResolvedValue(null);
-      mockTaskFindFirst.mockResolvedValue(null);
 
       const app = createApp();
       const res = await request(app).then(r =>
@@ -559,7 +558,7 @@ describe('Task Lifecycle Integration Tests', () => {
     });
 
     it('moves task with explicit sort order', async () => {
-      mockTaskFindUnique.mockResolvedValue(baseTask);
+      mockTaskFindFirst.mockResolvedValueOnce(baseTask); // initial task lookup in updateStatus
       mockTaskStatusFindFirst.mockResolvedValue({
         id: UUID.STATUS_DONE,
         name: 'Done',
@@ -586,7 +585,7 @@ describe('Task Lifecycle Integration Tests', () => {
 
   describe('Task Reorder', () => {
     it('reorders task within status column', async () => {
-      mockTaskFindUnique.mockResolvedValue(baseTask);
+      mockTaskFindFirst.mockResolvedValueOnce(baseTask); // initial task lookup in reorder
       mockTaskUpdate.mockResolvedValue({ ...baseTask, sortOrder: 2 });
 
       const app = createApp();
@@ -694,7 +693,7 @@ describe('Task Lifecycle Integration Tests', () => {
         labels: [],
         comments: [],
       };
-      mockTaskFindUnique.mockResolvedValue(detailedTask);
+      mockTaskFindFirst.mockResolvedValue(detailedTask);
 
       const app = createApp();
       const res = await request(app).then(r =>
@@ -710,7 +709,7 @@ describe('Task Lifecycle Integration Tests', () => {
     });
 
     it('returns 404 for non-existent task', async () => {
-      mockTaskFindUnique.mockResolvedValue(null);
+      mockTaskFindFirst.mockResolvedValue(null);
 
       const app = createApp();
       const res = await request(app).then(r =>
@@ -822,6 +821,32 @@ describe('Task Lifecycle Integration Tests', () => {
         .mockResolvedValueOnce(task2);
       mockTaskDependencyFindFirst.mockResolvedValueOnce(null); // no duplicate
       // BFS finds TASK_2 reachable from TASK_1 (cycle)
+      mockTaskDependencyFindMany.mockResolvedValueOnce([{ blockedTaskId: UUID.TASK_2 }]);
+
+      const app = createApp();
+      const res = await request(app).then(r =>
+        r.post(`/api/v1/projects/${UUID.PROJECT}/tasks/${UUID.TASK_1}/dependencies`)
+          .set('Origin', 'http://localhost:5173')
+          .set('Authorization', `Bearer ${editorToken}`)
+          .send({ blockingTaskId: UUID.TASK_2 }),
+      );
+
+      expect(res.status).toBe(409);
+    });
+
+    it('rejects transitive circular dependency (depth 2)', async () => {
+      // Scenario: TASK_2 blocks TASK_INTERMEDIATE, TASK_INTERMEDIATE blocks TASK_1.
+      // Attempting to add "TASK_1 blocks TASK_2" would create a cycle.
+      // BFS starts from TASK_1 (blocked task) and traverses its blocking chain:
+      // hop 1 — TASK_1 blocks TASK_INTERMEDIATE; hop 2 — TASK_INTERMEDIATE blocks TASK_2 (target found).
+      const TASK_INTERMEDIATE = '00000000-0000-4000-a000-000000000099';
+      mockTaskFindUnique
+        .mockResolvedValueOnce(task1)
+        .mockResolvedValueOnce(task2);
+      mockTaskDependencyFindFirst.mockResolvedValueOnce(null); // no duplicate
+      // First BFS hop: TASK_1 blocks TASK_INTERMEDIATE
+      mockTaskDependencyFindMany.mockResolvedValueOnce([{ blockedTaskId: TASK_INTERMEDIATE }]);
+      // Second BFS hop: TASK_INTERMEDIATE blocks TASK_2 — cycle detected
       mockTaskDependencyFindMany.mockResolvedValueOnce([{ blockedTaskId: UUID.TASK_2 }]);
 
       const app = createApp();
