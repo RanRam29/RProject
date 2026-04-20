@@ -74,6 +74,15 @@ vi.mock('../../middleware/rate-limit.middleware.js', () => {
   };
 });
 
+// Stable fingerprint so token binding checks are deterministic in integration tests
+const MOCK_FINGERPRINT = 'mock-fingerprint-hash-hex-string-1234';
+vi.mock('crypto', () => ({
+  randomUUID: () => 'mock-uuid-refresh-token',
+  createHash: () => ({
+    update: () => ({ digest: () => MOCK_FINGERPRINT }),
+  }),
+}));
+
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import createApp from '../../app.js';
@@ -311,11 +320,12 @@ describe('Auth Integration Tests', () => {
 
     it('returns 200 with new tokens for valid refresh', async () => {
       // Service uses a single atomic delete({ where: { token }, include: { user } })
+      // fingerprint must match what generateFingerprint produces for this request
       mockRefreshTokenDelete.mockResolvedValue({
         id: 'rt-1',
         token: 'valid-refresh-token',
         userId: testUser.id,
-        fingerprint: '',
+        fingerprint: MOCK_FINGERPRINT,
         user: testUser,
         expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
       });
@@ -339,7 +349,7 @@ describe('Auth Integration Tests', () => {
         id: 'rt-1',
         token: 'expired-token',
         userId: testUser.id,
-        fingerprint: '',
+        fingerprint: MOCK_FINGERPRINT,
         user: testUser,
         expiresAt: new Date(Date.now() - 1000), // expired
       });

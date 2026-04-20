@@ -17,7 +17,7 @@ const SALT_ROUNDS = 12;
  * This prevents stolen tokens from being used on different devices.
  */
 export function generateFingerprint(userAgent: string, ip: string): string {
-  return createHash('sha256').update(`${userAgent}|${ip}`).digest('hex').slice(0, 16);
+  return createHash('sha256').update(`${userAgent}|${ip}`).digest('hex');
 }
 
 interface TokenPair {
@@ -234,7 +234,7 @@ export const authService = {
     }
 
     // Validate fingerprint binding: reject tokens used from a different client context
-    if (fingerprint && deletedToken.fingerprint && deletedToken.fingerprint !== fingerprint) {
+    if (fingerprint && deletedToken.fingerprint !== fingerprint) {
       throw ApiError.unauthorized('Token fingerprint mismatch');
     }
 

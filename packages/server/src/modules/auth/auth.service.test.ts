@@ -402,6 +402,25 @@ describe('authService.refreshToken', () => {
     expect(mockRefreshTokenCreate).not.toHaveBeenCalled();
   });
 
+  it('throws 401 when caller sends fingerprint but stored token has empty string', async () => {
+    const tokenWithEmptyFingerprint = {
+      ...storedRefreshToken,
+      fingerprint: '',
+    };
+    mockRefreshTokenDelete.mockResolvedValue(tokenWithEmptyFingerprint);
+
+    await expect(
+      authService.refreshToken('existing-refresh-token', FINGERPRINT),
+    ).rejects.toMatchObject({
+      statusCode: 401,
+      message: 'Token fingerprint mismatch',
+    });
+
+    // Should not generate new tokens
+    expect(mockSign).not.toHaveBeenCalled();
+    expect(mockRefreshTokenCreate).not.toHaveBeenCalled();
+  });
+
   it('succeeds when no fingerprint is provided (backward-compatible)', async () => {
     mockRefreshTokenDelete.mockResolvedValue(storedRefreshToken);
 
