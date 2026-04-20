@@ -629,15 +629,33 @@ export class TasksService {
         throw ApiError.conflict('This dependency already exists');
       }
 
-      // Check for circular dependency (reverse direction)
-      const reverse = await prisma.taskDependency.findFirst({
-        where: { blockedTaskId: blockingTaskId, blockingTaskId: blockedTaskId },
-      });
+      // Check for circular dependency via full BFS transitive traversal.
+      // Starting from blockedTaskId, follow blocking relationships forward
+      // (i.e. tasks that blockedTaskId blocks, then tasks those block, etc.).
+      // If blockingTaskId is reachable, adding the edge would create a cycle.
+      {
+        const visited = new Set<string>([blockedTaskId]);
+        const queue: string[] = [blockedTaskId];
 
-      if (reverse) {
-        throw ApiError.badRequest(
-          'Cannot create dependency: would create a circular dependency',
-        );
+        while (queue.length > 0) {
+          const currentId = queue.shift()!;
+          const deps = await prisma.taskDependency.findMany({
+            where: { blockingTaskId: currentId },
+            select: { blockedTaskId: true },
+          });
+
+          for (const dep of deps) {
+            if (dep.blockedTaskId === blockingTaskId) {
+              throw ApiError.conflict(
+                'Adding this dependency would create a circular dependency',
+              );
+            }
+            if (!visited.has(dep.blockedTaskId)) {
+              visited.add(dep.blockedTaskId);
+              queue.push(dep.blockedTaskId);
+            }
+          }
+        }
       }
 
       const dependency = await prisma.taskDependency.create({

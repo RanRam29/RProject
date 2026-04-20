@@ -15,6 +15,7 @@ const mockTaskCount = vi.fn();
 const mockTaskUpdateMany = vi.fn();
 const mockTaskDeleteMany = vi.fn();
 const mockTaskDependencyFindFirst = vi.fn();
+const mockTaskDependencyFindMany = vi.fn();
 const mockTaskDependencyFindUnique = vi.fn();
 const mockTaskDependencyCreate = vi.fn();
 const mockTaskDependencyDelete = vi.fn();
@@ -64,6 +65,7 @@ vi.mock('../../config/db.js', () => ({
     },
     taskDependency: {
       findFirst: (...args: unknown[]) => mockTaskDependencyFindFirst(...args),
+      findMany: (...args: unknown[]) => mockTaskDependencyFindMany(...args),
       findUnique: (...args: unknown[]) => mockTaskDependencyFindUnique(...args),
       create: (...args: unknown[]) => mockTaskDependencyCreate(...args),
       delete: (...args: unknown[]) => mockTaskDependencyDelete(...args),
@@ -777,9 +779,8 @@ describe('Task Lifecycle Integration Tests', () => {
       mockTaskFindUnique
         .mockResolvedValueOnce(task1)
         .mockResolvedValueOnce(task2);
-      mockTaskDependencyFindFirst
-        .mockResolvedValueOnce(null)
-        .mockResolvedValueOnce(null);
+      mockTaskDependencyFindFirst.mockResolvedValueOnce(null); // no duplicate
+      mockTaskDependencyFindMany.mockResolvedValueOnce([]); // no transitive cycle
       mockTaskDependencyCreate.mockResolvedValue({
         id: UUID.DEP_1,
         blockedTaskId: UUID.TASK_1,
@@ -819,9 +820,9 @@ describe('Task Lifecycle Integration Tests', () => {
       mockTaskFindUnique
         .mockResolvedValueOnce(task1)
         .mockResolvedValueOnce(task2);
-      mockTaskDependencyFindFirst
-        .mockResolvedValueOnce(null)
-        .mockResolvedValueOnce({ id: 'dep-reverse' });
+      mockTaskDependencyFindFirst.mockResolvedValueOnce(null); // no duplicate
+      // BFS finds TASK_2 reachable from TASK_1 (cycle)
+      mockTaskDependencyFindMany.mockResolvedValueOnce([{ blockedTaskId: UUID.TASK_2 }]);
 
       const app = createApp();
       const res = await request(app).then(r =>
@@ -831,7 +832,7 @@ describe('Task Lifecycle Integration Tests', () => {
           .send({ blockingTaskId: UUID.TASK_2 }),
       );
 
-      expect(res.status).toBe(400);
+      expect(res.status).toBe(409);
     });
 
     it('rejects duplicate dependency', async () => {

@@ -10,6 +10,7 @@ const mockTaskCount = vi.fn();
 const mockStatusFindFirst = vi.fn();
 const mockPermFindFirst = vi.fn();
 const mockDepFindFirst = vi.fn();
+const mockDepFindMany = vi.fn();
 const mockDepFindUnique = vi.fn();
 const mockDepCreate = vi.fn();
 const mockDepDelete = vi.fn();
@@ -36,6 +37,7 @@ vi.mock('../../config/db.js', () => ({
     },
     taskDependency: {
       findFirst: (...args: unknown[]) => mockDepFindFirst(...args),
+      findMany: (...args: unknown[]) => mockDepFindMany(...args),
       findUnique: (...args: unknown[]) => mockDepFindUnique(...args),
       create: (...args: unknown[]) => mockDepCreate(...args),
       delete: (...args: unknown[]) => mockDepDelete(...args),
@@ -822,9 +824,8 @@ describe('TasksService', () => {
       mockTaskFindUnique
         .mockResolvedValueOnce(blockedTask)
         .mockResolvedValueOnce(blockingTask);
-      mockDepFindFirst
-        .mockResolvedValueOnce(null) // no duplicate
-        .mockResolvedValueOnce(null); // no reverse
+      mockDepFindFirst.mockResolvedValueOnce(null); // no duplicate
+      mockDepFindMany.mockResolvedValueOnce([]); // no transitive cycle (BFS returns nothing)
       mockDepCreate.mockResolvedValue(dep);
 
       const result = await tasksService.addDependency(BLOCKED_TASK_ID, BLOCKING_TASK_ID);
@@ -913,19 +914,19 @@ describe('TasksService', () => {
       });
     });
 
-    it('should throw on circular dependency (reverse exists)', async () => {
+    it('should throw on circular dependency (transitive cycle detected)', async () => {
       mockTaskFindUnique
         .mockResolvedValueOnce(makeTask({ id: BLOCKED_TASK_ID }))
         .mockResolvedValueOnce(makeTask({ id: BLOCKING_TASK_ID }));
-      mockDepFindFirst
-        .mockResolvedValueOnce(null) // no direct duplicate
-        .mockResolvedValueOnce({ id: 'reverse-dep' }); // reverse exists
+      mockDepFindFirst.mockResolvedValueOnce(null); // no direct duplicate
+      // BFS from BLOCKED_TASK_ID finds that BLOCKING_TASK_ID is reachable (cycle)
+      mockDepFindMany.mockResolvedValueOnce([{ blockedTaskId: BLOCKING_TASK_ID }]);
 
       await expect(
         tasksService.addDependency(BLOCKED_TASK_ID, BLOCKING_TASK_ID),
       ).rejects.toMatchObject({
-        statusCode: 400,
-        message: 'Cannot create dependency: would create a circular dependency',
+        statusCode: 409,
+        message: 'Adding this dependency would create a circular dependency',
       });
     });
   });
