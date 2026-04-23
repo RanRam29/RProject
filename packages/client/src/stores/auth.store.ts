@@ -9,7 +9,7 @@ interface AuthState {
   hasHydrated: boolean;
   setUser: (user: UserDTO | null) => void;
   setLoading: (loading: boolean) => void;
-  login: (user: UserDTO, accessToken: string, refreshToken: string, rememberMe?: boolean) => void;
+  login: (user: UserDTO, accessToken: string, rememberMe?: boolean) => void;
   logout: () => void;
   setHydrated: () => void;
 }
@@ -27,7 +27,7 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   setLoading: (isLoading) => set({ isLoading }),
 
-  login: (user, accessToken, _refreshToken, rememberMe) => {
+  login: (user, accessToken, rememberMe) => {
     setTokens(accessToken, rememberMe);
     set({ user, isAuthenticated: true, isLoading: false, hasHydrated: true });
   },

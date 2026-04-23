@@ -50,7 +50,7 @@ describe('useAuthStore', () => {
   });
 
   it('login stores tokens and sets user', () => {
-    useAuthStore.getState().login(mockUser, 'access-token', 'refresh-token');
+    useAuthStore.getState().login(mockUser, 'access-token');
     const state = useAuthStore.getState();
     expect(state.user).toEqual(mockUser);
     expect(state.isAuthenticated).toBe(true);
