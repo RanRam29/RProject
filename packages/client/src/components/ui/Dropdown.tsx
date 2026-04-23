@@ -116,7 +116,7 @@ export const Dropdown: React.FC<DropdownProps> = ({
         <div style={menuStyle} role="menu">
           {items.map((item, index) => (
             <button
-              key={index}
+              key={item.label}
               role="menuitem"
               style={getItemStyle(item, index)}
               onMouseEnter={() => setHoveredIndex(index)}

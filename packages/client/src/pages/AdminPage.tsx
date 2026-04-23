@@ -7,6 +7,7 @@ import { useUIStore } from '../stores/ui.store';
 import { useAuthStore } from '../stores/auth.store';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
+import { Modal } from '../components/ui/Modal';
 import { timeAgo } from '../utils/activity.utils';
 import type { UserDTO, ApiResponse, PaginatedResponse } from '@pm/shared';
 
@@ -345,6 +346,7 @@ function UserRow({
   const addToast = useUIStore((s) => s.addToast);
   const currentUserId = useAuthStore((s) => s.user?.id);
   const isSelf = user.id === currentUserId;
+  const [confirmState, setConfirmState] = useState<{ open: boolean; onConfirm: () => void; message: string }>({ open: false, onConfirm: () => {}, message: '' });
 
   const roleMutation = useMutation({
     mutationFn: (newRole: string) => usersApi.updateRole(user.id, newRole),
@@ -381,60 +383,89 @@ function UserRow({
   });
 
   return (
-    <tr>
-      <td style={tdStyle}>
-        <div style={{ fontWeight: 500 }}>{user.displayName}</div>
-      </td>
-      <td style={{ ...tdStyle, color: 'var(--color-text-secondary)' }}>{user.email}</td>
-      <td style={tdStyle}>
-        {isSelf ? (
-          <span style={{ fontSize: '13px', fontWeight: 500 }}>
-            {SYSTEM_ROLES.find((r) => r.value === user.systemRole)?.label ?? user.systemRole}
-          </span>
-        ) : (
-          <select
-            style={{ ...selectStyle, width: 'auto', minWidth: '140px' }}
-            value={user.systemRole}
-            disabled={roleMutation.isPending}
-            onChange={(e) => roleMutation.mutate(e.target.value)}
-          >
-            {SYSTEM_ROLES.map((r) => (
-              <option key={r.value} value={r.value}>
-                {r.label}
-              </option>
-            ))}
-          </select>
-        )}
-      </td>
-      <td style={tdStyle}>
-        <span style={badgeStyle(user.isActive)}>{user.isActive ? 'Active' : 'Inactive'}</span>
-      </td>
-      <td style={{ ...tdStyle, fontSize: '13px', color: 'var(--color-text-secondary)' }}>
-        {new Date(user.createdAt).toLocaleDateString()}
-      </td>
-      <td style={tdStyle}>
-        {isSelf ? (
-          <span style={{ fontSize: '12px', color: 'var(--color-text-tertiary)' }}>You</span>
-        ) : user.isActive ? (
-          <span style={{ color: 'var(--color-danger)', fontSize: '12px' }}>
+    <>
+      <tr>
+        <td style={tdStyle}>
+          <div style={{ fontWeight: 500 }}>{user.displayName}</div>
+        </td>
+        <td style={{ ...tdStyle, color: 'var(--color-text-secondary)' }}>{user.email}</td>
+        <td style={tdStyle}>
+          {isSelf ? (
+            <span style={{ fontSize: '13px', fontWeight: 500 }}>
+              {SYSTEM_ROLES.find((r) => r.value === user.systemRole)?.label ?? user.systemRole}
+            </span>
+          ) : (
+            <select
+              style={{ ...selectStyle, width: 'auto', minWidth: '140px' }}
+              value={user.systemRole}
+              disabled={roleMutation.isPending}
+              onChange={(e) => roleMutation.mutate(e.target.value)}
+            >
+              {SYSTEM_ROLES.map((r) => (
+                <option key={r.value} value={r.value}>
+                  {r.label}
+                </option>
+              ))}
+            </select>
+          )}
+        </td>
+        <td style={tdStyle}>
+          <span style={badgeStyle(user.isActive)}>{user.isActive ? 'Active' : 'Inactive'}</span>
+        </td>
+        <td style={{ ...tdStyle, fontSize: '13px', color: 'var(--color-text-secondary)' }}>
+          {new Date(user.createdAt).toLocaleDateString()}
+        </td>
+        <td style={tdStyle}>
+          {isSelf ? (
+            <span style={{ fontSize: '12px', color: 'var(--color-text-tertiary)' }}>You</span>
+          ) : user.isActive ? (
+            <span style={{ color: 'var(--color-danger)', fontSize: '12px' }}>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setConfirmState({
+                    open: true,
+                    message: `Are you sure you want to deactivate ${user.displayName}?`,
+                    onConfirm: () => deactivateMutation.mutate(),
+                  });
+                }}
+                loading={deactivateMutation.isPending}
+              >
+                Deactivate
+              </Button>
+            </span>
+          ) : (
+            <span style={{ fontSize: '12px', color: 'var(--color-text-tertiary)' }}>Deactivated</span>
+          )}
+        </td>
+      </tr>
+      <Modal
+        isOpen={confirmState.open}
+        onClose={() => setConfirmState((s) => ({ ...s, open: false }))}
+        title="Confirm"
+        size="sm"
+        footer={
+          <>
+            <Button variant="ghost" size="sm" onClick={() => setConfirmState((s) => ({ ...s, open: false }))}>
+              Cancel
+            </Button>
             <Button
-              variant="ghost"
+              variant="primary"
               size="sm"
               onClick={() => {
-                if (window.confirm(`Are you sure you want to deactivate ${user.displayName}?`)) {
-                  deactivateMutation.mutate();
-                }
+                confirmState.onConfirm();
+                setConfirmState((s) => ({ ...s, open: false }));
               }}
-              loading={deactivateMutation.isPending}
             >
               Deactivate
             </Button>
-          </span>
-        ) : (
-          <span style={{ fontSize: '12px', color: 'var(--color-text-tertiary)' }}>Deactivated</span>
-        )}
-      </td>
-    </tr>
+          </>
+        }
+      >
+        <p style={{ margin: 0, fontSize: '14px', color: 'var(--color-text-primary)' }}>{confirmState.message}</p>
+      </Modal>
+    </>
   );
 }
 

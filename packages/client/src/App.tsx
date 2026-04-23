@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { AppRouter } from './router';
 import { ToastContainer } from './components/ui/Toast';
-import { useUIStore } from './stores/ui.store';
+import { useTheme } from './hooks/useTheme';
 import { useAuthStore } from './stores/auth.store';
 import { authApi } from './api/auth.api';
 import { hasToken, setAccessToken } from './utils/token-storage';
@@ -60,13 +60,11 @@ function useAppHydration() {
 }
 
 export default function App() {
-  const theme = useUIStore((s) => s.theme);
+  const { theme } = useTheme();
 
   useAppHydration();
 
   useEffect(() => {
-    document.documentElement.setAttribute('data-theme', theme);
-
     // Configure StatusBar native plugin based on theme
     if (Capacitor.isNativePlatform()) {
       StatusBar.setStyle({
