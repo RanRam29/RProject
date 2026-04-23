@@ -61,7 +61,7 @@ describe('useAuthStore', () => {
   });
 
   it('logout clears tokens and user', () => {
-    useAuthStore.getState().login(mockUser, 'access-token', 'refresh-token');
+    useAuthStore.getState().login(mockUser, 'access-token');
     useAuthStore.getState().logout();
     const state = useAuthStore.getState();
     expect(state.user).toBeNull();
@@ -71,7 +71,7 @@ describe('useAuthStore', () => {
   });
 
   it('login with rememberMe=false stores access token in sessionStorage only', () => {
-    useAuthStore.getState().login(mockUser, 'access-token', 'refresh-token', false);
+    useAuthStore.getState().login(mockUser, 'access-token', false);
     expect(sessionStorage.getItem('accessToken')).toBe('access-token');
     // refresh token must NOT be persisted in browser storage (httpOnly cookie only)
     expect(sessionStorage.getItem('refreshToken')).toBeNull();
@@ -80,7 +80,7 @@ describe('useAuthStore', () => {
   });
 
   it('login with rememberMe=true stores access token in localStorage only', () => {
-    useAuthStore.getState().login(mockUser, 'access-token', 'refresh-token', true);
+    useAuthStore.getState().login(mockUser, 'access-token', true);
     expect(localStorage.getItem('accessToken')).toBe('access-token');
     // refresh token must NOT be persisted in browser storage (httpOnly cookie only)
     expect(localStorage.getItem('refreshToken')).toBeNull();
@@ -89,7 +89,7 @@ describe('useAuthStore', () => {
   });
 
   it('logout clears tokens from both storages', () => {
-    useAuthStore.getState().login(mockUser, 'access-token', 'refresh-token', false);
+    useAuthStore.getState().login(mockUser, 'access-token', false);
     useAuthStore.getState().logout();
     expect(sessionStorage.getItem('accessToken')).toBeNull();
     expect(localStorage.getItem('accessToken')).toBeNull();
