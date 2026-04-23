@@ -618,7 +618,7 @@ describe('TasksService', () => {
       mockTaskFindFirst.mockResolvedValueOnce(task);
       mockTaskUpdate.mockResolvedValue(updated);
 
-      const result = await tasksService.reorder(TASK_ID, 3, PROJECT_ID);
+      const result = await tasksService.reorder(TASK_ID, PROJECT_ID, 3);
 
       expect(result).toEqual(updated);
       expect(mockTaskFindFirst).toHaveBeenCalledWith(
@@ -638,7 +638,7 @@ describe('TasksService', () => {
     it('should throw when task not found', async () => {
       mockTaskFindFirst.mockResolvedValueOnce(null);
 
-      await expect(tasksService.reorder('nonexistent', 0, PROJECT_ID)).rejects.toMatchObject({
+      await expect(tasksService.reorder('nonexistent', PROJECT_ID, 0)).rejects.toMatchObject({
         statusCode: 404,
         message: 'Task not found',
       });

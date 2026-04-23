@@ -454,7 +454,7 @@ export class TasksService {
     }
   }
 
-  async reorder(taskId: string, sortOrder: number, projectId: string) {
+  async reorder(taskId: string, projectId: string, sortOrder: number) {
     try {
       const task = await prisma.task.findFirst({
         where: { id: taskId, projectId },

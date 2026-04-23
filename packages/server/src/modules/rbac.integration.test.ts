@@ -682,6 +682,7 @@ describe('RBAC Integration Tests', () => {
     describe('PATCH /tasks/:taskId (update)', () => {
       it('allows EDITOR to update a task', async () => {
         mockProjectPermission('user-editor', 'EDITOR');
+        mockTaskFindFirst.mockResolvedValueOnce(mockTaskData); // controller pre-fetch for history logging
         mockTaskFindUnique.mockResolvedValue(mockTaskData);
         mockTaskUpdate.mockResolvedValue({ ...mockTaskData, title: 'Updated' });
 
@@ -714,7 +715,7 @@ describe('RBAC Integration Tests', () => {
     describe('PATCH /tasks/:taskId/status (move)', () => {
       it('allows EDITOR to change task status', async () => {
         mockProjectPermission('user-editor', 'EDITOR');
-        mockTaskFindUnique.mockResolvedValue(mockTaskData); // controller oldTask history fetch
+        mockTaskFindFirst.mockResolvedValueOnce(mockTaskData); // controller pre-fetch for history logging
         mockTaskFindFirst.mockResolvedValueOnce(mockTaskData); // service initial task lookup
         mockTaskStatusFindFirst.mockResolvedValue({
           id: RBAC_UUID.STATUS_2,

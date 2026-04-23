@@ -443,6 +443,7 @@ describe('Task Lifecycle Integration Tests', () => {
 
   describe('Task Update', () => {
     it('updates task title', async () => {
+      mockTaskFindFirst.mockResolvedValueOnce(baseTask); // controller pre-fetch for history logging
       mockTaskFindUnique.mockResolvedValue(baseTask);
       mockTaskUpdate.mockResolvedValue({ ...baseTask, title: 'Updated Title' });
 
@@ -460,6 +461,7 @@ describe('Task Lifecycle Integration Tests', () => {
     });
 
     it('updates task priority', async () => {
+      mockTaskFindFirst.mockResolvedValueOnce(baseTask); // controller pre-fetch for history logging
       mockTaskFindUnique.mockResolvedValue(baseTask);
       mockTaskUpdate.mockResolvedValue({ ...baseTask, priority: 'HIGH' });
 
@@ -475,6 +477,7 @@ describe('Task Lifecycle Integration Tests', () => {
     });
 
     it('assigns task to a project member', async () => {
+      mockTaskFindFirst.mockResolvedValueOnce(baseTask); // controller pre-fetch for history logging
       mockTaskFindUnique.mockResolvedValue(baseTask);
       mockProjectPermissionFindFirst.mockResolvedValue({
         id: UUID.PERM_EDITOR,
@@ -499,6 +502,7 @@ describe('Task Lifecycle Integration Tests', () => {
     });
 
     it('rejects assignment to non-member', async () => {
+      mockTaskFindFirst.mockResolvedValueOnce(baseTask); // controller pre-fetch for history logging
       mockTaskFindUnique.mockResolvedValue(baseTask);
       mockProjectPermissionFindFirst.mockResolvedValue(null);
 
@@ -516,7 +520,8 @@ describe('Task Lifecycle Integration Tests', () => {
 
   describe('Task Status Change (Kanban Move)', () => {
     it('moves task to a different status column', async () => {
-      mockTaskFindFirst.mockResolvedValueOnce(baseTask); // initial task lookup in updateStatus
+      mockTaskFindFirst.mockResolvedValueOnce(baseTask); // controller pre-fetch for history logging
+      mockTaskFindFirst.mockResolvedValueOnce(baseTask); // service task existence check
       mockTaskStatusFindFirst.mockResolvedValue({
         id: UUID.STATUS_IP,
         name: 'In Progress',

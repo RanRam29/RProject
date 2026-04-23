@@ -99,8 +99,10 @@ export class TasksController {
       const userId = req.user!.id;
       const { title, description, assigneeId, priority, startDate, dueDate, isMilestone, estimatedHours, laneId } = req.body;
 
+      const projectId = req.params.projectId as string;
+
       // Fetch old task for change tracking
-      const oldTask = await prisma.task.findUnique({ where: { id: taskId } });
+      const oldTask = await prisma.task.findFirst({ where: { id: taskId, projectId } });
 
       const task = await tasksService.update(taskId, userId, {
         title,
@@ -242,8 +244,8 @@ export class TasksController {
       const { statusId, sortOrder } = req.body;
 
       // Fetch old task to record status change
-      const oldTask = await prisma.task.findUnique({
-        where: { id: taskId },
+      const oldTask = await prisma.task.findFirst({
+        where: { id: taskId, projectId },
         include: { status: { select: { name: true } } },
       });
 
@@ -279,7 +281,7 @@ export class TasksController {
       const taskId = req.params.taskId as string;
       const { sortOrder } = req.body;
 
-      const task = await tasksService.reorder(taskId, sortOrder, projectId);
+      const task = await tasksService.reorder(taskId, projectId, sortOrder);
 
       sendSuccess(res, task);
     } catch (error) {
