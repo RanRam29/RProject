@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { tasksService } from './tasks.service.js';
+import { subtasksService } from './subtasks.service.js';
 import { taskHistoryService } from './task-history.service.js';
 import { timeTrackingService } from './time-tracking.service.js';
 import { sendSuccess, sendPaginated } from '../../utils/api-response.js';
@@ -309,7 +310,7 @@ export class TasksController {
       const userId = req.user!.id;
       const { title, description, statusId, assigneeId, priority, startDate, dueDate } = req.body;
 
-      const subtask = await tasksService.createSubtask(taskId, userId, {
+      const subtask = await subtasksService.createSubtask(taskId, userId, {
         title,
         description,
         statusId,
