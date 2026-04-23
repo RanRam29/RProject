@@ -1,7 +1,6 @@
 import { useEffect, useCallback } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { notificationsApi } from '../api/notifications.api';
-import { useNotificationStore } from '../stores/notification.store';
 import { useSocket } from '../contexts/SocketContext';
 import { useAuthStore } from '../stores/auth.store';
 import { useUIStore } from '../stores/ui.store';
@@ -12,59 +11,28 @@ export function useNotifications() {
   const queryClient = useQueryClient();
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const addToast = useUIStore((s) => s.addToast);
-  const {
-    notifications,
-    unreadCount,
-    isLoading,
-    setNotifications,
-    addNotification,
-    setUnreadCount,
-    markAsRead: storeMarkAsRead,
-    markAllAsRead: storeMarkAllAsRead,
-    removeNotification,
-    clearAll,
-    setLoading,
-  } = useNotificationStore();
 
-  // Fetch notifications
-  const { data: notificationsData } = useQuery({
+  const { data: notificationsData, isFetching } = useQuery({
     queryKey: ['notifications'],
     queryFn: () => notificationsApi.list(1, 50),
     enabled: isAuthenticated,
     staleTime: 30_000,
   });
 
-  // Fetch unread count
-  const { data: unreadCountData } = useQuery({
-    queryKey: ['notifications', 'unread-count'],
-    queryFn: () => notificationsApi.getUnreadCount(),
-    enabled: isAuthenticated,
-    staleTime: 10_000,
-    refetchInterval: 60_000,
-  });
+  const notifications: NotificationDTO[] = notificationsData?.data ?? [];
+  const unreadCount = notifications.filter((n) => !n.isRead).length;
+  const isLoading = isFetching && notifications.length === 0;
 
-  // Sync query data to store
-  useEffect(() => {
-    if (notificationsData) {
-      setNotifications(notificationsData.data);
-    }
-  }, [notificationsData, setNotifications]);
-
-  useEffect(() => {
-    if (unreadCountData !== undefined) {
-      setUnreadCount(unreadCountData);
-    }
-  }, [unreadCountData, setUnreadCount]);
-
-  // Listen for real-time notifications
+  // Listen for real-time notifications — optimistically prepend, then sync
   useEffect(() => {
     if (!socket) return;
 
-    const handleNewNotification = (data: { notification: NotificationDTO }) => {
-      // Optimistic: add to store for instant UI feedback
-      addNotification(data.notification);
-      addToast({ type: 'info', message: data.notification.title });
-      // Invalidate BOTH queries so server state replaces the optimistic update
+    const handleNewNotification = (payload: { notification: NotificationDTO }) => {
+      queryClient.setQueryData<{ data: NotificationDTO[]; pagination: unknown }>(
+        ['notifications'],
+        (old) => (old ? { ...old, data: [payload.notification, ...old.data] } : old),
+      );
+      addToast({ type: 'info', message: payload.notification.title });
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
     };
 
@@ -73,51 +41,87 @@ export function useNotifications() {
     return () => {
       socket.off('notification:new', handleNewNotification);
     };
-  }, [socket, addNotification, addToast, queryClient]);
+  }, [socket, addToast, queryClient]);
 
   const markAsRead = useCallback(async (notificationId: string) => {
-    storeMarkAsRead(notificationId);
+    // Optimistic update
+    queryClient.setQueryData<{ data: NotificationDTO[]; pagination: unknown }>(
+      ['notifications'],
+      (old) => {
+        if (!old) return old;
+        return {
+          ...old,
+          data: old.data.map((n) =>
+            n.id === notificationId ? { ...n, isRead: true, readAt: new Date().toISOString() } : n,
+          ),
+        };
+      },
+    );
     try {
       await notificationsApi.markAsRead(notificationId);
-      queryClient.invalidateQueries({ queryKey: ['notifications', 'unread-count'] });
     } catch {
       // Revert optimistic update on failure
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
     }
-  }, [storeMarkAsRead, queryClient]);
+  }, [queryClient]);
 
   const markAllAsRead = useCallback(async () => {
-    storeMarkAllAsRead();
+    // Optimistic update
+    queryClient.setQueryData<{ data: NotificationDTO[]; pagination: unknown }>(
+      ['notifications'],
+      (old) => {
+        if (!old) return old;
+        return {
+          ...old,
+          data: old.data.map((n) => ({
+            ...n,
+            isRead: true,
+            readAt: n.readAt ?? new Date().toISOString(),
+          })),
+        };
+      },
+    );
     try {
       await notificationsApi.markAllAsRead();
-      queryClient.invalidateQueries({ queryKey: ['notifications', 'unread-count'] });
     } catch {
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
     }
-  }, [storeMarkAllAsRead, queryClient]);
+  }, [queryClient]);
 
   const deleteNotification = useCallback(async (notificationId: string) => {
-    removeNotification(notificationId);
+    // Optimistic update
+    queryClient.setQueryData<{ data: NotificationDTO[]; pagination: unknown }>(
+      ['notifications'],
+      (old) => {
+        if (!old) return old;
+        return {
+          ...old,
+          data: old.data.filter((n) => n.id !== notificationId),
+        };
+      },
+    );
     try {
       await notificationsApi.delete(notificationId);
-      queryClient.invalidateQueries({ queryKey: ['notifications', 'unread-count'] });
     } catch {
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
     }
-  }, [removeNotification, queryClient]);
+  }, [queryClient]);
 
   const deleteAllNotifications = useCallback(async () => {
-    setLoading(true);
-    clearAll();
+    // Optimistic update
+    queryClient.setQueryData<{ data: NotificationDTO[]; pagination: unknown }>(
+      ['notifications'],
+      (old) => {
+        if (!old) return old;
+        return { ...old, data: [] };
+      },
+    );
     try {
       await notificationsApi.deleteAll();
-      queryClient.invalidateQueries({ queryKey: ['notifications', 'unread-count'] });
     } catch {
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
-    } finally {
-      setLoading(false);
     }
-  }, [clearAll, setLoading, queryClient]);
+  }, [queryClient]);
 
   return {
     notifications,
