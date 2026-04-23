@@ -48,11 +48,13 @@ apiClient.interceptors.response.use(
 
       if (isRefreshing) {
         return new Promise((resolve, reject) => {
+          let timeoutId: ReturnType<typeof setTimeout>;
           subscribeTokenRefresh((newToken: string) => {
+            clearTimeout(timeoutId);
             originalRequest.headers.Authorization = `Bearer ${newToken}`;
             resolve(apiClient(originalRequest));
           });
-          setTimeout(() => reject(error), 10000);
+          timeoutId = setTimeout(() => reject(error), 10000);
         });
       }
 
