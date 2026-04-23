@@ -27,8 +27,8 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   setLoading: (isLoading) => set({ isLoading }),
 
-  login: (user, accessToken, refreshToken, rememberMe) => {
-    setTokens(accessToken, refreshToken, rememberMe);
+  login: (user, accessToken, _refreshToken, rememberMe) => {
+    setTokens(accessToken, rememberMe);
     set({ user, isAuthenticated: true, isLoading: false, hasHydrated: true });
   },
 

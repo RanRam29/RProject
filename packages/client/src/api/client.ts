@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { env } from '../config/env';
 import { useAuthStore } from '../stores/auth.store';
-import { getAccessToken, getRefreshToken, setAccessToken, setTokens } from '../utils/token-storage';
+import { getAccessToken, setAccessToken } from '../utils/token-storage';
 
 const apiClient = axios.create({
   baseURL: env.API_URL,
@@ -59,20 +59,14 @@ apiClient.interceptors.response.use(
       isRefreshing = true;
 
       try {
-        const refreshToken = getRefreshToken();
-        if (!refreshToken) throw new Error('No refresh token');
-
+        // No body needed — the httpOnly refresh-token cookie is sent
+        // automatically by the browser because withCredentials is true.
         // Use apiClient so the request goes through the Vite dev proxy
         // and picks up the correct base URL in all environments.
-        const { data } = await apiClient.post('/auth/refresh', { refreshToken });
+        const { data } = await apiClient.post('/auth/refresh');
 
-        const { accessToken, refreshToken: newRefreshToken } = data.data;
-        // Update tokens in storage, preserving the remember-me preference.
-        if (newRefreshToken) {
-          setTokens(accessToken, newRefreshToken);
-        } else {
-          setAccessToken(accessToken);
-        }
+        const { accessToken } = data.data;
+        setAccessToken(accessToken);
 
         onTokenRefreshed(accessToken);
         originalRequest.headers.Authorization = `Bearer ${accessToken}`;
