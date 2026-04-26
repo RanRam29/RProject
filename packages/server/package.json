@@ -8,6 +8,7 @@
     "build": "prisma generate && tsc",
     "migrate": "prisma migrate deploy",
     "seed": "tsx prisma/seed.ts",
+    "prestart": "prisma migrate deploy && (tsx prisma/seed.ts || true)",
     "start": "node dist/index.js",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
