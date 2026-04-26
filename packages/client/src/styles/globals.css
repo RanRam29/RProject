@@ -93,6 +93,17 @@
   --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
 
+  /* ── Type scale ── */
+  --type-h1-size: 34px;   --type-h1-weight: 700;  --type-h1-ls: -0.5px;  --type-h1-lh: 1.2;
+  --type-h2-size: 24px;   --type-h2-weight: 700;  --type-h2-ls: -0.3px;  --type-h2-lh: 1.25;
+  --type-h3-size: 18px;   --type-h3-weight: 600;  --type-h3-ls: -0.2px;  --type-h3-lh: 1.35;
+  --type-h4-size: 15px;   --type-h4-weight: 600;  --type-h4-ls: 0;       --type-h4-lh: 1.4;
+  --type-body-size: 14px; --type-body-weight: 400; --type-body-lh: 1.5;
+  --type-small-size: 13px;
+  --type-xs-size: 12px;
+  --type-caps-size: 11px; --type-caps-weight: 600; --type-caps-ls: 0.7px;
+  --type-code-size: 13px; --type-code-weight: 500;
+
   /* ── Layout ── */
   --sidebar-width: 260px;
   --topbar-height: 64px;
@@ -351,4 +362,35 @@ select {
 body {
   background-image: radial-gradient(circle at top right, rgba(99, 102, 241, 0.05), transparent 40%),
                     radial-gradient(circle at bottom left, rgba(129, 140, 248, 0.03), transparent 40%);
+}
+
+/* Card surface with hover lift */
+.rp-card {
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--rp-radius-card);
+  box-shadow: var(--shadow-card);
+  padding: 16px;
+  transition: transform var(--transition-normal), box-shadow var(--transition-normal);
+}
+.rp-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-card-hover);
+}
+
+/* Ambient background gradient container */
+.rp-body-bg {
+  background-color: var(--color-bg-primary);
+  background-image:
+    radial-gradient(circle at top right, rgba(99, 102, 241, 0.05), transparent 40%),
+    radial-gradient(circle at bottom left, rgba(129, 140, 248, 0.03), transparent 40%);
+}
+
+/* Caps label utility */
+.caps {
+  font-size: var(--type-caps-size);
+  font-weight: var(--type-caps-weight);
+  letter-spacing: var(--type-caps-ls);
+  text-transform: uppercase;
+  color: var(--sidebar-section-label);
 }
