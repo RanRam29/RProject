@@ -1,10 +1,3 @@
-databases:
-  - name: pm-postgres
-    plan: free
-    databaseName: pm_prod
-    user: pm_user
-    postgresMajorVersion: 16
-
 services:
   - type: web
     plan: free
@@ -20,9 +13,7 @@ services:
       - key: PORT
         value: 3001
       - key: DATABASE_URL
-        fromDatabase:
-          name: pm-postgres
-          property: connectionString
+        sync: false
       - key: JWT_SECRET
         generateValue: true
       - key: JWT_EXPIRES_IN
