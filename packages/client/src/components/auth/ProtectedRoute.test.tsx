@@ -14,7 +14,7 @@ describe('ProtectedRoute', () => {
     vi.resetAllMocks();
   });
 
-  it('renders an SVG spinner (Loader2) while isLoading is true', () => {
+  it('renders a spinner while isLoading is true', () => {
     mockUseAuth.mockReturnValue({
       isAuthenticated: false,
       isLoading: true,
@@ -23,12 +23,12 @@ describe('ProtectedRoute', () => {
       register: vi.fn(),
       logout: vi.fn(),
     });
-    const { container } = render(
+    render(
       <MemoryRouter>
         <ProtectedRoute />
       </MemoryRouter>
     );
-    expect(container.querySelector('svg')).not.toBeNull();
+    expect(screen.getByRole('status')).toBeTruthy();
   });
 
   it('keeps spinner visible (does not redirect) while isLoading is true', () => {
@@ -40,13 +40,13 @@ describe('ProtectedRoute', () => {
       register: vi.fn(),
       logout: vi.fn(),
     });
-    const { container } = render(
+    render(
       <MemoryRouter initialEntries={['/dashboard']}>
         <ProtectedRoute />
       </MemoryRouter>
     );
     // Spinner still visible means we did not navigate away
-    expect(container.querySelector('svg')).not.toBeNull();
+    expect(screen.getByRole('status')).toBeTruthy();
   });
 
   it('renders Outlet when authenticated and not loading', () => {
