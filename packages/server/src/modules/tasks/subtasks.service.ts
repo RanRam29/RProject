@@ -8,6 +8,7 @@ import { WS_EVENTS } from '../../ws/ws.events.js';
 export class SubtasksService {
   async createSubtask(
     parentTaskId: string,
+    projectId: string,
     userId: string,
     data: {
       title: string;
@@ -25,6 +26,10 @@ export class SubtasksService {
       });
 
       if (!parentTask) {
+        throw ApiError.notFound('Parent task not found');
+      }
+
+      if (parentTask.projectId !== projectId) {
         throw ApiError.notFound('Parent task not found');
       }
 

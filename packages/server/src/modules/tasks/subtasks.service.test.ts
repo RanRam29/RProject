@@ -109,7 +109,7 @@ describe('SubtasksService', () => {
       mockTaskFindFirst.mockResolvedValue(null); // no existing subtasks
       mockTaskCreate.mockResolvedValue(subtask);
 
-      const result = await subtasksService.createSubtask('parent-1', USER_ID, {
+      const result = await subtasksService.createSubtask('parent-1', PROJECT_ID, USER_ID, {
         title: 'Subtask',
         statusId: STATUS_ID,
       });
@@ -147,7 +147,7 @@ describe('SubtasksService', () => {
         makeTask({ id: 'subtask-1', parentTaskId: 'parent-1', sortOrder: 5 }),
       );
 
-      await subtasksService.createSubtask('parent-1', USER_ID, {
+      await subtasksService.createSubtask('parent-1', PROJECT_ID, USER_ID, {
         title: 'Subtask',
         statusId: STATUS_ID,
       });
@@ -169,7 +169,7 @@ describe('SubtasksService', () => {
         makeTask({ id: 'subtask-1', parentTaskId: 'parent-1', assigneeId: ASSIGNEE_ID }),
       );
 
-      await subtasksService.createSubtask('parent-1', USER_ID, {
+      await subtasksService.createSubtask('parent-1', PROJECT_ID, USER_ID, {
         title: 'Subtask',
         statusId: STATUS_ID,
         assigneeId: ASSIGNEE_ID,
@@ -184,7 +184,21 @@ describe('SubtasksService', () => {
       mockTaskFindUnique.mockResolvedValue(null);
 
       await expect(
-        subtasksService.createSubtask('nonexistent', USER_ID, {
+        subtasksService.createSubtask('nonexistent', PROJECT_ID, USER_ID, {
+          title: 'Sub',
+          statusId: STATUS_ID,
+        }),
+      ).rejects.toMatchObject({
+        statusCode: 404,
+        message: 'Parent task not found',
+      });
+    });
+
+    it('should throw 404 when parent task belongs to a different project (IDOR guard)', async () => {
+      mockTaskFindUnique.mockResolvedValue(makeTask({ id: 'parent-1', projectId: 'other-project' }));
+
+      await expect(
+        subtasksService.createSubtask('parent-1', PROJECT_ID, USER_ID, {
           title: 'Sub',
           statusId: STATUS_ID,
         }),
@@ -199,7 +213,7 @@ describe('SubtasksService', () => {
       mockStatusFindFirst.mockResolvedValue(null);
 
       await expect(
-        subtasksService.createSubtask('parent-1', USER_ID, {
+        subtasksService.createSubtask('parent-1', PROJECT_ID, USER_ID, {
           title: 'Sub',
           statusId: 'bad-status',
         }),
@@ -215,7 +229,7 @@ describe('SubtasksService', () => {
       mockPermFindFirst.mockResolvedValue(null);
 
       await expect(
-        subtasksService.createSubtask('parent-1', USER_ID, {
+        subtasksService.createSubtask('parent-1', PROJECT_ID, USER_ID, {
           title: 'Sub',
           statusId: STATUS_ID,
           assigneeId: 'non-member',

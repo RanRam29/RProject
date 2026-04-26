@@ -307,10 +307,11 @@ export class TasksController {
   async createSubtask(req: Request, res: Response, next: NextFunction) {
     try {
       const taskId = req.params.taskId as string;
+      const projectId = req.params.projectId as string;
       const userId = req.user!.id;
       const { title, description, statusId, assigneeId, priority, startDate, dueDate } = req.body;
 
-      const subtask = await subtasksService.createSubtask(taskId, userId, {
+      const subtask = await subtasksService.createSubtask(taskId, projectId, userId, {
         title,
         description,
         statusId,
