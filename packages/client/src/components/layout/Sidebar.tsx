@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../../hooks/useAuth';
 import { projectsApi } from '../../api/projects.api';
 import { SystemRole } from '@pm/shared';
+import LogoMark from '../ui/LogoMark';
 
 /* ------------------------------------------------------------------ */
 /*  SVG Icons                                                          */
@@ -68,7 +69,7 @@ const navItems: NavItem[] = [
   { to: '/admin', label: 'Admin', icon: <AdminIcon />, adminOnly: true },
 ];
 
-/* project color dots */
+/* project color dot fallback palette */
 const DOT_COLORS = ['#5B8DEF', '#34D399', '#A78BFA', '#FB7185', '#FBBF24', '#38BDF8', '#F97316'];
 
 /* ------------------------------------------------------------------ */
@@ -116,6 +117,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle, isMobile,
         width: collapsed ? '0' : 'var(--sidebar-width)',
         minWidth: collapsed ? '0' : 'var(--sidebar-width)',
         backgroundColor: 'var(--sidebar-bg)',
+        backdropFilter: 'blur(24px) saturate(1.8)',
+        WebkitBackdropFilter: 'blur(24px) saturate(1.8)',
         borderRight: collapsed ? 'none' : '1px solid var(--sidebar-border)',
         display: 'flex',
         flexDirection: 'column',
@@ -135,14 +138,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle, isMobile,
         }}>
           {/* Logo */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '9px', whiteSpace: 'nowrap' }}>
-            <div style={{
-              width: '30px', height: '30px', borderRadius: '8px', flexShrink: 0,
-              background: 'linear-gradient(135deg, #5B8DEF 0%, #A78BFA 100%)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              boxShadow: '0 3px 10px rgba(91,141,239,0.35)',
-            }}>
-              <span style={{ color: '#fff', fontWeight: 800, fontSize: '12px', letterSpacing: '-0.3px' }}>RP</span>
-            </div>
+            <LogoMark size={30} />
             <span style={{
               fontSize: '15px', fontWeight: 700, color: 'var(--sidebar-text-active)',
               letterSpacing: '-0.3px', whiteSpace: 'nowrap',
@@ -238,7 +234,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle, isMobile,
                   }
                 }}
               >
-                <span style={{ width: '7px', height: '7px', borderRadius: '50%', backgroundColor: DOT_COLORS[i % DOT_COLORS.length], flexShrink: 0 }} />
+                <span style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: DOT_COLORS[i % DOT_COLORS.length], flexShrink: 0 }} />
                 <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', flex: 1 }}>{project.name}</span>
               </NavLink>
             ))}

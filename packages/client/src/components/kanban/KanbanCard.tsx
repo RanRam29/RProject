@@ -12,6 +12,7 @@ interface KanbanCardProps {
   isSelected?: boolean;
   onSelectionChange?: (taskId: string, isSelected: boolean) => void;
   selectionMode?: boolean;
+  statusName?: string;
 }
 
 export const KanbanCard = memo(function KanbanCard({
@@ -21,6 +22,7 @@ export const KanbanCard = memo(function KanbanCard({
   isSelected = false,
   onSelectionChange,
   selectionMode = false,
+  statusName,
 }: KanbanCardProps) {
   const {
     attributes,
@@ -33,24 +35,33 @@ export const KanbanCard = memo(function KanbanCard({
 
   const isBeingDragged = isDragging || isSortableDragging;
 
+  const isStuck = statusName?.toLowerCase() === 'stuck';
+
   const computedTransform = isBeingDragged
-    ? `${CSS.Transform.toString(transform)} rotate(2deg)`
+    ? `${CSS.Transform.toString(transform)} rotate(-2deg) scale(1.02)`
     : CSS.Transform.toString(transform);
 
-  const computedTransition = transition || 'box-shadow var(--transition-fast), opacity var(--transition-fast)';
+  const computedTransition = transition || 'box-shadow var(--transition-fast), transform var(--transition-fast), opacity var(--transition-fast)';
 
   const style: React.CSSProperties = {
     transform: computedTransform,
     transition: computedTransition,
     backgroundColor: isSelected ? 'var(--color-accent-light)' : 'var(--color-bg-elevated)',
-    borderRadius: 'var(--radius-md)',
+    backdropFilter: 'blur(24px) saturate(1.8)',
+    WebkitBackdropFilter: 'blur(24px) saturate(1.8)',
+    borderRadius: 'var(--rp-radius-card)',
     padding: '12px',
-    cursor: selectionMode ? 'pointer' : 'grab',
-    border: isSelected ? '1px solid var(--color-accent)' : '1px solid var(--color-border)',
-    boxShadow: isBeingDragged ? 'var(--shadow-drag)' : 'var(--shadow-sm)',
-    opacity: isSortableDragging ? 0.4 : 1,
+    cursor: isBeingDragged ? 'grabbing' : selectionMode ? 'pointer' : 'grab',
+    border: isSelected
+      ? '1px solid var(--color-accent)'
+      : isStuck
+        ? '1px solid rgba(239,68,68,0.25)'
+        : '1px solid var(--color-border)',
+    boxShadow: isBeingDragged ? 'var(--shadow-drag)' : 'var(--shadow-card)',
+    opacity: isBeingDragged ? 0.9 : isSortableDragging ? 0.4 : 1,
     userSelect: 'none' as const,
     position: 'relative',
+    animation: isStuck && !isBeingDragged ? 'rp-stuck-pulse 2s ease-in-out infinite' : undefined,
   };
 
   const titleStyle: React.CSSProperties = {
@@ -64,9 +75,9 @@ export const KanbanCard = memo(function KanbanCard({
   const metaStyle: React.CSSProperties = {
     display: 'flex',
     alignItems: 'center',
-    gap: '8px',
-    fontSize: '12px',
-    color: 'var(--color-text-secondary)',
+    gap: '10px',
+    fontSize: '11px',
+    color: 'var(--color-text-tertiary)',
   };
 
   const dueDateStyle: React.CSSProperties = {
@@ -113,14 +124,16 @@ export const KanbanCard = memo(function KanbanCard({
       {...(selectionMode ? {} : { ...attributes, ...listeners })}
       onMouseEnter={(e) => {
         if (!isBeingDragged) {
-          e.currentTarget.style.boxShadow = 'var(--shadow-md)';
-          if (!isSelected) e.currentTarget.style.borderColor = 'var(--color-border-hover)';
+          e.currentTarget.style.boxShadow = 'var(--shadow-card-hover)';
+          e.currentTarget.style.transform = 'translateY(-2px)';
+          if (!isSelected && !isStuck) e.currentTarget.style.borderColor = 'var(--color-border-hover)';
         }
       }}
       onMouseLeave={(e) => {
         if (!isBeingDragged) {
-          e.currentTarget.style.boxShadow = 'var(--shadow-sm)';
-          if (!isSelected) e.currentTarget.style.borderColor = 'var(--color-border)';
+          e.currentTarget.style.boxShadow = 'var(--shadow-card)';
+          e.currentTarget.style.transform = '';
+          if (!isSelected && !isStuck) e.currentTarget.style.borderColor = 'var(--color-border)';
         }
       }}
     >

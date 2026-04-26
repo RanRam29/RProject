@@ -4,6 +4,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { useTheme } from '../../hooks/useTheme';
 import { NotificationBell } from '../notifications/NotificationBell';
 import { useUIStore } from '../../stores/ui.store';
+import { Avatar } from '../ui/Avatar';
 
 /* ------------------------------------------------------------------ */
 /*  Icons                                                              */
@@ -90,37 +91,54 @@ export const TopBar: React.FC<TopBarProps> = ({ onMenuClick }) => {
     return () => document.removeEventListener('mousedown', handleClick);
   }, [dropdownOpen]);
 
-  const userInitials = user?.displayName
-    ? user.displayName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
-    : '??';
-
-  /* ── Shared class for icon buttons ── */
-  const iconBtnClass = 'flex items-center justify-center w-[34px] h-[34px] rounded-lg border-none transition-colors duration-200 cursor-pointer shrink-0 bg-transparent';
+  const iconBtnStyle: React.CSSProperties = {
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    width: '34px', height: '34px', borderRadius: 'var(--radius-md)',
+    border: 'none', backgroundColor: 'transparent',
+    color: 'var(--color-text-secondary)', cursor: 'pointer', flexShrink: 0,
+    transition: 'all var(--transition-fast)',
+  };
+  const iconBtnClass = '';
 
   return (
     <header className="flex items-center gap-2 shrink-0 sticky top-0 z-50 pr-4 pl-2" style={{ backgroundColor: 'var(--color-bg-elevated)', backdropFilter: 'blur(24px) saturate(1.8)', WebkitBackdropFilter: 'blur(24px) saturate(1.8)', borderBottom: '1px solid var(--color-border)', height: 'calc(var(--topbar-height) + var(--safe-area-top))', paddingTop: 'var(--safe-area-top)' }}>
 
       {/* ── Left: Menu toggle ── */}
-      <button className={iconBtnClass} onClick={onMenuClick} title="Toggle sidebar">
+      <button className={iconBtnClass} style={iconBtnStyle} onClick={onMenuClick} title="Toggle sidebar"
+        onMouseEnter={e => { e.currentTarget.style.backgroundColor = 'var(--color-bg-secondary)'; e.currentTarget.style.color = 'var(--color-text-primary)'; }}
+        onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = 'var(--color-text-secondary)'; }}
+      >
         <MenuIcon />
       </button>
 
       {/* ── Center: Search bar ── */}
-      <div className="flex-1 max-w-[480px] mx-auto">
+      <div style={{ flex: 1, maxWidth: '480px', margin: '0 auto' }}>
         <div
-          className="flex items-center gap-2 px-3 h-9 rounded-[9px] cursor-text transition-all duration-200"
-          style={{ backgroundColor: 'var(--color-bg-secondary)', border: '1px solid transparent', color: 'var(--color-text-secondary)' }}
-          onMouseEnter={e => { e.currentTarget.style.backgroundColor = 'var(--color-bg-primary)'; e.currentTarget.style.borderColor = 'var(--color-border-hover)'; }}
-          onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'var(--color-bg-secondary)'; e.currentTarget.style.borderColor = 'transparent'; }}
+          style={{
+            display: 'flex', alignItems: 'center', gap: '8px',
+            padding: '0 10px', height: '36px', borderRadius: '10px',
+            cursor: 'text', transition: 'all var(--transition-fast)',
+            backgroundColor: 'rgba(0,0,0,0.04)', border: '1px solid transparent',
+            color: 'var(--color-text-tertiary)',
+          }}
+          onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--color-border)'; }}
+          onMouseLeave={e => { e.currentTarget.style.borderColor = 'transparent'; }}
           onClick={() => {
             const event = new KeyboardEvent('keydown', { key: 'k', ctrlKey: true, bubbles: true });
             document.dispatchEvent(event);
           }}
         >
           <SearchIcon />
-          <span className="text-[13px] flex-1 select-none">Search...</span>
+          <span style={{ fontSize: '13px', flex: 1, userSelect: 'none' }}>Search...</span>
           {!isMobile && (
-            <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded border border-slate-200 text-slate-400 tracking-wide select-none">
+            <span style={{
+              fontFamily: 'var(--font-mono)', fontSize: '10px', fontWeight: 600,
+              padding: '2px 6px', borderRadius: '5px',
+              backgroundColor: 'var(--color-bg-secondary)',
+              border: '1px solid var(--color-border)',
+              color: 'var(--color-text-tertiary)',
+              userSelect: 'none', letterSpacing: '0.02em',
+            }}>
               ⌘K
             </span>
           )}
@@ -132,16 +150,21 @@ export const TopBar: React.FC<TopBarProps> = ({ onMenuClick }) => {
 
         {/* Help */}
         {!isMobile && (
-          <button className={iconBtnClass} title="Help">
+          <button style={iconBtnStyle} title="Help"
+            onMouseEnter={e => { e.currentTarget.style.backgroundColor = 'var(--color-bg-secondary)'; e.currentTarget.style.color = 'var(--color-text-primary)'; }}
+            onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = 'var(--color-text-secondary)'; }}
+          >
             <QuestionIcon />
           </button>
         )}
 
         {/* Theme toggle */}
         <button
-          className={iconBtnClass}
+          style={iconBtnStyle}
           onClick={toggleTheme}
           title={theme === 'dark' ? 'Light mode' : 'Dark mode'}
+          onMouseEnter={e => { e.currentTarget.style.backgroundColor = 'var(--color-bg-secondary)'; e.currentTarget.style.color = 'var(--color-text-primary)'; }}
+          onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = 'var(--color-text-secondary)'; }}
         >
           {theme === 'dark' ? <SunIcon /> : <MoonIcon />}
         </button>
@@ -150,28 +173,19 @@ export const TopBar: React.FC<TopBarProps> = ({ onMenuClick }) => {
         <NotificationBell />
 
         {/* ── User avatar dropdown ── */}
-        <div ref={dropdownRef} className="relative ml-1">
+        <div ref={dropdownRef} style={{ position: 'relative', marginLeft: '4px' }}>
           <button
             onClick={() => setDropdownOpen(p => !p)}
-            className="flex items-center gap-1.5 pl-1 pr-2 py-1 border-none rounded-[9px] bg-transparent cursor-pointer hover:bg-slate-100 transition-colors duration-200"
+            style={{
+              display: 'flex', alignItems: 'center', gap: '6px',
+              padding: '4px 8px 4px 4px', border: 'none', borderRadius: '20px',
+              backgroundColor: 'transparent', cursor: 'pointer',
+              transition: 'background-color var(--transition-fast)',
+            }}
+            onMouseEnter={e => { e.currentTarget.style.backgroundColor = 'var(--color-bg-secondary)'; }}
+            onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'transparent'; }}
           >
-            {/* Avatar circle */}
-            {user?.avatarUrl ? (
-              <img
-                src={user.avatarUrl}
-                alt={user.displayName}
-                style={{ width: '30px', height: '30px', borderRadius: '50%', objectFit: 'cover' }}
-              />
-            ) : (
-              <div style={{
-                width: '30px', height: '30px', borderRadius: '50%',
-                background: 'linear-gradient(135deg, #5B8DEF 0%, #A78BFA 100%)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                color: '#fff', fontSize: '11px', fontWeight: 700, flexShrink: 0,
-              }}>
-                {userInitials}
-              </div>
-            )}
+            <Avatar src={user?.avatarUrl} name={user?.displayName ?? '?'} size="sm" />
             {!isMobile && (
               <>
                 <span style={{ fontSize: '13px', fontWeight: 500, color: 'var(--color-text-primary)', whiteSpace: 'nowrap' }}>
@@ -209,18 +223,7 @@ export const TopBar: React.FC<TopBarProps> = ({ onMenuClick }) => {
                 marginBottom: '4px',
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '9px' }}>
-                  {user?.avatarUrl ? (
-                    <img src={user.avatarUrl} alt="" style={{ width: '36px', height: '36px', borderRadius: '50%', objectFit: 'cover' }} />
-                  ) : (
-                    <div style={{
-                      width: '36px', height: '36px', borderRadius: '50%',
-                      background: 'linear-gradient(135deg, #5B8DEF 0%, #A78BFA 100%)',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      color: '#fff', fontSize: '13px', fontWeight: 700, flexShrink: 0,
-                    }}>
-                      {userInitials}
-                    </div>
-                  )}
+                  <Avatar src={user?.avatarUrl} name={user?.displayName ?? '?'} size="md" />
                   <div>
                     <div style={{ fontSize: '13.5px', fontWeight: 600, color: 'var(--color-text-primary)', lineHeight: 1.3 }}>{user?.displayName}</div>
                     <div style={{ fontSize: '11.5px', color: 'var(--color-text-tertiary)', marginTop: '1px' }}>{user?.email}</div>

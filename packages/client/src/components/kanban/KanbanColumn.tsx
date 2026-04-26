@@ -33,17 +33,17 @@ export function KanbanColumn({
     minWidth: '280px',
     maxWidth: '320px',
     flex: '0 0 280px',
-    backgroundColor: 'var(--color-bg-secondary)',
+    backgroundColor: isOver || isOverlay ? 'rgba(99,102,241,0.06)' : 'var(--color-bg-secondary)',
     borderRadius: 'var(--radius-lg)',
     padding: '12px',
     display: 'flex',
     flexDirection: 'column',
     gap: '8px',
     maxHeight: 'calc(100vh - 200px)',
-    transition: 'background-color var(--transition-fast)',
+    transition: 'background-color var(--transition-fast), border-color var(--transition-fast)',
     border: isOver || isOverlay
-      ? '2px dashed var(--color-accent)'
-      : '2px solid transparent',
+      ? '1px dashed var(--color-accent)'
+      : '1px solid transparent',
     scrollSnapAlign: 'start',
   };
 
@@ -140,6 +140,7 @@ export function KanbanColumn({
             isSelected={selectedTaskIds?.has(task.id)}
             onSelectionChange={onTaskSelectionChange}
             selectionMode={selectionMode}
+            statusName={status.name}
           />
         ))}
       </div>
