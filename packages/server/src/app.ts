@@ -82,7 +82,13 @@ const createApp = (): express.Application => {
       const { default: prisma } = await import('./config/db.js');
       await prisma.$queryRaw`SELECT 1`;
       const dbUrl = process.env.DATABASE_URL ?? '';
-      res.json({ status: 'ok', db: dbUrl.substring(0, 40) + '...' });
+      try {
+        const userCount = await prisma.user.count();
+        res.json({ status: 'ok', db: dbUrl.substring(0, 40) + '...', userCount });
+      } catch (e2: unknown) {
+        const msg = e2 instanceof Error ? e2.message : String(e2);
+        res.json({ status: 'connected_no_schema', db: dbUrl.substring(0, 40) + '...', tableError: msg.substring(0, 300) });
+      }
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
       res.status(500).json({ status: 'error', error: msg.substring(0, 200) });
