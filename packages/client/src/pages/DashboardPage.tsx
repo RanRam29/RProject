@@ -11,6 +11,7 @@ import type { ProjectDTO } from '@pm/shared';
 
 // Components
 import { PlusIcon, SearchIcon, FolderIcon, card } from '../components/dashboard/shared';
+import { Button } from '../components/ui/Button';
 import { NewProjectModal } from '../components/dashboard/NewProjectModal';
 import { StatsCardsWidget } from '../components/dashboard/StatsCardsWidget';
 import { MyTasksWidget } from '../components/dashboard/MyTasksWidget';
@@ -19,6 +20,13 @@ import { ActivityWidget } from '../components/dashboard/ActivityWidget';
 import { VelocityWidget } from '../components/dashboard/VelocityWidget';
 import { DistributionWidget } from '../components/dashboard/DistributionWidget';
 import { ProjectCard } from '../components/dashboard/ProjectCard';
+
+function getTimeOfDay(): string {
+  const h = new Date().getHours();
+  if (h < 12) return 'morning';
+  if (h < 17) return 'afternoon';
+  return 'evening';
+}
 
 const injectCSS = `
   @media (max-width: 640px) {
@@ -105,34 +113,25 @@ const DashboardPage: React.FC = () => {
     <>
       <style>{injectCSS}</style>
 
-      {/* ── Page header ── */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
+      {/* ── Page header / greeting ── */}
+      <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
         <div>
-          <h1 style={{ fontSize: '22px', fontWeight: 800, color: 'var(--color-text-primary)', margin: 0, letterSpacing: '-0.5px' }}>
-            {user?.displayName ? `Welcome back, ${user.displayName.split(' ')[0]} 👋` : 'Dashboard'}
+          <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--color-text-tertiary)', letterSpacing: '0.7px', textTransform: 'uppercase', marginBottom: '6px' }}>
+            {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+          </div>
+          <h1 style={{ fontSize: '28px', fontWeight: 700, color: 'var(--color-text-primary)', margin: 0, letterSpacing: '-0.5px', lineHeight: 1 }}>
+            {user?.displayName ? `Good ${getTimeOfDay()}, ${user.displayName.split(' ')[0]}` : 'Dashboard'}
           </h1>
-          <p style={{ fontSize: '13px', color: 'var(--color-text-secondary)', margin: '3px 0 0' }}>
+          <p style={{ fontSize: '14px', color: 'var(--color-text-secondary)', margin: '6px 0 0' }}>
             Customize your workflow. Drag to rearrange panels.
           </p>
         </div>
 
         {/* New project CTA */}
-        <button
-          onClick={() => setModalOpen(true)}
-          style={{
-            display: 'flex', alignItems: 'center', gap: '7px',
-            padding: '9px 18px', border: 'none', borderRadius: '10px',
-            background: 'linear-gradient(135deg, #5B8DEF, #4A7ADE)',
-            color: '#fff', fontSize: '13.5px', fontWeight: 600,
-            cursor: 'pointer', boxShadow: '0 3px 12px rgba(91,141,239,0.35)',
-            transition: 'all var(--transition-fast)',
-          }}
-          onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 6px 20px rgba(91,141,239,0.45)'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
-          onMouseLeave={e => { e.currentTarget.style.boxShadow = '0 3px 12px rgba(91,141,239,0.35)'; e.currentTarget.style.transform = 'translateY(0)'; }}
-        >
+        <Button variant="primary" size="md" onClick={() => setModalOpen(true)}>
           <PlusIcon />
           New Project
-        </button>
+        </Button>
       </div>
 
       {/* ── Grid Layout ── */}
