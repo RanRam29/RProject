@@ -77,6 +77,18 @@ const createApp = (): express.Application => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
   });
 
+  app.get('/api/health/db', async (_req, res) => {
+    try {
+      const { default: prisma } = await import('./config/db.js');
+      await prisma.$queryRaw`SELECT 1`;
+      const dbUrl = process.env.DATABASE_URL ?? '';
+      res.json({ status: 'ok', db: dbUrl.substring(0, 40) + '...' });
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      res.status(500).json({ status: 'error', error: msg.substring(0, 200) });
+    }
+  });
+
   app.use(defaultLimiter);
 
   // ------------------------------------
