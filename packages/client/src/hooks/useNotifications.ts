@@ -19,8 +19,16 @@ export function useNotifications() {
     staleTime: 30_000,
   });
 
+  const { data: unreadData } = useQuery({
+    queryKey: ['notifications', 'unread-count'] as const,
+    queryFn: () => notificationsApi.getUnreadCount(),
+    enabled: isAuthenticated,
+    staleTime: 30_000,
+    refetchInterval: 60_000,
+  });
+
   const notifications: NotificationDTO[] = notificationsData?.data ?? [];
-  const unreadCount = notifications.filter((n) => !n.isRead).length;
+  const unreadCount = unreadData ?? notifications.filter((n) => !n.isRead).length; // fallback to derived count
   const isLoading = isFetching && notifications.length === 0;
 
   // Listen for real-time notifications — optimistically prepend, then sync
@@ -28,12 +36,9 @@ export function useNotifications() {
     if (!socket) return;
 
     const handleNewNotification = (payload: { notification: NotificationDTO }) => {
-      queryClient.setQueryData<{ data: NotificationDTO[]; pagination: unknown }>(
-        ['notifications'],
-        (old) => (old ? { ...old, data: [payload.notification, ...old.data] } : old),
-      );
       addToast({ type: 'info', message: payload.notification.title });
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      queryClient.invalidateQueries({ queryKey: ['notifications', 'unread-count'] });
     };
 
     socket.on('notification:new', handleNewNotification);
@@ -59,9 +64,12 @@ export function useNotifications() {
     );
     try {
       await notificationsApi.markAsRead(notificationId);
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      queryClient.invalidateQueries({ queryKey: ['notifications', 'unread-count'] });
     } catch {
       // Revert optimistic update on failure
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      queryClient.invalidateQueries({ queryKey: ['notifications', 'unread-count'] });
     }
   }, [queryClient]);
 
@@ -83,8 +91,11 @@ export function useNotifications() {
     );
     try {
       await notificationsApi.markAllAsRead();
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      queryClient.invalidateQueries({ queryKey: ['notifications', 'unread-count'] });
     } catch {
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      queryClient.invalidateQueries({ queryKey: ['notifications', 'unread-count'] });
     }
   }, [queryClient]);
 
@@ -102,8 +113,11 @@ export function useNotifications() {
     );
     try {
       await notificationsApi.delete(notificationId);
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      queryClient.invalidateQueries({ queryKey: ['notifications', 'unread-count'] });
     } catch {
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      queryClient.invalidateQueries({ queryKey: ['notifications', 'unread-count'] });
     }
   }, [queryClient]);
 

@@ -22,19 +22,25 @@ apiClient.interceptors.request.use((config) => {
 // ── Refresh-token lock ──────────────────────────────────────
 // Prevents concurrent 401 responses from each trying to refresh
 // the single-use refresh token (race condition that logs the user out).
-let isRefreshing = false;
-let refreshSubscribers: ((token: string) => void)[] = [];
+interface RefreshSubscriber {
+  resolve: (token: string) => void;
+  reject: (err: unknown) => void;
+}
 
-function subscribeTokenRefresh(cb: (token: string) => void) {
-  refreshSubscribers.push(cb);
+let isRefreshing = false;
+let refreshSubscribers: RefreshSubscriber[] = [];
+
+function subscribeTokenRefresh(resolve: (token: string) => void, reject: (err: unknown) => void) {
+  refreshSubscribers.push({ resolve, reject });
 }
 
 function onTokenRefreshed(token: string) {
-  refreshSubscribers.forEach((cb) => cb(token));
+  refreshSubscribers.forEach(({ resolve }) => resolve(token));
   refreshSubscribers = [];
 }
 
-function onRefreshFailed() {
+function onRefreshFailed(err: unknown) {
+  refreshSubscribers.forEach(({ reject }) => reject(err));
   refreshSubscribers = [];
 }
 
@@ -48,13 +54,13 @@ apiClient.interceptors.response.use(
 
       if (isRefreshing) {
         return new Promise((resolve, reject) => {
-          let timeoutId: ReturnType<typeof setTimeout>;
-          subscribeTokenRefresh((newToken: string) => {
-            clearTimeout(timeoutId);
-            originalRequest.headers.Authorization = `Bearer ${newToken}`;
-            resolve(apiClient(originalRequest));
-          });
-          timeoutId = setTimeout(() => reject(error), 10000);
+          subscribeTokenRefresh(
+            (newToken: string) => {
+              originalRequest.headers.Authorization = `Bearer ${newToken}`;
+              resolve(apiClient(originalRequest));
+            },
+            (err) => reject(err)
+          );
         });
       }
 
@@ -73,8 +79,8 @@ apiClient.interceptors.response.use(
         onTokenRefreshed(accessToken);
         originalRequest.headers.Authorization = `Bearer ${accessToken}`;
         return apiClient(originalRequest);
-      } catch {
-        onRefreshFailed();
+      } catch (err) {
+        onRefreshFailed(err);
         useAuthStore.getState().logout();
         return Promise.reject(error);
       } finally {
