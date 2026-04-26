@@ -20,7 +20,7 @@ export interface UserPresenceDTO {
 
 export interface AuthTokens {
   accessToken: string;
-  refreshToken: string;
+  refreshToken?: string;
 }
 
 export interface LoginRequest {

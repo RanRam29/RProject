@@ -50,7 +50,7 @@ export const BreadcrumbNav: React.FC<BreadcrumbNavProps> = ({ items }) => {
         const isLast = index === items.length - 1;
 
         return (
-          <React.Fragment key={index}>
+          <React.Fragment key={item.path ?? item.label}>
             {index > 0 && <span style={separatorStyle}>&#8250;</span>}
             {isLast || !item.path ? (
               <span style={currentStyle}>{item.label}</span>

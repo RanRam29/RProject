@@ -1,10 +1,10 @@
 import { useEffect } from 'react';
 import { AppRouter } from './router';
 import { ToastContainer } from './components/ui/Toast';
-import { useUIStore } from './stores/ui.store';
+import { useTheme } from './hooks/useTheme';
 import { useAuthStore } from './stores/auth.store';
 import { authApi } from './api/auth.api';
-import { hasToken, getRefreshToken, setTokens } from './utils/token-storage';
+import { hasToken, setAccessToken } from './utils/token-storage';
 import { Capacitor } from '@capacitor/core';
 import { SplashScreen } from '@capacitor/splash-screen';
 import { StatusBar, Style } from '@capacitor/status-bar';
@@ -14,12 +14,12 @@ import { StatusBar, Style } from '@capacitor/status-bar';
 //
 // Strategy:
 //  1. If an access token exists → call /auth/me. The axios interceptor will
-//     silently refresh it (using the stored refresh token) if it has expired.
-//  2. If no access token but a refresh token exists → exchange it for new
-//     tokens, then call /auth/me. Covers the "Remember me = off" case where
-//     the access token was stored in sessionStorage and is gone after a
-//     tab close, but the refresh token was in localStorage.
-//  3. Neither token → go to login.
+//     silently refresh it (via the httpOnly cookie) if it has expired.
+//  2. No access token → attempt a silent refresh using the httpOnly cookie,
+//     then call /auth/me. Covers the "Remember me = off" case where the access
+//     token was in sessionStorage and is gone after a tab close, but the server
+//     still holds a valid refresh-token cookie.
+//  3. Refresh fails → go to login.
 //
 // A module-level flag ensures this runs exactly once even in React StrictMode.
 let _hydrationStarted = false;
@@ -41,37 +41,30 @@ function useAppHydration() {
       return;
     }
 
-    const refreshToken = getRefreshToken();
-    if (refreshToken) {
-      // No access token but refresh token exists — do a silent refresh first
-      console.log('[App Hydration] No access token but refresh token exists, refreshing');
-      authApi
-        .refresh(refreshToken)
-        .then((tokens) => {
-          setTokens(tokens.accessToken, tokens.refreshToken);
-          return authApi.me();
-        })
-        .then((user) => setUser(user))
-        .catch(() => logout());
-      return;
-    }
-
-    // No tokens at all — go straight to login
-    console.log('[App Hydration] No tokens found going to login');
-    setLoading(false);
-    setHydrated();
+    // No access token — attempt a cookie-based silent refresh before giving up
+    console.log('[App Hydration] No access token, attempting silent refresh via cookie');
+    authApi
+      .refresh()
+      .then((tokens) => {
+        setAccessToken(tokens.accessToken);
+        return authApi.me();
+      })
+      .then((user) => setUser(user))
+      .catch(() => {
+        console.log('[App Hydration] Silent refresh failed, going to login');
+        setLoading(false);
+        setHydrated();
+      });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 }
 
 export default function App() {
-  const theme = useUIStore((s) => s.theme);
+  const { theme } = useTheme();
 
   useAppHydration();
 
   useEffect(() => {
-    document.documentElement.setAttribute('data-theme', theme);
-
     // Configure StatusBar native plugin based on theme
     if (Capacitor.isNativePlatform()) {
       StatusBar.setStyle({

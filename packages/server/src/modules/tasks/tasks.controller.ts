@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { tasksService } from './tasks.service.js';
+import { subtasksService } from './subtasks.service.js';
 import { taskHistoryService } from './task-history.service.js';
 import { timeTrackingService } from './time-tracking.service.js';
 import { sendSuccess, sendPaginated } from '../../utils/api-response.js';
@@ -56,9 +57,10 @@ export class TasksController {
 
   async getById(req: Request, res: Response, next: NextFunction) {
     try {
+      const projectId = req.params.projectId as string;
       const taskId = req.params.taskId as string;
 
-      const task = await tasksService.getById(taskId);
+      const task = await tasksService.getById(taskId, projectId);
 
       sendSuccess(res, task);
     } catch (error) {
@@ -98,8 +100,10 @@ export class TasksController {
       const userId = req.user!.id;
       const { title, description, assigneeId, priority, startDate, dueDate, isMilestone, estimatedHours, laneId } = req.body;
 
+      const projectId = req.params.projectId as string;
+
       // Fetch old task for change tracking
-      const oldTask = await prisma.task.findUnique({ where: { id: taskId } });
+      const oldTask = await prisma.task.findFirst({ where: { id: taskId, projectId } });
 
       const task = await tasksService.update(taskId, userId, {
         title,
@@ -235,17 +239,18 @@ export class TasksController {
 
   async updateStatus(req: Request, res: Response, next: NextFunction) {
     try {
+      const projectId = req.params.projectId as string;
       const taskId = req.params.taskId as string;
       const userId = req.user!.id;
       const { statusId, sortOrder } = req.body;
 
       // Fetch old task to record status change
-      const oldTask = await prisma.task.findUnique({
-        where: { id: taskId },
+      const oldTask = await prisma.task.findFirst({
+        where: { id: taskId, projectId },
         include: { status: { select: { name: true } } },
       });
 
-      const task = await tasksService.updateStatus(taskId, statusId, sortOrder);
+      const task = await tasksService.updateStatus(taskId, statusId, projectId, sortOrder);
 
       // Record status change in history
       if (oldTask) {
@@ -273,10 +278,11 @@ export class TasksController {
 
   async reorder(req: Request, res: Response, next: NextFunction) {
     try {
+      const projectId = req.params.projectId as string;
       const taskId = req.params.taskId as string;
       const { sortOrder } = req.body;
 
-      const task = await tasksService.reorder(taskId, sortOrder);
+      const task = await tasksService.reorder(taskId, projectId, sortOrder);
 
       sendSuccess(res, task);
     } catch (error) {
@@ -301,10 +307,11 @@ export class TasksController {
   async createSubtask(req: Request, res: Response, next: NextFunction) {
     try {
       const taskId = req.params.taskId as string;
+      const projectId = req.params.projectId as string;
       const userId = req.user!.id;
       const { title, description, statusId, assigneeId, priority, startDate, dueDate } = req.body;
 
-      const subtask = await tasksService.createSubtask(taskId, userId, {
+      const subtask = await subtasksService.createSubtask(taskId, projectId, userId, {
         title,
         description,
         statusId,

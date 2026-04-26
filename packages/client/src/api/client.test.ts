@@ -104,22 +104,11 @@ describe('apiClient', () => {
       await expect(interceptor.rejected(error)).rejects.toBe(error);
     });
 
-    it('clears tokens via store logout when no refresh token exists', async () => {
-      localStorage.setItem('accessToken', 'expired-token');
-      // No refreshToken in storage → interceptor should call logout()
-
-      const interceptor = getResponseInterceptor();
-      const error = { config: { headers: {} }, response: { status: 401 } };
-
-      await expect(interceptor.rejected(error)).rejects.toBe(error);
-      expect(localStorage.getItem('accessToken')).toBeNull();
-    });
-
     it('clears tokens via store logout when refresh request fails', async () => {
       localStorage.setItem('accessToken', 'expired-token');
-      localStorage.setItem('refreshToken', 'bad-refresh-token');
+      // No refresh token in storage — the httpOnly cookie is sent by the browser
+      // automatically. Simulate the /auth/refresh call itself failing.
 
-      // Simulate the /auth/refresh call failing
       apiClient.defaults.adapter = vi.fn().mockRejectedValueOnce(
         Object.assign(new Error('Refresh failed'), {
           response: { status: 401 },
@@ -132,19 +121,18 @@ describe('apiClient', () => {
 
       await expect(interceptor.rejected(error)).rejects.toBe(error);
       expect(localStorage.getItem('accessToken')).toBeNull();
-      expect(localStorage.getItem('refreshToken')).toBeNull();
     });
 
-    it('refreshes token and updates storage on 401 with valid refresh token', async () => {
+    it('refreshes token and updates storage on 401 (cookie-based refresh)', async () => {
       localStorage.setItem('accessToken', 'expired-token');
-      localStorage.setItem('refreshToken', 'valid-refresh-token');
+      // No refresh token in storage — the httpOnly cookie is sent automatically.
 
-      // First adapter call: POST /auth/refresh → new tokens
+      // First adapter call: POST /auth/refresh → new access token
       // Second adapter call: retry of original request → success
       apiClient.defaults.adapter = vi.fn()
         .mockResolvedValueOnce({
           status: 200,
-          data: { data: { accessToken: 'new-access-token', refreshToken: 'new-refresh-token' } },
+          data: { data: { accessToken: 'new-access-token' } },
           headers: {},
           config: {},
           statusText: 'OK',
@@ -166,10 +154,12 @@ describe('apiClient', () => {
       await interceptor.rejected(error);
 
       expect(localStorage.getItem('accessToken')).toBe('new-access-token');
+      // refresh token must NOT be written to browser storage
+      expect(localStorage.getItem('refreshToken')).toBeNull();
     });
 
     it('sets _retry flag on the original request during 401 handling', async () => {
-      localStorage.setItem('refreshToken', 'some-token');
+      // No refresh token in storage — the httpOnly cookie is sent automatically.
 
       apiClient.defaults.adapter = vi.fn().mockRejectedValueOnce(
         Object.assign(new Error('Refresh failed'), {
@@ -188,12 +178,12 @@ describe('apiClient', () => {
 
     it('sets new Authorization header on the retried request', async () => {
       localStorage.setItem('accessToken', 'expired-token');
-      localStorage.setItem('refreshToken', 'valid-refresh-token');
+      // No refresh token in storage — the httpOnly cookie is sent automatically.
 
       apiClient.defaults.adapter = vi.fn()
         .mockResolvedValueOnce({
           status: 200,
-          data: { data: { accessToken: 'fresh-token', refreshToken: 'fresh-refresh-token' } },
+          data: { data: { accessToken: 'fresh-token' } },
           headers: {},
           config: {},
           statusText: 'OK',

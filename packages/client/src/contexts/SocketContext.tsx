@@ -45,6 +45,10 @@ export function SocketProvider({ children }: { children: ReactNode }) {
 
     s.on('connect', () => setConnected(true));
     s.on('disconnect', () => setConnected(false));
+    s.io.on('reconnect_attempt', () => {
+      const freshToken = getAccessToken();
+      if (freshToken) s.auth = { token: freshToken };
+    });
 
     setSocket(s);
 

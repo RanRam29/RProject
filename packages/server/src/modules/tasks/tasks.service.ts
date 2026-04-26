@@ -114,10 +114,10 @@ export class TasksService {
     }
   }
 
-  async getById(taskId: string) {
+  async getById(taskId: string, projectId: string) {
     try {
-      const task = await prisma.task.findUnique({
-        where: { id: taskId },
+      const task = await prisma.task.findFirst({
+        where: { id: taskId, projectId },
         include: {
           status: true,
           project: {
@@ -391,10 +391,10 @@ export class TasksService {
     }
   }
 
-  async updateStatus(taskId: string, statusId: string, sortOrder?: number) {
+  async updateStatus(taskId: string, statusId: string, projectId: string, sortOrder?: number) {
     try {
-      const task = await prisma.task.findUnique({
-        where: { id: taskId },
+      const task = await prisma.task.findFirst({
+        where: { id: taskId, projectId },
       });
 
       if (!task) {
@@ -454,10 +454,10 @@ export class TasksService {
     }
   }
 
-  async reorder(taskId: string, sortOrder: number) {
+  async reorder(taskId: string, projectId: string, sortOrder: number) {
     try {
-      const task = await prisma.task.findUnique({
-        where: { id: taskId },
+      const task = await prisma.task.findFirst({
+        where: { id: taskId, projectId },
       });
 
       if (!task) {
@@ -503,97 +503,6 @@ export class TasksService {
     }
   }
 
-  async createSubtask(
-    parentTaskId: string,
-    userId: string,
-    data: {
-      title: string;
-      description?: string;
-      statusId: string;
-      assigneeId?: string;
-      priority?: string;
-      startDate?: Date;
-      dueDate?: Date;
-    },
-  ) {
-    try {
-      const parentTask = await prisma.task.findUnique({
-        where: { id: parentTaskId },
-      });
-
-      if (!parentTask) {
-        throw ApiError.notFound('Parent task not found');
-      }
-
-      // Parallelize independent validation queries
-      const [status, assigneePermission, lastSubtask] = await Promise.all([
-        prisma.taskStatus.findFirst({
-          where: { id: data.statusId, projectId: parentTask.projectId },
-        }),
-        data.assigneeId
-          ? prisma.projectPermission.findFirst({
-              where: { projectId: parentTask.projectId, userId: data.assigneeId },
-            })
-          : Promise.resolve(null),
-        prisma.task.findFirst({
-          where: { parentTaskId },
-          orderBy: { sortOrder: 'desc' },
-        }),
-      ]);
-
-      if (!status) {
-        throw ApiError.badRequest('Invalid status for this project');
-      }
-
-      if (data.assigneeId && !assigneePermission) {
-        throw ApiError.badRequest('Assignee is not a member of this project');
-      }
-
-      const sortOrder = lastSubtask ? lastSubtask.sortOrder + 1 : 0;
-
-      const subtask = await prisma.task.create({
-        data: {
-          projectId: parentTask.projectId,
-          parentTaskId,
-          creatorId: userId,
-          title: data.title,
-          description: data.description ? (data.description as Prisma.InputJsonValue) : Prisma.JsonNull,
-          statusId: data.statusId,
-          assigneeId: data.assigneeId || null,
-          priority: (data.priority || 'NONE') as TaskPriority,
-          startDate: data.startDate || null,
-          dueDate: data.dueDate || null,
-          sortOrder,
-        },
-        include: {
-          status: true,
-          assignee: {
-            select: USER_SELECT_STANDARD,
-          },
-          creator: {
-            select: USER_SELECT_STANDARD,
-          },
-          parentTask: {
-            select: { id: true, title: true },
-          },
-          labels: {
-            include: { label: true },
-          },
-          comments: {
-            select: { id: true },
-          },
-        },
-      });
-
-      emitToProject(parentTask.projectId, WS_EVENTS.SUBTASK_CREATED, { projectId: parentTask.projectId, taskId: parentTaskId, subtask });
-
-      return subtask;
-    } catch (error) {
-      if (error instanceof ApiError) throw error;
-      throw ApiError.badRequest('Failed to create subtask');
-    }
-  }
-
   async addDependency(blockedTaskId: string, blockingTaskId: string) {
     try {
       // Validate both tasks exist
@@ -629,15 +538,33 @@ export class TasksService {
         throw ApiError.conflict('This dependency already exists');
       }
 
-      // Check for circular dependency (reverse direction)
-      const reverse = await prisma.taskDependency.findFirst({
-        where: { blockedTaskId: blockingTaskId, blockingTaskId: blockedTaskId },
-      });
+      // Check for circular dependency via full BFS transitive traversal.
+      // Starting from blockedTaskId, follow blocking relationships forward
+      // (i.e. tasks that blockedTaskId blocks, then tasks those block, etc.).
+      // If blockingTaskId is reachable, adding the edge would create a cycle.
+      {
+        const visited = new Set<string>([blockedTaskId]);
+        const queue: string[] = [blockedTaskId];
 
-      if (reverse) {
-        throw ApiError.badRequest(
-          'Cannot create dependency: would create a circular dependency',
-        );
+        while (queue.length > 0) {
+          const currentId = queue.shift()!;
+          const deps = await prisma.taskDependency.findMany({
+            where: { blockingTaskId: currentId },
+            select: { blockedTaskId: true },
+          });
+
+          for (const dep of deps) {
+            if (dep.blockedTaskId === blockingTaskId) {
+              throw ApiError.conflict(
+                'Adding this dependency would create a circular dependency',
+              );
+            }
+            if (!visited.has(dep.blockedTaskId)) {
+              visited.add(dep.blockedTaskId);
+              queue.push(dep.blockedTaskId);
+            }
+          }
+        }
       }
 
       const dependency = await prisma.taskDependency.create({

@@ -213,7 +213,7 @@ const TypingDots: FC = () => (
   <div style={{ display: 'flex', gap: 4, padding: '8px 14px', alignItems: 'center' }}>
     {[0, 1, 2].map((i) => (
       <motion.div
-        key={i}
+        key={`dot-${i}`}
         style={{
           width: 7,
           height: 7,

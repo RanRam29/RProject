@@ -1,7 +1,7 @@
 import React from 'react';
 import { Navigate, Outlet } from 'react-router-dom';
-import { Loader2 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
+import { Spinner } from '../ui/Spinner';
 
 export const ProtectedRoute: React.FC = () => {
   const { isAuthenticated, isLoading } = useAuth();
@@ -9,11 +9,7 @@ export const ProtectedRoute: React.FC = () => {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-screen w-full bg-[var(--color-bg-primary)]">
-        <Loader2
-          size={40}
-          strokeWidth={2}
-          className="animate-spin text-[var(--color-accent)]"
-        />
+        <Spinner size="lg" />
       </div>
     );
   }

@@ -24,10 +24,10 @@ export const authApi = {
     return res.data.data!;
   },
 
-  async refresh(refreshToken: string): Promise<AuthTokens> {
-    const res = await apiClient.post<ApiResponse<AuthTokens>>('/auth/refresh', {
-      refreshToken,
-    });
+  async refresh(): Promise<AuthTokens> {
+    // No body — the httpOnly refresh-token cookie is sent automatically
+    // by the browser via withCredentials: true.
+    const res = await apiClient.post<ApiResponse<AuthTokens>>('/auth/refresh');
     return res.data.data!;
   },
 

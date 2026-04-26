@@ -4,6 +4,7 @@ import { tasksApi } from '../../api/tasks.api';
 import { labelsApi } from '../../api/labels.api';
 import { useUIStore } from '../../stores/ui.store';
 import { Button } from '../ui/Button';
+import { Modal } from '../ui/Modal';
 import type { TaskStatusDTO, LabelDTO, CreateTaskStatusRequest, CreateLabelRequest } from '@pm/shared';
 
 interface ProjectSettingsProps {
@@ -118,6 +119,7 @@ function ProjectStatusesEditor({ projectId }: { projectId: string }) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
   const [editColor, setEditColor] = useState('');
+  const [confirmState, setConfirmState] = useState<{ open: boolean; onConfirm: () => void; message: string }>({ open: false, onConfirm: () => {}, message: '' });
 
   const { data: statuses = [] } = useQuery({
     queryKey: ['statuses', projectId],
@@ -268,9 +270,11 @@ function ProjectStatusesEditor({ projectId }: { projectId: string }) {
                     </button>
                     <button
                       onClick={() => {
-                        if (window.confirm(`Delete status "${status.name}"? Tasks using this status must be moved first.`)) {
-                          deleteMutation.mutate(status.id);
-                        }
+                        setConfirmState({
+                          open: true,
+                          message: `Delete status "${status.name}"? Tasks using this status must be moved first.`,
+                          onConfirm: () => deleteMutation.mutate(status.id),
+                        });
                       }}
                       style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--color-danger)', fontSize: '12px' }}
                     >
@@ -316,6 +320,32 @@ function ProjectStatusesEditor({ projectId }: { projectId: string }) {
           Add
         </Button>
       </div>
+
+      <Modal
+        isOpen={confirmState.open}
+        onClose={() => setConfirmState((s) => ({ ...s, open: false }))}
+        title="Confirm"
+        size="sm"
+        footer={
+          <>
+            <Button variant="ghost" size="sm" onClick={() => setConfirmState((s) => ({ ...s, open: false }))}>
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => {
+                confirmState.onConfirm();
+                setConfirmState((s) => ({ ...s, open: false }));
+              }}
+            >
+              Delete
+            </Button>
+          </>
+        }
+      >
+        <p style={{ margin: 0, fontSize: '14px', color: 'var(--color-text-primary)' }}>{confirmState.message}</p>
+      </Modal>
     </div>
   );
 }
@@ -330,6 +360,7 @@ function ProjectLabelsEditor({ projectId }: { projectId: string }) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
   const [editColor, setEditColor] = useState('');
+  const [confirmState, setConfirmState] = useState<{ open: boolean; onConfirm: () => void; message: string }>({ open: false, onConfirm: () => {}, message: '' });
 
   const { data: labels = [] } = useQuery({
     queryKey: ['labels', projectId],
@@ -480,9 +511,11 @@ function ProjectLabelsEditor({ projectId }: { projectId: string }) {
                     </button>
                     <button
                       onClick={() => {
-                        if (window.confirm(`Delete label "${label.name}"?`)) {
-                          deleteMutation.mutate(label.id);
-                        }
+                        setConfirmState({
+                          open: true,
+                          message: `Delete label "${label.name}"?`,
+                          onConfirm: () => deleteMutation.mutate(label.id),
+                        });
                       }}
                       style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--color-danger)', fontSize: '12px' }}
                     >
@@ -526,6 +559,32 @@ function ProjectLabelsEditor({ projectId }: { projectId: string }) {
           Add
         </Button>
       </div>
+
+      <Modal
+        isOpen={confirmState.open}
+        onClose={() => setConfirmState((s) => ({ ...s, open: false }))}
+        title="Confirm"
+        size="sm"
+        footer={
+          <>
+            <Button variant="ghost" size="sm" onClick={() => setConfirmState((s) => ({ ...s, open: false }))}>
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => {
+                confirmState.onConfirm();
+                setConfirmState((s) => ({ ...s, open: false }));
+              }}
+            >
+              Delete
+            </Button>
+          </>
+        }
+      >
+        <p style={{ margin: 0, fontSize: '14px', color: 'var(--color-text-primary)' }}>{confirmState.message}</p>
+      </Modal>
     </div>
   );
 }

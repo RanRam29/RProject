@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { env } from '../config/env';
 import { useAuthStore } from '../stores/auth.store';
-import { getAccessToken, getRefreshToken, setAccessToken, setTokens } from '../utils/token-storage';
+import { getAccessToken, setAccessToken } from '../utils/token-storage';
 
 const apiClient = axios.create({
   baseURL: env.API_URL,
@@ -22,19 +22,25 @@ apiClient.interceptors.request.use((config) => {
 // ── Refresh-token lock ──────────────────────────────────────
 // Prevents concurrent 401 responses from each trying to refresh
 // the single-use refresh token (race condition that logs the user out).
-let isRefreshing = false;
-let refreshSubscribers: ((token: string) => void)[] = [];
+interface RefreshSubscriber {
+  resolve: (token: string) => void;
+  reject: (err: unknown) => void;
+}
 
-function subscribeTokenRefresh(cb: (token: string) => void) {
-  refreshSubscribers.push(cb);
+let isRefreshing = false;
+let refreshSubscribers: RefreshSubscriber[] = [];
+
+function subscribeTokenRefresh(resolve: (token: string) => void, reject: (err: unknown) => void) {
+  refreshSubscribers.push({ resolve, reject });
 }
 
 function onTokenRefreshed(token: string) {
-  refreshSubscribers.forEach((cb) => cb(token));
+  refreshSubscribers.forEach(({ resolve }) => resolve(token));
   refreshSubscribers = [];
 }
 
-function onRefreshFailed() {
+function onRefreshFailed(err: unknown) {
+  refreshSubscribers.forEach(({ reject }) => reject(err));
   refreshSubscribers = [];
 }
 
@@ -48,37 +54,33 @@ apiClient.interceptors.response.use(
 
       if (isRefreshing) {
         return new Promise((resolve, reject) => {
-          subscribeTokenRefresh((newToken: string) => {
-            originalRequest.headers.Authorization = `Bearer ${newToken}`;
-            resolve(apiClient(originalRequest));
-          });
-          setTimeout(() => reject(error), 10000);
+          subscribeTokenRefresh(
+            (newToken: string) => {
+              originalRequest.headers.Authorization = `Bearer ${newToken}`;
+              resolve(apiClient(originalRequest));
+            },
+            (err) => reject(err)
+          );
         });
       }
 
       isRefreshing = true;
 
       try {
-        const refreshToken = getRefreshToken();
-        if (!refreshToken) throw new Error('No refresh token');
-
+        // No body needed — the httpOnly refresh-token cookie is sent
+        // automatically by the browser because withCredentials is true.
         // Use apiClient so the request goes through the Vite dev proxy
         // and picks up the correct base URL in all environments.
-        const { data } = await apiClient.post('/auth/refresh', { refreshToken });
+        const { data } = await apiClient.post('/auth/refresh');
 
-        const { accessToken, refreshToken: newRefreshToken } = data.data;
-        // Update tokens in storage, preserving the remember-me preference.
-        if (newRefreshToken) {
-          setTokens(accessToken, newRefreshToken);
-        } else {
-          setAccessToken(accessToken);
-        }
+        const { accessToken } = data.data;
+        setAccessToken(accessToken);
 
         onTokenRefreshed(accessToken);
         originalRequest.headers.Authorization = `Bearer ${accessToken}`;
         return apiClient(originalRequest);
-      } catch {
-        onRefreshFailed();
+      } catch (err) {
+        onRefreshFailed(err);
         useAuthStore.getState().logout();
         return Promise.reject(error);
       } finally {

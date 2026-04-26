@@ -572,7 +572,7 @@ export function TaskImportModal({ isOpen, onClose, projectId }: TaskImportModalP
                 </thead>
                 <tbody>
                   {parsedTasks.map((task, i) => (
-                    <tr key={i} style={{ opacity: task.selected ? 1 : 0.4 }}>
+                    <tr key={`${task.title}-${i}`} style={{ opacity: task.selected ? 1 : 0.4 }}>
                       <td style={{ ...previewTdStyle, width: '36px', textAlign: 'center' }}>
                         <input
                           type="checkbox"
