@@ -39,14 +39,6 @@ try {
       ['db', 'execute', '--stdin', '--url', directUrl],
       { input: 'DROP TABLE IF EXISTS "_prisma_migrations";', cwd: serverRoot, encoding: 'utf-8', env: migrateEnv }
     );
-  } else {
-    // Normal path: resolve any previously-failed migration record
-    try {
-      execSync(`"${prismaBin}" migrate resolve --rolled-back 20250208_add_email_tokens`, { cwd: serverRoot, stdio: 'inherit', env: migrateEnv });
-      logger.info('Resolved failed migration record.');
-    } catch {
-      // Ignore — record may not exist
-    }
   }
 
   execSync(`"${prismaBin}" migrate deploy`, { cwd: serverRoot, stdio: 'inherit', env: migrateEnv });
