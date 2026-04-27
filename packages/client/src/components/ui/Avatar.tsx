@@ -13,16 +13,14 @@ const sizes: Record<string, { dimension: number; fontSize: number }> = {
 };
 
 const avatarColors = [
-  '#3b82f6',
-  '#ef4444',
-  '#10b981',
-  '#f59e0b',
-  '#8b5cf6',
-  '#ec4899',
-  '#14b8a6',
-  '#f97316',
-  '#6366f1',
-  '#06b6d4',
+  '#5B8DEF',
+  '#34D399',
+  '#A78BFA',
+  '#FB7185',
+  '#FBBF24',
+  '#38BDF8',
+  '#F97316',
+  '#EC4899',
 ];
 
 function getInitials(name: string): string {
@@ -65,6 +63,7 @@ export const Avatar: React.FC<AvatarProps> = ({
     color: '#ffffff',
     fontSize: sizeConfig.fontSize,
     fontWeight: 600,
+    letterSpacing: '-0.3px',
     lineHeight: 1,
     userSelect: 'none',
     textTransform: 'uppercase',

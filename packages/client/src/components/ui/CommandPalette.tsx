@@ -160,13 +160,15 @@ export function CommandPalette() {
   const overlayStyle: React.CSSProperties = {
     position: 'fixed',
     inset: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+    backdropFilter: 'blur(4px)',
+    WebkitBackdropFilter: 'blur(4px)',
     display: 'flex',
     alignItems: 'flex-start',
     justifyContent: 'center',
     zIndex: 9900,
-    paddingTop: '15vh',
-    animation: 'fadeIn var(--transition-fast) ease',
+    paddingTop: '100px',
+    animation: 'cmdFade 180ms ease',
   };
 
   const paletteStyle: React.CSSProperties = {
@@ -174,11 +176,11 @@ export function CommandPalette() {
     backdropFilter: 'blur(24px) saturate(1.8)',
     WebkitBackdropFilter: 'blur(24px) saturate(1.8)',
     border: '1px solid var(--color-border)',
-    borderRadius: 'var(--radius-lg)',
-    boxShadow: 'var(--shadow-lg)',
+    borderRadius: 'var(--rp-radius-modal)',
+    boxShadow: 'var(--shadow-xl)',
     width: '100%',
     maxWidth: '560px',
-    maxHeight: '400px',
+    maxHeight: '60vh',
     display: 'flex',
     flexDirection: 'column',
     overflow: 'hidden',
@@ -186,7 +188,7 @@ export function CommandPalette() {
 
   const inputStyle: React.CSSProperties = {
     width: '100%',
-    padding: '14px 16px',
+    padding: '16px 20px',
     fontSize: '15px',
     border: 'none',
     borderBottom: '1px solid var(--color-border)',
@@ -234,11 +236,11 @@ export function CommandPalette() {
             Object.entries(grouped).map(([category, items]) => (
               <div key={category}>
                 <div style={{
-                  padding: '8px 16px 4px',
-                  fontSize: '11px', fontWeight: 600,
+                  padding: '10px 20px 4px',
+                  fontSize: '10px', fontWeight: 600,
                   color: 'var(--color-text-tertiary)',
                   textTransform: 'uppercase',
-                  letterSpacing: '0.5px',
+                  letterSpacing: '0.7px',
                 }}>
                   {getCategoryLabel(category)}
                 </div>
@@ -253,9 +255,10 @@ export function CommandPalette() {
                         display: 'flex',
                         alignItems: 'center',
                         gap: '10px',
-                        padding: '8px 16px',
+                        padding: '9px 20px',
                         cursor: 'pointer',
                         backgroundColor: isSelected ? 'var(--color-accent-light)' : 'transparent',
+                        color: isSelected ? 'var(--color-accent-text)' : undefined,
                         transition: 'background var(--transition-fast)',
                       }}
                       onClick={() => {
@@ -299,9 +302,9 @@ export function CommandPalette() {
           fontSize: '11px', color: 'var(--color-text-tertiary)',
           display: 'flex', gap: '12px',
         }}>
-          <span><kbd style={{ padding: '1px 4px', border: '1px solid var(--color-border)', borderRadius: '3px', fontSize: '10px' }}>↑↓</kbd> Navigate</span>
-          <span><kbd style={{ padding: '1px 4px', border: '1px solid var(--color-border)', borderRadius: '3px', fontSize: '10px' }}>↵</kbd> Open</span>
-          <span><kbd style={{ padding: '1px 4px', border: '1px solid var(--color-border)', borderRadius: '3px', fontSize: '10px' }}>Esc</kbd> Close</span>
+          <span><kbd style={{ fontFamily: 'var(--font-mono)', padding: '3px 7px', backgroundColor: 'var(--color-bg-secondary)', border: '1px solid var(--color-border)', borderRadius: '5px', fontSize: '10px' }}>↑↓</kbd> Navigate</span>
+          <span><kbd style={{ fontFamily: 'var(--font-mono)', padding: '3px 7px', backgroundColor: 'var(--color-bg-secondary)', border: '1px solid var(--color-border)', borderRadius: '5px', fontSize: '10px' }}>↵</kbd> Open</span>
+          <span><kbd style={{ fontFamily: 'var(--font-mono)', padding: '3px 7px', backgroundColor: 'var(--color-bg-secondary)', border: '1px solid var(--color-border)', borderRadius: '5px', fontSize: '10px' }}>Esc</kbd> Close</span>
         </div>
       </div>
     </div>

@@ -6,7 +6,7 @@ export const card: React.CSSProperties = {
     WebkitBackdropFilter: 'blur(24px) saturate(1.8)',
     border: '1px solid var(--color-border)',
     borderRadius: 'var(--radius-lg)',
-    boxShadow: 'var(--shadow-md)',
+    boxShadow: 'var(--shadow-card)',
     overflow: 'hidden',
 };
 

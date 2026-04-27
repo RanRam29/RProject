@@ -16,19 +16,19 @@ const sizeStyles: Record<string, React.CSSProperties> = {
   sm: {
     padding: '6px 12px',
     fontSize: '13px',
-    height: '32px',
+    borderRadius: '10px',
     gap: '6px',
   },
   md: {
-    padding: '8px 16px',
+    padding: '9px 16px',
     fontSize: '14px',
-    height: '38px',
+    borderRadius: 'var(--radius-md)',
     gap: '8px',
   },
   lg: {
-    padding: '10px 24px',
+    padding: '12px 20px',
     fontSize: '15px',
-    height: '44px',
+    borderRadius: 'var(--rp-radius-card)',
     gap: '8px',
   },
 };
@@ -60,7 +60,6 @@ export const Button: React.FC<ButtonProps> = ({
     alignItems: 'center',
     justifyContent: 'center',
     border: 'none',
-    borderRadius: 'var(--radius-md)',
     fontWeight: 500,
     cursor: isDisabled ? 'not-allowed' : 'pointer',
     transition: `all var(--transition-fast)`,
@@ -99,9 +98,9 @@ export const Button: React.FC<ButtonProps> = ({
     },
     danger: {
       backgroundColor: isActive
-        ? '#dc2626'
+        ? 'var(--color-danger-hover)'
         : isHovered
-          ? '#dc2626'
+          ? 'var(--color-danger-hover)'
           : 'var(--color-danger)',
       color: 'var(--color-text-inverse)',
       transform: isActive ? 'scale(0.97)' : 'none',
