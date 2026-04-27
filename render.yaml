@@ -14,6 +14,8 @@ services:
         value: 3001
       - key: DATABASE_URL
         value: "postgresql://neondb_owner:npg_OG9rC6AqvHQD@ep-billowing-firefly-amq1qdgj-pooler.c-5.us-east-1.aws.neon.tech/neondb?sslmode=require"
+      - key: DIRECT_URL
+        value: "postgresql://neondb_owner:npg_OG9rC6AqvHQD@ep-billowing-firefly-amq1qdgj.c-5.us-east-1.aws.neon.tech/neondb?sslmode=require"
       - key: JWT_SECRET
         generateValue: true
       - key: JWT_EXPIRES_IN
