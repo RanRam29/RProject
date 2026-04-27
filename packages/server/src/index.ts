@@ -73,6 +73,21 @@ try {
     }
   }
 
+  // Idempotent schema patch: add fingerprint column if it wasn't physically applied
+  // (happens when P3005 recovery marks migrations as applied without running the SQL)
+  {
+    const patchFile = path.join(tmpdir(), '_fingerprint_patch.sql');
+    try {
+      writeFileSync(patchFile, `ALTER TABLE "refresh_tokens" ADD COLUMN IF NOT EXISTS "fingerprint" TEXT NOT NULL DEFAULT '';`);
+      execSync(`"${prismaBin}" db execute --file "${patchFile}" --url "${directUrl}"`, {
+        cwd: serverRoot, stdio: 'pipe', env: migrateEnv,
+      });
+      logger.info('Schema patch: fingerprint column ensured.');
+    } catch { /* already exists or DB unreachable — safe to continue */ } finally {
+      try { unlinkSync(patchFile); } catch { /* ignore */ }
+    }
+  }
+
   logger.info('Migrations complete. Running seed...');
   execSync(`"${tsxBin}" prisma/seed.ts`, {
     cwd: serverRoot, stdio: 'inherit',

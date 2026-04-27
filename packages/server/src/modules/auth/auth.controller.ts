@@ -15,7 +15,7 @@ function setRefreshTokenCookie(res: Response, refreshToken: string): void {
   res.cookie('refreshToken', refreshToken, {
     httpOnly: true,
     secure: IS_PRODUCTION,
-    sameSite: IS_PRODUCTION ? 'strict' : 'lax',
+    sameSite: IS_PRODUCTION ? 'none' : 'lax',
     path: '/api/v1/auth',
     maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
   });
@@ -25,7 +25,7 @@ function clearRefreshTokenCookie(res: Response): void {
   res.clearCookie('refreshToken', {
     httpOnly: true,
     secure: IS_PRODUCTION,
-    sameSite: IS_PRODUCTION ? 'strict' : 'lax',
+    sameSite: IS_PRODUCTION ? 'none' : 'lax',
     path: '/api/v1/auth',
   });
 }
