@@ -20,6 +20,13 @@ const directUrl = process.env.DIRECT_URL ?? poolerUrl.replace(/-pooler\./, '.');
 const migrateEnv = { ...process.env, DATABASE_URL: directUrl };
 try {
   logger.info(`Running migrations with direct URL: ${directUrl.substring(0, 50)}...`);
+  // Resolve any failed migration records before deploying (e.g. from a prior failed attempt via PgBouncer)
+  try {
+    execSync(`"${prismaBin}" migrate resolve --rolled-back 20250208_add_email_tokens`, { cwd: serverRoot, stdio: 'inherit', env: migrateEnv });
+    logger.info('Resolved failed migration record.');
+  } catch {
+    // Ignore — record may not exist (already resolved or never failed)
+  }
   execSync(`"${prismaBin}" migrate deploy`, { cwd: serverRoot, stdio: 'inherit', env: migrateEnv });
   logger.info('Migrations complete. Running seed...');
   execSync(`"${tsxBin}" prisma/seed.ts`, { cwd: serverRoot, stdio: 'inherit', env: { ...process.env, DATABASE_URL: directUrl } });
