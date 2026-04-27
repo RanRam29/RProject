@@ -48,7 +48,7 @@ export const VelocityWidget: React.FC = () => {
                 <h3 style={{ fontSize: '14px', fontWeight: 700, color: 'var(--color-text-primary)', margin: 0, letterSpacing: '-0.2px' }}>Activity Velocity</h3>
                 <p style={{ fontSize: '11.5px', color: 'var(--color-text-tertiary)', margin: '2px 0 0' }}>Engagement over last 7 days</p>
             </div>
-            <div style={{ flex: 1, padding: '16px 20px 20px 0', minHeight: 0 }}>
+            <div style={{ flex: 1, padding: '16px 20px 20px 0', minHeight: 150 }}>
                 {isLoading ? (
                     <div style={{ paddingLeft: '20px', height: '100%', display: 'flex', alignItems: 'flex-end', gap: '10px' }}>
                         {Array.from({ length: 7 }).map((_, i) => (
