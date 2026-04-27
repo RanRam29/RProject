@@ -1,7 +1,9 @@
 import dotenv from 'dotenv';
 dotenv.config();
 
-import { execSync, spawnSync } from 'child_process';
+import { execSync } from 'child_process';
+import { writeFileSync, unlinkSync, readdirSync } from 'fs';
+import { tmpdir } from 'os';
 import { fileURLToPath } from 'url';
 import path from 'path';
 import http from 'http';
@@ -9,41 +11,73 @@ import createApp from './app.js';
 import { env } from './config/env.js';
 import { logger } from './utils/logger.js';
 
-// Run DB migrations before starting — uses direct (non-pooler) URL to bypass PgBouncer
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const serverRoot = path.resolve(__dirname, '..');
 const prismaBin = path.join(serverRoot, 'node_modules', '.bin', 'prisma');
 const tsxBin = path.join(serverRoot, 'node_modules', '.bin', 'tsx');
-// Derive direct URL: strip "-pooler" from Neon pooler hostname so migrations bypass PgBouncer
 const poolerUrl = process.env.DATABASE_URL ?? '';
+// Use DIRECT_URL if set; otherwise strip "-pooler" from Neon pooler hostname
 const directUrl = process.env.DIRECT_URL ?? poolerUrl.replace(/-pooler\./, '.');
 const migrateEnv = { ...process.env, DATABASE_URL: directUrl };
+
+function tryDeploy(): { ok: boolean; output: string } {
+  try {
+    execSync(`"${prismaBin}" migrate deploy`, { cwd: serverRoot, stdio: 'pipe', env: migrateEnv });
+    return { ok: true, output: '' };
+  } catch (e: unknown) {
+    const err = e as { stderr?: Buffer; stdout?: Buffer };
+    const output = `${err.stderr?.toString() ?? ''}${err.stdout?.toString() ?? ''}`;
+    return { ok: false, output };
+  }
+}
+
 try {
-  logger.info(`Running migrations with direct URL: ${directUrl.substring(0, 50)}...`);
+  logger.info(`Running migrations: ${directUrl.substring(0, 60)}...`);
 
-  // Detect schema divergence: _prisma_migrations may have stale "applied" records
-  // from a prior DB while the actual tables were wiped (e.g. Neon free-tier reset).
-  // In that case migrate deploy only runs the last pending migration, which fails
-  // because the tables it depends on don't exist.
-  const schemaCheck = spawnSync(
-    prismaBin,
-    ['db', 'execute', '--stdin', '--url', directUrl],
-    { input: "SELECT EXISTS(SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='users')::text;", cwd: serverRoot, encoding: 'utf-8', env: migrateEnv }
-  );
-  const usersExists = schemaCheck.status === 0 && (schemaCheck.stdout ?? '').includes('true');
+  let result = tryDeploy();
 
-  if (!usersExists) {
-    logger.warn('Schema divergence detected — users table missing. Dropping stale migration history for full redeploy...');
-    spawnSync(
-      prismaBin,
-      ['db', 'execute', '--stdin', '--url', directUrl],
-      { input: 'DROP TABLE IF EXISTS "_prisma_migrations";', cwd: serverRoot, encoding: 'utf-8', env: migrateEnv }
-    );
+  if (!result.ok) {
+    if (result.output.includes('P3018') || result.output.includes('does not exist')) {
+      // Stale _prisma_migrations records after a Neon DB wipe — drop history and retry from scratch
+      logger.warn('P3018 detected — dropping stale migration history for full redeploy...');
+      const sqlFile = path.join(tmpdir(), '_drop_migrations.sql');
+      try {
+        writeFileSync(sqlFile, 'DROP TABLE IF EXISTS "_prisma_migrations";');
+        execSync(`"${prismaBin}" db execute --file "${sqlFile}" --url "${directUrl}"`, {
+          cwd: serverRoot, stdio: 'pipe', env: migrateEnv,
+        });
+      } finally {
+        try { unlinkSync(sqlFile); } catch { /* ignore */ }
+      }
+      execSync(`"${prismaBin}" migrate deploy`, { cwd: serverRoot, stdio: 'inherit', env: migrateEnv });
+
+    } else if (result.output.includes('P3005')) {
+      // Tables already exist but _prisma_migrations is missing — mark every migration as applied
+      logger.warn('P3005 detected — resolving all migrations as applied against existing schema...');
+      const migrationsDir = path.join(serverRoot, 'prisma', 'migrations');
+      const dirs = readdirSync(migrationsDir)
+        .filter(d => d !== 'migration_lock.toml' && !d.startsWith('.'))
+        .sort();
+      for (const dir of dirs) {
+        try {
+          execSync(`"${prismaBin}" migrate resolve --applied "${dir}"`, {
+            cwd: serverRoot, stdio: 'pipe', env: migrateEnv,
+          });
+          logger.info(`Resolved: ${dir}`);
+        } catch { /* already resolved or not a migration dir */ }
+      }
+
+    } else {
+      logger.error('migrate deploy failed:\n' + result.output.substring(0, 600));
+      throw new Error('migrate deploy failed — see above');
+    }
   }
 
-  execSync(`"${prismaBin}" migrate deploy`, { cwd: serverRoot, stdio: 'inherit', env: migrateEnv });
   logger.info('Migrations complete. Running seed...');
-  execSync(`"${tsxBin}" prisma/seed.ts`, { cwd: serverRoot, stdio: 'inherit', env: { ...process.env, DATABASE_URL: directUrl } });
+  execSync(`"${tsxBin}" prisma/seed.ts`, {
+    cwd: serverRoot, stdio: 'inherit',
+    env: { ...process.env, DATABASE_URL: directUrl },
+  });
   logger.info('Seed complete.');
 } catch (err) {
   logger.warn('migrate/seed failed:', err instanceof Error ? err.message : String(err));
