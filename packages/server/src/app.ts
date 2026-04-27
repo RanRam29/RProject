@@ -95,6 +95,30 @@ const createApp = (): express.Application => {
     }
   });
 
+  app.get('/api/debug/migrate', async (_req, res) => {
+    const { execSync } = await import('child_process');
+    const { fileURLToPath } = await import('url');
+    const pathMod = await import('path');
+    const url = new URL(import.meta.url);
+    const dir = pathMod.default.dirname(fileURLToPath(url));
+    const serverRoot = pathMod.default.resolve(dir, '..');
+    const prismaBin = pathMod.default.join(serverRoot, 'node_modules', '.bin', 'prisma');
+    try {
+      const out = execSync(`"${prismaBin}" migrate deploy`, {
+        cwd: serverRoot, env: process.env, encoding: 'utf8', timeout: 60000,
+      });
+      res.json({ status: 'ok', output: out.substring(0, 2000), cwd: serverRoot, bin: prismaBin });
+    } catch (e: unknown) {
+      const err = e as { message?: string; stdout?: string; stderr?: string };
+      res.status(500).json({
+        status: 'error', cwd: serverRoot, bin: prismaBin,
+        message: err.message?.substring(0, 500),
+        stdout: String(err.stdout ?? '').substring(0, 1000),
+        stderr: String(err.stderr ?? '').substring(0, 1000),
+      });
+    }
+  });
+
   app.use(defaultLimiter);
 
   // ------------------------------------
