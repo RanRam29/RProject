@@ -1,2 +1,2 @@
 -- AlterTable
-ALTER TABLE "RefreshToken" ADD COLUMN "fingerprint" TEXT NOT NULL DEFAULT '';
+ALTER TABLE "refresh_tokens" ADD COLUMN "fingerprint" TEXT NOT NULL DEFAULT '';
