@@ -4,7 +4,7 @@ services:
     name: pm-server
     runtime: node
     buildCommand: pnpm install && pnpm --filter @pm/shared build && cd packages/server && npx prisma generate && cd ../.. && pnpm --filter @pm/server build
-    startCommand: cd packages/server && node dist/index.js
+    startCommand: cd packages/server && pnpm start
     envVars:
       - key: NODE_VERSION
         value: 20.11.0
