@@ -74,7 +74,7 @@ const createApp = (): express.Application => {
   // Health check (Exempt from rate limits)
   // ------------------------------------
   app.get('/api/health', (_req, res) => {
-    res.json({ status: 'ok', timestamp: new Date().toISOString(), sha: 'fb06b01-plus' });
+    res.json({ status: 'ok', timestamp: new Date().toISOString(), sha: 'c2fa9f7-fix' });
   });
 
   app.get('/api/health/db', async (_req, res) => {
