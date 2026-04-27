@@ -27,7 +27,7 @@ export function errorHandler(
     return;
   }
 
-  const code = (err as Record<string, unknown>).code;
+  const code = (err as unknown as Record<string, unknown>).code;
   logger.error('Unhandled error:', err.message, code ? `[${code}]` : '');
   res.status(500).json({
     success: false,
