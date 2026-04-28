@@ -13,7 +13,7 @@ import './styles/animations.css';
 import { env } from './config/env';
 
 // Fire-and-forget background ping to wake up the server from sleep (e.g. Render free tier)
-fetch(`${env.API_URL.replace(/\/api\/v\d+$/, '')}/api/health`).catch(() => { /* silent failure */ });
+fetch(`${env.API_URL.replace(/\/api\/v\d+\/?$/, '')}/api/health`).catch(() => { /* silent failure */ });
 
 const queryClient = new QueryClient({
   defaultOptions: {
