@@ -1,10 +1,15 @@
 import { CorsOptions } from 'cors';
 import env from './env.js';
 
-const allowedOrigins = env.CLIENT_URL
+const fromEnv = env.CLIENT_URL
   .split(',')
   .map((url) => url.trim())
   .filter(Boolean);
+
+// Always include the production Vercel deployment regardless of env var state
+const PRODUCTION_ORIGINS = ['https://rproject-mocha.vercel.app'];
+
+const allowedOrigins = [...new Set([...fromEnv, ...PRODUCTION_ORIGINS])];
 
 export const corsOptions: CorsOptions = {
   origin: (origin, callback) => {
