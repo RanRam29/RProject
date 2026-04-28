@@ -151,6 +151,34 @@
   --color-danger-light: rgba(239, 68, 68, 0.15);
   --color-danger-text: #FCA5A5;
 
+  /* Glass surfaces — dark */
+  --rp-bg-glass: rgba(15, 15, 18, 0.80);
+  --rp-bg-glass-border: rgba(255, 255, 255, 0.08);
+
+  /* Status badges — dark (muted neon tints) */
+  --rp-status-todo-bg: #1C1C1E;
+  --rp-status-todo-text: #A1A1AA;
+  --rp-status-progress-bg: rgba(59, 130, 246, 0.15);
+  --rp-status-progress-text: #93C5FD;
+  --rp-status-review-bg: rgba(245, 158, 11, 0.15);
+  --rp-status-review-text: #FCD34D;
+  --rp-status-stuck-bg: rgba(239, 68, 68, 0.15);
+  --rp-status-stuck-text: #FCA5A5;
+  --rp-status-done-bg: rgba(16, 185, 129, 0.15);
+  --rp-status-done-text: #6EE7B7;
+
+  /* Priority badges — dark */
+  --rp-priority-urgent-bg: rgba(239, 68, 68, 0.15);
+  --rp-priority-urgent-text: #FCA5A5;
+  --rp-priority-high-bg: rgba(249, 115, 22, 0.15);
+  --rp-priority-high-text: #FDBA74;
+  --rp-priority-medium-bg: rgba(234, 179, 8, 0.15);
+  --rp-priority-medium-text: #FDE047;
+  --rp-priority-low-bg: rgba(16, 185, 129, 0.15);
+  --rp-priority-low-text: #6EE7B7;
+  --rp-priority-none-bg: #1C1C1E;
+  --rp-priority-none-text: #71717A;
+
   /* Deep OLED shadows */
   --shadow-xs:  0 2px 4px rgba(0,0,0,0.50);
   --shadow-sm:  0 4px 12px rgba(0,0,0,0.60), 0 2px 4px rgba(0,0,0,0.40);
@@ -279,19 +307,45 @@ select {
   --rp-priority-none-bg: #F3F4F6;
   --rp-priority-none-text: #6B7280;
 
-  /* Radii */
-  --rp-radius-card: 14px;
-  --rp-radius-pill: 9999px;
+  /* Radii — semantic aliases onto the base scale */
+  --rp-radius-card: var(--radius-lg);     /* 16px */
+  --rp-radius-pill: var(--radius-full);
   --rp-radius-modal: 20px;
   --rp-radius-badge: 6px;
 
-  /* Motion */
+  /* Motion — canonical names; --transition-* aliases kept for compat */
   --rp-ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
   --rp-ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
-  --rp-duration-fast: 160ms;
-  --rp-duration-normal: 280ms;
-  --rp-duration-slow: 480ms;
-  
+  --rp-duration-fast: 150ms;   /* = --transition-fast */
+  --rp-duration-normal: 300ms; /* = --transition-normal */
+  --rp-duration-slow: 500ms;   /* = --transition-slow */
+
+  /* Z-index scale */
+  --z-base: 0;
+  --z-raised: 10;
+  --z-dropdown: 100;
+  --z-sticky: 200;
+  --z-overlay: 300;
+  --z-modal: 400;
+  --z-toast: 500;
+  --z-tooltip: 600;
+
+  /* Spacing scale (4px base) */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+
+  /* Missing status: In Review */
+  --rp-status-review-bg: #FEF3C7;
+  --rp-status-review-text: #92400E;
+
   /* Mobile Safe Areas */
   --safe-area-top: env(safe-area-inset-top, 0px);
   --safe-area-bottom: env(safe-area-inset-bottom, 0px);
